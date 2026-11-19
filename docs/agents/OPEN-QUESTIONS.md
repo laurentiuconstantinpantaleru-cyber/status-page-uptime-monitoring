@@ -9,9 +9,9 @@
 <!-- graffino-agentic:end -->
 
 ## Index
-- Q-001 · Which 10 student project URLs and 2 local business URLs will be monitored?
-- Q-002 · What are the thresholds for N (open incident) and M (resolve incident)?
-- Q-003 · What is the alert escalation contact and timeout policy?
+- Q-001 · Which 10 student project URLs and 2 local business URLs will be monitored? · _investigating_
+- Q-002 · What are the thresholds for N (open incident) and M (resolve incident)? · _answered_
+- Q-003 · What is the alert escalation contact and timeout policy? · _answered_
 - Q-004 · Which email transport/provider will be used for alerts and reports?
 - Q-005 · What are the specific requirements requested in the 3 student interviews?
 - Q-006 · How does the web in-memory cache learn about worker state changes?
@@ -19,22 +19,24 @@
 ---
 
 ## Q-001 · Which 10 student project URLs and 2 local business URLs will be monitored?
-- **Status:** open
+- **Status:** investigating
 - **Blocks:** Live monitoring deployment and verification of the 14-day pre-delivery requirement.
 - **Who answers:** user
-- **Proposed answer:** Gather real URLs from colleagues (with permission) and local businesses, recorded in `docs/MONITORS.md`.
+- **Proposed answer:** The 2 local businesses are confirmed: `https://hugthemug.ro/` and `http://cafewien.ro/` (5 min check interval). The 10 student project URLs are currently being gathered in `MONITORS.md`.
 
 ## Q-002 · What are the thresholds for N (open incident) and M (resolve incident)?
-- **Status:** open
+- **Status:** answered 2026-11-19
 - **Blocks:** Incident engine transition constants.
 - **Who answers:** user
-- **Proposed answer:** N = 2 consecutive confirmed failures to declare an incident; M = 2 consecutive successful checks to resolve.
+- **Answer:** N = 2 consecutive confirmed failures to declare an incident; M = 3 consecutive successful checks to automatically resolve the incident.
+- **Recorded as:** D-006
 
 ## Q-003 · What is the alert escalation contact and timeout policy?
-- **Status:** open
+- **Status:** answered 2026-11-19
 - **Blocks:** Alert notification escalation dispatcher.
 - **Who answers:** user
-- **Proposed answer:** Primary Telegram/email alert sent immediately; if unacknowledged after 15 minutes, notify secondary contact.
+- **Answer:** Primary alert dispatched immediately via Telegram/email. Secondary contact alerted if unacknowledged after 15 minutes (configurable up to 1 hour). Acknowledgment is done via a unique link/button in the alert or in the admin panel.
+- **Recorded as:** D-007
 
 ## Q-004 · Which email transport/provider will be used for alerts and reports?
 - **Status:** open
@@ -46,7 +48,7 @@
 - **Status:** open
 - **Blocks:** Feature prioritization and `INTERVIEW.md` documentation.
 - **Who answers:** user
-- **Proposed answer:** Conduct interviews with 3 application owners to determine what metrics and notification channels they need.
+- **Proposed answer:** The user conducts the interviews directly and writes `INTERVIEW.md`.
 
 ## Q-006 · How does the web in-memory cache learn about worker state changes?
 - **Status:** open

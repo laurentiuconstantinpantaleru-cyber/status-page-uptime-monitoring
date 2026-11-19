@@ -12,6 +12,10 @@
 - D-003 · PostgreSQL with versioned migrations and in-memory cache for status page
 - D-004 · Vitest with injectable clock for simulated-time tests
 - D-005 · Multi-worker check architecture with two-phase failure confirmation
+- D-006 · Incident lifecycle thresholds: N=2 confirmed failures to open, M=3 successes to close
+- D-007 · Alert escalation timeout and operator acknowledgment
+- D-008 · Check workers co-located as separate processes on the same host
+- D-009 · Explicit out-of-scope architectural and functional boundaries
 
 ---
 
@@ -62,5 +66,45 @@
 - **Why:** Eliminates false alarms caused by localized worker connectivity glitches or DNS failures on a single node.
 - **Rejected:** Single worker checks without confirmation (triggers false positive alerts when worker host experiences network jitter).
 - **Evidence:** docs/brief.md:11, docs/brief.md:20, docs/brief.md:24
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-19
+
+## D-006 · Incident lifecycle thresholds: N=2 confirmed failures to open, M=3 successes to close
+- **Status:** approved
+- **Date:** 2026-11-19
+- **Rule:** An incident is opened only after N=2 consecutive check failures confirmed by a secondary worker. An active incident is automatically marked resolved only after M=3 consecutive successful checks.
+- **Why:** Balances rapid outage detection with resilience against transient network blips and flapping services; validated by user interview.
+- **Rejected:** Immediate alert on 1 failure (noisy/false positives); 1 success to close (premature resolution of unstable services).
+- **Evidence:** docs/brief.md:24, docs/survey-results.md:7, docs/survey-results.md:12
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-19
+
+## D-007 · Alert escalation timeout and operator acknowledgment
+- **Status:** approved
+- **Date:** 2026-11-19
+- **Rule:** Outage alerts are dispatched immediately to primary Telegram/email contacts. If not acknowledged within 15 minutes (configurable up to 1 hour), escalation notifies the secondary contact. Acknowledgment is performed via a signed token link or in the admin UI.
+- **Why:** Prevents unattended prolonged downtime without creating spam loops (1 alert per incident + 1 on resolution).
+- **Rejected:** Unconditional continuous alert spamming; indefinite single-contact alerting without escalation.
+- **Evidence:** docs/brief.md:12, docs/survey-results.md:9, docs/survey-results.md:13
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-19
+
+## D-008 · Check workers co-located as separate processes on the same host
+- **Status:** approved
+- **Date:** 2026-11-19
+- **Rule:** The minimum 2 check workers run as separate Node.js processes co-located on the same physical or virtual host. Multi-region geographically distributed worker deployments are not supported in v1.
+- **Why:** Provides process and event loop isolation for independent verification while avoiding multi-host deployment and networking overhead.
+- **Rejected:** Multi-region distributed clusters (out of scope for v1 student project).
+- **Evidence:** docs/brief.md:20
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-19
+
+## D-009 · Explicit out-of-scope architectural and functional boundaries
+- **Status:** approved
+- **Date:** 2026-11-19
+- **Rule:** The following features are strictly out of scope: (1) Single Page Application frameworks (React/Vue), (2) External cache servers (Redis), (3) Headless browser synthetic testing (Puppeteer/Playwright), (4) Paid SMS/voice alerting (Twilio), (5) Billing/subscriptions (Stripe), (6) External issue tracker sync (Jira/ClickUp), (7) Native mobile apps, (8) Visitor email/RSS subscriptions to incidents, (9) CI deployment pause webhooks (quick button and maintenance calendar remain), (10) Multi-region worker clouds.
+- **Why:** Keeps the implementation bounded to the ~32h estimated effort and focuses engineering on core availability monitoring requirements.
+- **Rejected:** Expanding scope into commercial SaaS features.
+- **Evidence:** docs/brief.md:2, docs/survey-results.md:16
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-19
