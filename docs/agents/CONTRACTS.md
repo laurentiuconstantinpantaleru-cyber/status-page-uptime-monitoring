@@ -1,4 +1,4 @@
-# Contracts — p26-status
+# Contracts — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 > Promises across a boundary. **Provided:** this repo owns the contract; the text

@@ -1,4 +1,4 @@
-# CONTEXT — p26-status
+# CONTEXT — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 > Domain terms for this project. Use these words in code, docs, commits and plans.

@@ -1,4 +1,4 @@
-# Decisions — p26-status
+# Decisions — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 > Constraints the code must obey. Status: `approved` (obey) · `proposed` (do not

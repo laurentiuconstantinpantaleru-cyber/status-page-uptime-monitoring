@@ -1,4 +1,4 @@
-# Open questions — p26-status
+# Open questions — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 > Unknowns. Work that depends on an open question is out of scope until it is

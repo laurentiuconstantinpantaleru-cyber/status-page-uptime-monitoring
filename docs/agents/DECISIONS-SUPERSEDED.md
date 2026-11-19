@@ -1,4 +1,4 @@
-# Decisions superseded — p26-status
+# Decisions superseded — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 > Decisions that no longer apply. **Never obeyed**; read only to explain old code or a

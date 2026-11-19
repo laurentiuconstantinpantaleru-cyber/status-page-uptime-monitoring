@@ -1,4 +1,4 @@
-# DESIGN — p26-status
+# DESIGN — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 > The design guardrails for this app. Every UI change follows them. A change to a

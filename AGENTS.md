@@ -1,4 +1,4 @@
-# AGENTS.md — p26-status
+# AGENTS.md — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 ## How we work here
@@ -77,7 +77,7 @@ without new evidence. A rejected proposal is added there with the reason.
 <!-- graffino-agentic:end -->
 
 ## 1. What this repo is
-P26 · Status page and uptime monitoring service for student projects and local businesses.
+Status page + uptime monitoring — availability monitoring service for student projects and local businesses.
 Provides HTTP/TLS/keyword/latency checks, automated incident lifecycle, maintenance windows,
 email/Telegram alerts, sub-100ms cached public status pages, and monthly uptime reporting.
 

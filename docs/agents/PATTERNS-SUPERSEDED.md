@@ -1,4 +1,4 @@
-# Patterns superseded — p26-status
+# Patterns superseded — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 > Patterns that no longer apply. **Never obeyed**; read only to explain old code or a

@@ -1,4 +1,4 @@
-# Patterns — p26-status
+# Patterns — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 > How we build things here. Copy only `approved` entries. `candidate` = seen once or

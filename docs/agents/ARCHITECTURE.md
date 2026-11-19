@@ -1,4 +1,4 @@
-# Architecture — p26-status
+# Architecture — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 > How this repo is built, generated from the code at backfill and kept current by
@@ -6,7 +6,7 @@
 <!-- graffino-agentic:end -->
 
 ## Overview
-P26 is an availability monitoring and status page platform. It periodically probes external services
+Status page + uptime monitoring is an availability monitoring and status page platform. It periodically probes external services
 via separated check workers, detects outages using two-worker confirmation, manages incident lifecycles,
 sends alerts, and serves sub-100ms cached public status pages per organization.
 

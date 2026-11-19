@@ -1,4 +1,4 @@
-# Rejected — p26-status
+# Rejected — status-page-uptime-monitoring
 
 <!-- graffino-agentic:begin v1 -->
 > Proposals and backfill findings the user rejected, with the reason. **Do not
