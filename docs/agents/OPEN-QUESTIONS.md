@@ -28,7 +28,7 @@
 - **Status:** answered 2026-11-19
 - **Blocks:** Incident engine transition constants.
 - **Who answers:** user
-- **Answer:** N = 2 consecutive confirmed failures to declare an incident; M = 3 consecutive successful checks to automatically resolve the incident.
+- **Answer:** N = 2 consecutive confirmed failures to declare an incident; M = 2 consecutive successful checks to automatically resolve the incident.
 - **Recorded as:** D-006
 
 ## Q-003 · What is the alert escalation contact and timeout policy?
