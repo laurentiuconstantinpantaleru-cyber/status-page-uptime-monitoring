@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+
+# Claude agent configuration & worktrees
+.claude/*
+!.claude/skills/
+!.claude/agents/
+.claude/worktrees/
+
+# OS and editor files
+.DS_Store
+Thumbs.db

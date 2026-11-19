@@ -1,0 +1,28 @@
+# docs/design/registry.yaml — every screen and shared component, by DS- ID.
+# Plans, commits, mocks and board files use the ID. kind: foundation | component | screen
+# status: draft (mock drawn) | approved (confirmed on the board) | implemented | deprecated (never delete an entry)
+designs:
+  - id: DS-p26-public-status
+    kind: screen
+    source: src/web/views/status.html
+    screenshots: [screens/DS-p26-public-status.light.png, screens/DS-p26-public-status.dark.png]
+    design_ref: mocks/DS-p26-public-status.html
+    status: draft
+  - id: DS-p26-admin-monitors
+    kind: screen
+    source: src/web/views/admin/monitors.html
+    screenshots: [screens/DS-p26-admin-monitors.light.png, screens/DS-p26-admin-monitors.dark.png]
+    design_ref: mocks/DS-p26-admin-monitors.html
+    status: draft
+  - id: DS-p26-admin-incidents
+    kind: screen
+    source: src/web/views/admin/incidents.html
+    screenshots: [screens/DS-p26-admin-incidents.light.png, screens/DS-p26-admin-incidents.dark.png]
+    design_ref: mocks/DS-p26-admin-incidents.html
+    status: draft
+  - id: DS-p26-admin-maintenance
+    kind: screen
+    source: src/web/views/admin/maintenance.html
+    screenshots: [screens/DS-p26-admin-maintenance.light.png, screens/DS-p26-admin-maintenance.dark.png]
+    design_ref: mocks/DS-p26-admin-maintenance.html
+    status: draft
