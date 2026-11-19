@@ -82,24 +82,62 @@ pulled back.
 - Design board: none yet
 - Figma: none
 
+- Token source in code: src/web/public/tokens.css
+
 ## Tokens
 
 ### Colors
-| Name | Light | Dark | Purpose |
+| Token | Light | Dark (Slate) | Purpose |
 |---|---|---|---|
-| `bg-primary` | `#ffffff` | `#0f172a` | Main background |
-| `bg-secondary` | `#f8fafc` | `#1e293b` | Surface / card background |
-| `text-primary` | `#0f172a` | `#f8fafc` | Primary text |
-| `text-secondary`| `#64748b` | `#94a3b8` | Subdued labels, metadata |
-| `border-subtle` | `#e2e8f0` | `#334155` | Card borders, dividers |
-| `status-ok` | `#10b981` | `#059669` | Operational / Up |
-| `status-degraded`| `#f59e0b`| `#d97706` | Degraded performance |
-| `status-outage` | `#ef4444` | `#dc2626` | Down / Major outage |
-| `status-maint`  | `#3b82f6` | `#2563eb` | Maintenance window |
+| `--color-bg-base` | `#ffffff` | `#0f172a` (Slate 900) | Main page background |
+| `--color-bg-surface` | `#f8fafc` (Slate 50) | `#1e293b` (Slate 800) | Card and container background |
+| `--color-bg-subtle` | `#f1f5f9` (Slate 100) | `#334155` (Slate 700) | Hover row background, chart bar background |
+| `--color-border` | `#e2e8f0` (Slate 200) | `#334155` (Slate 700) | Card borders, dividers |
+| `--color-border-strong` | `#cbd5e1` (Slate 300) | `#475569` (Slate 600) | Interactive control borders, inputs |
+| `--color-text-primary` | `#0f172a` (Slate 900) | `#f8fafc` (Slate 50) | Headings, primary text, metric values |
+| `--color-text-secondary` | `#475569` (Slate 600) | `#94a3b8` (Slate 400) | Labels, descriptions, subtitles |
+| `--color-text-muted` | `#64748b` (Slate 500) | `#64748b` (Slate 500) | Timestamps, footnotes, chart legends |
+| `--color-brand` | `#2563eb` (Blue 600) | `#3b82f6` (Blue 500) | Primary buttons, links, accents |
+| `--color-status-ok` | `#10b981` (Emerald 500) | `#34d399` (Emerald 400) | Service operational (Up) |
+| `--color-status-degraded` | `#f59e0b` (Amber 500) | `#fbbf24` (Amber 400) | High latency, degraded performance |
+| `--color-status-outage` | `#ef4444` (Red 500) | `#f87171` (Red 400) | Open incident, major outage (Down) |
+| `--color-status-maint` | `#3b82f6` (Blue 500) | `#60a5fa` (Blue 400) | Scheduled maintenance window |
 
 ### Typography
-- Body font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif
-- Monospace (latencies, endpoints): ui-monospace, SFMono-Regular, Menlo, monospace
+| Token | Family | Size / Line-height | Weight | Purpose |
+|---|---|---|---|---|
+| `--font-sans` | `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` | — | — | Body text, headings, buttons |
+| `--font-mono` | `ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace` | — | — | Latencies, uptime percentages, HTTP codes |
+| `--text-xs` | `--font-sans` | `11px / 16px` | 400 | Small labels, uptime bar legends |
+| `--text-sm` | `--font-sans` | `13px / 20px` | 400 / 500 | Secondary text, table cells |
+| `--text-base` | `--font-sans` | `14px / 22px` | 400 | Body text, incident update notes |
+| `--text-lg` | `--font-sans` | `16px / 24px` | 600 | Card titles, component names |
+| `--text-xl` | `--font-sans` | `20px / 28px` | 700 | Status banner headline |
+| `--text-metric` | `--font-mono` | `13px / 18px` | 500 | Metric values (`24ms`, `99.98%`) |
 
-### Spacing scale
-`4px`, `8px`, `12px`, `16px`, `24px`, `32px`, `48px`, `64px`
+### Spacing
+| Token | Value | Purpose |
+|---|---|---|
+| `--space-1` | `4px` | Fine gaps, bar gaps |
+| `--space-2` | `8px` | Badge padding, icon gap |
+| `--space-3` | `12px` | Compact cell padding |
+| `--space-4` | `16px` | Standard card padding |
+| `--space-6` | `24px` | Section gap |
+| `--space-8` | `32px` | Page content padding |
+| `--space-12` | `48px` | Top-level header gap |
+
+### Radius and Shadows
+| Token | Value | Purpose |
+|---|---|---|
+| `--radius-sm` | `4px` | Individual uptime bars, form inputs |
+| `--radius-md` | `6px` | Buttons, incident cards |
+| `--radius-lg` | `8px` | Status banner container, major cards |
+| `--radius-pill` | `9999px` | Status badges and pills |
+| `--shadow-card` | `0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)` | Surface card shadow |
+
+### Breakpoints
+| Name | Min | Max | Purpose |
+|---|---|---|---|
+| `mobile` | `0px` | `640px` | Single column stacked layout, horizontal scroll for 90d bars |
+| `tablet` | `641px` | `1024px` | Optimized tablet column |
+| `desktop` | `1025px` | `1280px` | Centered 960px container, full 90d uptime bars |
