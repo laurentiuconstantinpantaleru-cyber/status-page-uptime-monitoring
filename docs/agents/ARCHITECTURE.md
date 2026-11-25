@@ -36,9 +36,10 @@ sends alerts, and serves sub-100ms cached public status pages per organization.
 ```
 
 ## Parts
-Source is split into three roots: `src/web/` (web process), `src/worker/` (check
-worker processes) and `src/shared/` (code both use, e.g. the `Clock` in
-`src/shared/clock.ts`). Paths marked _planned_ do not exist yet.
+Source is split into `src/web/` (web process), `src/worker/` (check worker
+processes), `src/shared/` (code both use, e.g. the `Clock` in `src/shared/clock.ts`)
+and `src/db/` (database connection and migration runner). SQL migrations live in
+`db/migrations/` at the repo root. Paths marked _planned_ do not exist yet.
 
 | Part | Path | Responsibility | Talks to |
 |---|---|---|---|
@@ -49,6 +50,7 @@ worker processes) and `src/shared/` (code both use, e.g. the `Clock` in
 | Incident Engine | `src/shared/` _planned_ | State machine opening/closing incidents and calculating uptime | MySQL, Alert Dispatcher |
 | Alert Dispatcher | `src/worker/` _planned_ | Sends Telegram and email notifications with escalation | Telegram API, SMTP |
 | Roll-up Job | `src/worker/` _planned_ | Aggregates raw check data older than 7 days | MySQL |
+| Database | `src/db/connection.ts`, `src/db/migrate.ts`, `db/migrations/` | UTC connections (D-020); forward-only SQL migrations recorded in `schema_migrations` (D-021) | MySQL |
 | Clock | `src/shared/clock.ts` | `Clock` interface, `systemClock`, `FakeClock` for simulated-time tests | All time-dependent code |
 
 ## Data flow
@@ -62,18 +64,132 @@ worker processes) and `src/shared/` (code both use, e.g. the `Clock` in
 ## State and storage
 | What | Where | Owner | Notes |
 |---|---|---|---|
-| Monitors & Orgs | MySQL `monitors`, `organizations` | Web / Admin | Monitored targets, check intervals, thresholds |
-| Incidents & Updates | MySQL `incidents`, `incident_updates` | Incident Engine | Start time, end time, root cause, manual notes |
-| Raw Probe Logs | MySQL `check_results` | Check Workers | Kept for 7 days then rolled up |
-| Aggregated Metrics | MySQL `rollup_hourly`, `rollup_daily` | Roll-up Job | 90-day uptime and latency history |
-| Maintenance Windows | MySQL `maintenance_windows` | Web / Admin | Scheduled downtime excluded from uptime calculations |
+| Orgs, users, roles | MySQL `organizations`, `users` | Web / Admin | One organization per user; `global_admin` has none (D-018) |
+| Monitors | MySQL `monitors` | Web / Admin | Targets, interval 1–60 min (D-016), expected status, timeout, keyword, TLS, latency threshold |
+| Workers | MySQL `workers` | Check Workers | Worker processes and when each was last seen |
+| Raw checks | MySQL `checks` | Check Workers | One row per probe or confirmation; kept 7 days then rolled up (D-011) |
+| Incidents & Updates | MySQL `incidents`, `incident_updates` | Incident Engine | Start, end, cause; at most one open incident per monitor; human updates by stage (D-014) |
+| Maintenance Windows | MySQL `maintenance_windows` | Web / Admin | Scheduled and quick windows per monitor (D-012), excluded from uptime |
+| Alert contacts | MySQL `alert_contacts` | Web / Admin | Email/Telegram, primary or secondary (D-007), per organization |
+| API keys | MySQL `api_keys` | Web / Admin | `read`/`write`, public id + bcrypt hash of the secret (D-017) |
+| Migrations | MySQL `schema_migrations` | `npm run db:migrate` | Applied migration files (D-021) |
+| Aggregated Metrics | MySQL `rollup_hourly`, `rollup_daily` _planned_ | Roll-up Job | 90-day uptime and latency history |
+
+### Entity relationships
+Times are UTC `DATETIME(3)`. Deleting a monitor deletes its checks, incidents and
+maintenance windows.
+
+```mermaid
+erDiagram
+    organizations ||--o{ users : "has (global_admin: none)"
+    organizations ||--o{ monitors : owns
+    organizations ||--o{ alert_contacts : alerts
+    organizations ||--o{ api_keys : issues
+    monitors ||--o{ checks : "probed by"
+    workers ||--o{ checks : runs
+    monitors ||--o{ incidents : has
+    incidents ||--o{ incident_updates : "timeline of"
+    users |o--o{ incident_updates : writes
+    monitors ||--o{ maintenance_windows : "paused by"
+    users |o--o{ maintenance_windows : schedules
+
+    organizations {
+        bigint id PK
+        varchar slug UK
+        varchar name
+        smallint escalation_timeout_minutes "1-60, default 15"
+    }
+    users {
+        bigint id PK
+        bigint organization_id FK "NULL only for global_admin"
+        varchar email UK
+        varchar display_name
+        enum role "member, org_admin, global_admin"
+    }
+    monitors {
+        bigint id PK
+        bigint organization_id FK
+        varchar name
+        varchar url
+        tinyint interval_minutes "1-60, default 5"
+        smallint expected_status "default 200"
+        int timeout_ms
+        varchar keyword "NULL"
+        boolean check_tls
+        int latency_threshold_ms "NULL"
+    }
+    workers {
+        bigint id PK
+        varchar name UK
+        datetime last_seen_at "NULL"
+    }
+    checks {
+        bigint id PK
+        bigint monitor_id FK
+        bigint worker_id FK
+        datetime checked_at
+        enum kind "scheduled, confirmation"
+        enum outcome "up, down"
+        smallint http_status "NULL"
+        int latency_ms "NULL"
+        varchar error_cause "NULL"
+        datetime tls_expires_at "NULL"
+    }
+    incidents {
+        bigint id PK
+        bigint monitor_id FK
+        datetime started_at
+        datetime resolved_at "NULL while open"
+        varchar cause
+        varchar cause_detail "NULL"
+        smallint http_status "NULL"
+        bigint open_monitor_id UK "generated: one open per monitor"
+    }
+    incident_updates {
+        bigint id PK
+        bigint incident_id FK
+        bigint author_user_id FK "NULL"
+        enum stage "investigating, identified, monitoring, resolved"
+        text body
+    }
+    maintenance_windows {
+        bigint id PK
+        bigint monitor_id FK
+        datetime starts_at
+        datetime ends_at
+        enum source "scheduled, quick"
+        bigint created_by_user_id FK "NULL"
+    }
+    alert_contacts {
+        bigint id PK
+        bigint organization_id FK
+        enum channel "email, telegram"
+        varchar address
+        enum priority "primary, secondary"
+    }
+    api_keys {
+        bigint id PK
+        bigint organization_id FK
+        enum level "read, write"
+        char public_id UK
+        char key_hash "bcrypt"
+        datetime revoked_at "NULL"
+    }
+```
+
+Indexes behind the main queries: `checks (monitor_id, checked_at)` for a monitor's
+latest checks, `checks (worker_id, checked_at)` for worker degradation (D-015),
+`checks (checked_at)` for the 7-day purge, `incidents (monitor_id, started_at)` for
+incidents overlapping a period. Every table also has `created_at` (and `updated_at`
+on `organizations`, `monitors`), left out of the diagram.
 
 ## Configuration
 | Name | Where set | Used by | Notes |
 |---|---|---|---|
 | `PORT` | Environment | Web Server | HTTP listening port (default 3000) |
 | `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_RANDOM_ROOT_PASSWORD` | `.env` | `docker-compose.yml` | Local MySQL container credentials; root password generated at first start |
-| `DATABASE_URL` | Environment | All parts | MySQL connection string (`mysql://…`) |
+| `DATABASE_URL` | Environment | All parts, `npm run db:migrate` | MySQL connection string (`mysql://…`) |
+| `TEST_DATABASE_URL` | Environment, CI | `test/db/schema.test.ts` | Throwaway MySQL the schema tests wipe (name ends in `_test`); unset skips them |
 | `TELEGRAM_BOT_TOKEN` | Environment | Alert Dispatcher | Telegram bot token |
 | `SMTP_HOST` | Environment | Alert Dispatcher | Outbound SMTP email server |
 | `SMTP_PORT` | Environment | Alert Dispatcher | Outbound SMTP port |
@@ -83,9 +199,10 @@ worker processes) and `src/shared/` (code both use, e.g. the `Clock` in
 ## Build, deploy, runtime
 - Node.js (v20+) runtime with TypeScript.
 - Build step: `npm run build` compiles TypeScript to `dist/`.
+- Migrations: `npm run db:migrate` (after the build) applies pending `db/migrations/*.sql` to `DATABASE_URL`.
 - Runtime: Web server (`dist/web/server.js`, started with `npm run start:web`) and Workers (entry under `dist/worker/`, _planned_) run as separate processes.
 - Local database: `docker-compose.yml` runs MySQL 8.4 only, published on host port 3307, configured from `.env` (template: `.env.example`).
-- CI (`.github/workflows/ci.yml`): ledger lint, `npm ci`, `npm run build`, `npm test` on Node 22.
+- CI (`.github/workflows/ci.yml`): ledger lint, `npm ci`, `npm run build`, `npm test` on Node 22, with a `mysql:8.4` service for the schema tests.
 
 ## Boundaries
 - Public Status Page: Publicly readable; cached in-memory with sub-100ms response time; isolated from administrative write routes.

@@ -9,6 +9,7 @@
 - PATTERN-001 · Injectable clock interface for simulated-time tests · candidate
 - PATTERN-002 · Multi-worker ping confirmation before state change · candidate
 - PATTERN-003 · Version-polled in-memory cache invalidation on monitor state change · candidate
+- PATTERN-004 · Time columns get their value from the Clock, never a database default · candidate
 
 ---
 
@@ -19,6 +20,7 @@
 - **Example:** src/shared/clock.ts, test/shared/clock.test.ts
 - **Why:** Enables instant, 100% deterministic testing of 30-day/90-day intervals and cross-month uptime boundaries without test delays or flaky sleeps.
 - **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
 
 ## PATTERN-002 · Multi-worker ping confirmation before state change
 - **Status:** candidate
@@ -35,3 +37,11 @@
 - **Example:** docs/brief.md:22, D-020
 - **Why:** Guarantees sub-100ms response time while ensuring visitors see a status change within 30 seconds.
 - **Source:** docs · confidence high
+
+## PATTERN-004 · Time columns get their value from the Clock, never a database default
+- **Status:** candidate
+- **Use when:** Adding a `DATETIME(3)` column or writing a row that has one.
+- **How:** Declare time columns without `DEFAULT CURRENT_TIMESTAMP` or `ON UPDATE`, and pass `clock.now()` as a query parameter. A migration that inserts seed rows may use `UTC_TIMESTAMP(3)`.
+- **Example:** db/migrations/0001_initial_schema.sql, src/db/migrate.ts (`applied_at`)
+- **Why:** A database default reads the server's clock, which simulated-time tests cannot move (D-004, D-021).
+- **Source:** user · confidence high

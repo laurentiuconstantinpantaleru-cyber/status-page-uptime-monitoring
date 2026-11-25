@@ -14,6 +14,7 @@
 - D-001 · Node.js + TypeScript with Fastify for web API, SSR status page, and workers
 - D-002 · Server-rendered frontend with minimal vanilla JS for charts
 - D-020 · MySQL 8 with versioned migrations and in-memory cache for status page
+- D-021 · Plain SQL migrations applied forward-only by an own runner
 - D-004 · Vitest with injectable clock for simulated-time tests
 - D-005 · Multi-worker check architecture with two-phase failure confirmation
 - D-008 · Check workers co-located as separate processes on the same host

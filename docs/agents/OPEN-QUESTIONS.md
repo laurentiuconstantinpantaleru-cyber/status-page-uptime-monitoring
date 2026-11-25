@@ -16,6 +16,9 @@
 - Q-005 · What are the specific requirements requested in the 3 student interviews? · _answered_
 - Q-006 · How does the web in-memory cache learn about worker state changes? · _answered_
 - Q-007 · How often does the web process read the cache version number? · _answered_
+- Q-008 · How do users sign in to the admin interface?
+- Q-009 · How are recurring maintenance windows expressed?
+- Q-010 · What latency threshold do the seeded business monitors use?
 
 ---
 
@@ -24,6 +27,7 @@
 - **Blocks:** Live monitoring deployment and verification of the 14-day pre-delivery requirement.
 - **Who answers:** user
 - **Proposed answer:** The 2 local businesses are confirmed: `https://hugthemug.ro/` and `http://cafewien.ro/` at 5-minute interval (confirmed by user 2026-11-25, see D-016). The 10 student project URLs are currently being gathered in `MONITORS.md`.
+- **Confirmed:** 2026-11-26
 
 ## Q-002 · What are the thresholds for N (open incident) and M (resolve incident)?
 - **Status:** answered 2026-11-19
@@ -63,3 +67,18 @@
 - **Blocks:** Status page cache invalidation (D-020); how soon after a monitor status change visitors see it.
 - **Who answers:** user
 - **Answer:** Every 30 seconds.
+
+## Q-008 · How do users sign in to the admin interface?
+- **Status:** open
+- **Blocks:** Credential columns on `users` and the admin login.
+- **Who answers:** user
+
+## Q-009 · How are recurring maintenance windows expressed?
+- **Status:** open
+- **Blocks:** Recurring calendar windows (D-012); `maintenance_windows` holds one-off ranges only.
+- **Who answers:** user
+
+## Q-010 · What latency threshold do the seeded business monitors use?
+- **Status:** open
+- **Blocks:** Latency alerts for `hugthemug.ro` and `cafewien.ro`; their `latency_threshold_ms` is NULL until answered.
+- **Who answers:** user

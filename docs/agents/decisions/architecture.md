@@ -39,6 +39,16 @@
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26
 
+## D-021 · Plain SQL migrations applied forward-only by an own runner
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** Schema changes are numbered SQL files in `db/migrations/` (`NNNN_name.sql`), applied in order and forward only by `src/db/migrate.ts` (`npm run db:migrate`, driver `mysql2`) and recorded in `schema_migrations`. An applied migration is never edited; a mistake is fixed by a new migration. Time columns have no database default (`CURRENT_TIMESTAMP`); the application supplies every time from its `Clock`.
+- **Why:** The smallest tool that gives versioned migrations (D-020); the only new dependency is the MySQL driver the app needs anyway. Times from the `Clock` keep simulated-time tests in control of every stored timestamp (D-004).
+- **Rejected:** knex migrations (adds a query builder nobody asked for); dbmate (an external binary to install locally and in CI); database time defaults (bypass the simulated clock).
+- **Evidence:** src/db/migrate.ts, db/migrations/0001_initial_schema.sql
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
+
 ## D-004 · Vitest with injectable clock for simulated-time tests
 - **Status:** approved
 - **Date:** 2026-11-19
