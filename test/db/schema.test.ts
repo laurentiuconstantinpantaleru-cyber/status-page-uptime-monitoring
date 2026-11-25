@@ -8,7 +8,7 @@ import { FakeClock } from '../../src/shared/clock.js';
 // The database is wiped, so its name must end in `_test`.
 const url = process.env.TEST_DATABASE_URL;
 if (!url) {
-  console.warn('TEST_DATABASE_URL is not set: skipping the MySQL schema tests.');
+  process.stderr.write('TEST_DATABASE_URL is not set: skipping the MySQL schema tests.\n');
 }
 
 const T0 = new Date('2026-11-01T02:00:00.123Z');

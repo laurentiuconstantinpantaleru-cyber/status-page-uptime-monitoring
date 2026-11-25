@@ -9,6 +9,20 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    services:
+      # Throwaway database for the schema tests (test/db/schema.test.ts).
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: uptime_test
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+        ports:
+          - 3306:3306
+    env:
+      TEST_DATABASE_URL: mysql://root:test@127.0.0.1:3306/uptime_test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

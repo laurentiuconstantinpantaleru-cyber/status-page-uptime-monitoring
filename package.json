@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start:web": "node dist/web/server.js",
+    "db:migrate": "node dist/db/migrate.js",
     "test": "vitest run",
     "lint": "tsc -p tsconfig.json --noEmit && python3 docs/agents/tools/ledger-lint.py"
   },
