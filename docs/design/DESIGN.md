@@ -85,59 +85,72 @@ pulled back.
 - Token source in code: src/web/public/tokens.css
 
 ## Tokens
+Contrast ratios are WCAG 2.x, measured against the background named in the column.
+Status colors are for icons, bars, dots and borders only (≥ 3:1). Status *text* uses
+`--color-text-primary` next to the icon, so the amber never has to reach 4.5:1.
 
 ### Colors
-| Token | Light | Dark (Slate) | Purpose |
-|---|---|---|---|
-| `--color-bg-base` | `#ffffff` | `#0f172a` (Slate 900) | Main page background |
-| `--color-bg-surface` | `#f8fafc` (Slate 50) | `#1e293b` (Slate 800) | Card and container background |
-| `--color-bg-subtle` | `#f1f5f9` (Slate 100) | `#334155` (Slate 700) | Hover row background, chart bar background |
-| `--color-border` | `#e2e8f0` (Slate 200) | `#334155` (Slate 700) | Card borders, dividers |
-| `--color-border-strong` | `#cbd5e1` (Slate 300) | `#475569` (Slate 600) | Interactive control borders, inputs |
-| `--color-text-primary` | `#0f172a` (Slate 900) | `#f8fafc` (Slate 50) | Headings, primary text, metric values |
-| `--color-text-secondary` | `#475569` (Slate 600) | `#94a3b8` (Slate 400) | Labels, descriptions, subtitles |
-| `--color-text-muted` | `#64748b` (Slate 500) | `#64748b` (Slate 500) | Timestamps, footnotes, chart legends |
-| `--color-brand` | `#2563eb` (Blue 600) | `#3b82f6` (Blue 500) | Primary buttons, links, accents |
-| `--color-status-ok` | `#10b981` (Emerald 500) | `#34d399` (Emerald 400) | Service operational (Up) |
-| `--color-status-degraded` | `#f59e0b` (Amber 500) | `#fbbf24` (Amber 400) | High latency, degraded performance |
-| `--color-status-outage` | `#ef4444` (Red 500) | `#f87171` (Red 400) | Open incident, major outage (Down) |
-| `--color-status-maint` | `#3b82f6` (Blue 500) | `#60a5fa` (Blue 400) | Scheduled maintenance window |
+| Token | Light | Dark | Purpose | Contrast light / dark |
+|---|---|---|---|---|
+| `--color-bg-base` | `#ffffff` | `#0f172a` (Slate 900) | Page background | — |
+| `--color-bg-surface` | `#f8fafc` (Slate 50) | `#1e293b` (Slate 800) | Cards, containers | — |
+| `--color-bg-subtle` | `#f1f5f9` (Slate 100) | `#334155` (Slate 700) | Row hover, uptime bar track | — |
+| `--color-border` | `#e2e8f0` (Slate 200) | `#334155` (Slate 700) | Card borders, dividers (decorative) | — |
+| `--color-border-strong` | `#64748b` (Slate 500) | `#64748b` (Slate 500) | Input and control borders | 4.76 on base / 3.07 on surface |
+| `--color-text-primary` | `#0f172a` (Slate 900) | `#f8fafc` (Slate 50) | Headings, body, metric values | 17.85 / 17.06 |
+| `--color-text-secondary` | `#475569` (Slate 600) | `#cbd5e1` (Slate 300) | Labels, descriptions | 7.24 on surface / 9.85 on surface |
+| `--color-text-muted` | `#64748b` (Slate 500) | `#94a3b8` (Slate 400) | Timestamps, footnotes, legends; not on `bg-subtle` | 4.55 on surface / 5.71 on surface |
+| `--color-brand` | `#2563eb` (Blue 600) | `#60a5fa` (Blue 400) | Primary buttons, links, focus ring | 4.94 on surface / 5.75 on surface |
+| `--color-on-brand` | `#ffffff` | `#0f172a` (Slate 900) | Text and icons on `--color-brand` | 5.17 / 7.02 |
+| `--color-status-ok` | `#059669` (Emerald 600) | `#34d399` (Emerald 400) | Operational (Up) | 3.60 on surface / 7.61 |
+| `--color-status-degraded` | `#d97706` (Amber 600) | `#fbbf24` (Amber 400) | High latency, degraded | 3.04 on surface / 8.76 |
+| `--color-status-outage` | `#dc2626` (Red 600) | `#f87171` (Red 400) | Open incident (Down) | 4.83 / 5.29 |
+| `--color-status-maint` | `#7c3aed` (Violet 600) | `#a78bfa` (Violet 400) | Maintenance window | 5.70 / 5.38 |
+| `--color-status-nodata` | `#64748b` (Slate 500) | `#64748b` (Slate 500) | Uptime bar with no checks | 4.55 on surface / 3.07 |
+| `--shadow-card` | `0 1px 3px 0 rgba(15,23,42,0.08), 0 1px 2px -1px rgba(15,23,42,0.08)` | `0 0 0 1px #334155` | Card elevation; dark uses an outline, not a shadow | — |
 
 ### Typography
+System fonts stay (no download, which keeps the public page within its budget).
+Every number uses `font-variant-numeric: tabular-nums`, so columns of values line up.
+
 | Token | Family | Size / Line-height | Weight | Purpose |
 |---|---|---|---|---|
-| `--font-sans` | `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` | — | — | Body text, headings, buttons |
-| `--font-mono` | `ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace` | — | — | Latencies, uptime percentages, HTTP codes |
-| `--text-xs` | `--font-sans` | `11px / 16px` | 400 | Small labels, uptime bar legends |
+| `--font-sans` | `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` | — | — | Text, headings, buttons |
+| `--font-mono` | `ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace` | — | — | Every metric, timestamp, HTTP code, URL |
+| `--text-xs` | `--font-sans` | `12px / 16px` | 400 | Legends, uptime bar captions |
 | `--text-sm` | `--font-sans` | `13px / 20px` | 400 / 500 | Secondary text, table cells |
-| `--text-base` | `--font-sans` | `14px / 22px` | 400 | Body text, incident update notes |
-| `--text-lg` | `--font-sans` | `16px / 24px` | 600 | Card titles, component names |
-| `--text-xl` | `--font-sans` | `20px / 28px` | 700 | Status banner headline |
-| `--text-metric` | `--font-mono` | `13px / 18px` | 500 | Metric values (`24ms`, `99.98%`) |
+| `--text-base` | `--font-sans` | `15px / 24px` | 400 | Body, incident updates |
+| `--text-lg` | `--font-sans` | `17px / 26px` | 600 | Card titles, monitor names |
+| `--text-xl` | `--font-sans` | `22px / 30px` | 700 | Status banner headline (one per screen) |
+| `--text-metric` | `--font-mono` | `13px / 20px` | 500 | Inline metrics (`24 ms`, `200`, `14:05 UTC`) |
+| `--text-metric-lg` | `--font-mono` | `20px / 28px` | 600 | Headline metrics (`99.98%` per monitor) |
 
 ### Spacing
-| Token | Value | Purpose |
-|---|---|---|
-| `--space-1` | `4px` | Fine gaps, bar gaps |
-| `--space-2` | `8px` | Badge padding, icon gap |
-| `--space-3` | `12px` | Compact cell padding |
-| `--space-4` | `16px` | Standard card padding |
-| `--space-6` | `24px` | Section gap |
-| `--space-8` | `32px` | Page content padding |
-| `--space-12` | `48px` | Top-level header gap |
+4 px base. Airy layout: cards and sections get more room, and data inside them stays
+tight.
 
-### Radius and Shadows
 | Token | Value | Purpose |
 |---|---|---|
-| `--radius-sm` | `4px` | Individual uptime bars, form inputs |
-| `--radius-md` | `6px` | Buttons, incident cards |
-| `--radius-lg` | `8px` | Status banner container, major cards |
-| `--radius-pill` | `9999px` | Status badges and pills |
-| `--shadow-card` | `0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)` | Surface card shadow |
+| `--space-1` | `4px` | Uptime bar gap, icon-to-text in badges |
+| `--space-2` | `8px` | Badge padding, inline gaps |
+| `--space-3` | `12px` | Table cell padding, list row gap |
+| `--space-4` | `16px` | Gap between items inside a card |
+| `--space-6` | `24px` | Card padding |
+| `--space-8` | `32px` | Gap between cards and sections; page padding on mobile |
+| `--space-12` | `48px` | Page padding on desktop, header to content |
+| `--space-16` | `64px` | Top and bottom of the public status page |
+
+### Radius
+| Token | Value | Purpose |
+|---|---|---|
+| `--radius-sm` | `3px` | Uptime bars |
+| `--radius-md` | `6px` | Inputs, buttons, badges |
+| `--radius-lg` | `10px` | Cards, status banner |
+| `--radius-pill` | `9999px` | Status pills |
 
 ### Breakpoints
 | Name | Min | Max | Purpose |
 |---|---|---|---|
-| `mobile` | `0px` | `640px` | Single column stacked layout, horizontal scroll for 90d bars |
-| `tablet` | `641px` | `1024px` | Optimized tablet column |
-| `desktop` | `1025px` | `1280px` | Centered 960px container, full 90d uptime bars |
+| `mobile` | `0px` | `640px` | One column; uptime bars show the last 30 days, no horizontal scroll |
+| `tablet` | `641px` | `1024px` | One column, 90-day bars |
+| `desktop` | `1025px` | — | Centered 960 px container, 90-day bars |
