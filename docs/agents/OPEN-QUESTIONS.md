@@ -15,7 +15,7 @@
 - Q-004 · Which email transport/provider will be used for alerts and reports?
 - Q-005 · What are the specific requirements requested in the 3 student interviews? · _answered_
 - Q-006 · How does the web in-memory cache learn about worker state changes? · _answered_
-- Q-007 · How often does the web process read the cache version number?
+- Q-007 · How often does the web process read the cache version number? · _answered_
 
 ---
 
@@ -59,6 +59,7 @@
 - **Recorded as:** D-020
 
 ## Q-007 · How often does the web process read the cache version number?
-- **Status:** open
+- **Status:** answered 2026-11-26
 - **Blocks:** Status page cache invalidation (D-020); how soon after a monitor status change visitors see it.
 - **Who answers:** user
+- **Answer:** Every 30 seconds.
