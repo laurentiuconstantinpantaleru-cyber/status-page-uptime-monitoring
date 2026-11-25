@@ -13,7 +13,7 @@
 - Q-002 · What are the thresholds for N (open incident) and M (resolve incident)? · _answered_
 - Q-003 · What is the alert escalation contact and timeout policy? · _answered_
 - Q-004 · Which email transport/provider will be used for alerts and reports?
-- Q-005 · What are the specific requirements requested in the 3 student interviews?
+- Q-005 · What are the specific requirements requested in the 3 student interviews? · _answered_
 - Q-006 · How does the web in-memory cache learn about worker state changes?
 
 ---
@@ -22,7 +22,7 @@
 - **Status:** investigating
 - **Blocks:** Live monitoring deployment and verification of the 14-day pre-delivery requirement.
 - **Who answers:** user
-- **Proposed answer:** The 2 local businesses are confirmed: `https://hugthemug.ro/` and `http://cafewien.ro/` (5 min check interval). The 10 student project URLs are currently being gathered in `MONITORS.md`.
+- **Proposed answer:** The 2 local businesses are confirmed: `https://hugthemug.ro/` and `http://cafewien.ro/` at 5-minute interval (confirmed by user 2026-11-25, see D-016). The 10 student project URLs are currently being gathered in `MONITORS.md`.
 
 ## Q-002 · What are the thresholds for N (open incident) and M (resolve incident)?
 - **Status:** answered 2026-11-19
@@ -45,10 +45,10 @@
 - **Proposed answer:** Standard SMTP credentials via environment variables (e.g. Resend, Sendgrid, or Gmail SMTP).
 
 ## Q-005 · What are the specific requirements requested in the 3 student interviews?
-- **Status:** open
+- **Status:** answered 2026-11-25
 - **Blocks:** Feature prioritization and `INTERVIEW.md` documentation.
 - **Who answers:** user
-- **Proposed answer:** The user conducts the interviews directly and writes `INTERVIEW.md`.
+- **Answer:** The colleague interviews were run as an online form with 4 respondents; results are in `docs/survey-results.md` and `INTERVIEW.md`, both written by the user. The 2 local businesses gave consent by phone on 2026-11-25 (recorded in `MONITORS.md`).
 
 ## Q-006 · How does the web in-memory cache learn about worker state changes?
 - **Status:** open

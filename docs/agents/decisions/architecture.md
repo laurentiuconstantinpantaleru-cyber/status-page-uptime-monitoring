@@ -60,6 +60,17 @@
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-19
 
+## D-015 · Worker degradation detection and fault suppression
+
+- **Status:** approved
+- **Date:** 2026-11-25
+- **Rule:** A worker is classified as "degraded" in a check window when all three conditions hold: (a) at least `MIN_WORKER_MONITORS` (default: 3) of its monitors were checked in that window; (b) at least `WORKER_FAULT_THRESHOLD` % (default: 70 %) of those checks failed; (c) the other worker succeeds on the same monitors in the same window. When a worker is degraded, its incident declarations for that window are suppressed and a `worker_fault` event is recorded in the database and surfaced in the admin panel. When fewer than `MIN_WORKER_MONITORS` monitors were checked, no degradation judgment is made and the two-phase confirmation from D-005 applies exclusively. Both thresholds are environment-variable-configurable.
+- **Why:** Prevents false incidents when a worker's local network (DNS, routing) fails; required explicitly by docs/brief.md §Twist.
+- **Rejected:** Always trusting a single-worker failure without cross-worker comparison (causes false incidents on worker network blips).
+- **Evidence:** docs/brief.md:24, docs/brief.md:39
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-25
+
 ## D-009 · Explicit out-of-scope architectural and functional boundaries
 - **Status:** approved
 - **Date:** 2026-11-19

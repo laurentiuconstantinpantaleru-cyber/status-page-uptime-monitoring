@@ -7,6 +7,9 @@
 <!-- graffino-agentic:end -->
 
 ## Index
+### [Api](decisions/api.md)
+- D-017 · API key levels, storage, and rate limiting
+
 ### [Architecture](decisions/architecture.md)
 - D-001 · Node.js + TypeScript with Fastify for web API, SSR status page, and workers
 - D-002 · Server-rendered frontend with minimal vanilla JS for charts
@@ -14,6 +17,7 @@
 - D-004 · Vitest with injectable clock for simulated-time tests
 - D-005 · Multi-worker check architecture with two-phase failure confirmation
 - D-008 · Check workers co-located as separate processes on the same host
+- D-015 · Worker degradation detection and fault suppression
 - D-009 · Explicit out-of-scope architectural and functional boundaries
 
 ### [Incidents](decisions/incidents.md)
@@ -24,7 +28,14 @@
 - D-014 · Human-authored incident timeline updates with standardized lifecycle stages
 
 ### [Monitoring](decisions/monitoring.md)
+- D-016 · Default check interval of 5 minutes, range 1–60 minutes
 - D-010 · TLS certificate expiration warnings at 30 days and 7 days reminder
 - D-011 · Raw check retention for 7 days with hourly and daily roll-up compaction
+
+### [Reporting](decisions/reporting.md)
+- D-019 · Monthly uptime report: schedule, recipients, format, and idempotency
+
+### [Roles](decisions/roles.md)
+- D-018 · Role permission matrix
 
 ---
