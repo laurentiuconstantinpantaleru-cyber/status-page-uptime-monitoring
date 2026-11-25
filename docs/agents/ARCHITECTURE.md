@@ -36,15 +36,20 @@ sends alerts, and serves sub-100ms cached public status pages per organization.
 ```
 
 ## Parts
+Source is split into three roots: `src/web/` (web process), `src/worker/` (check
+worker processes) and `src/shared/` (code both use, e.g. the `Clock` in
+`src/shared/clock.ts`). Paths marked _planned_ do not exist yet.
+
 | Part | Path | Responsibility | Talks to |
 |---|---|---|---|
-| Web Server | `src/web/` | Serves Fastify REST API, SSR status pages, admin views | PostgreSQL, in-memory cache |
-| In-Memory Cache | `src/cache/` | Caches rendered status payloads under 100ms | Web Server |
-| Scheduler | `src/scheduler/` | Drift-free execution planning for monitor probes | Check Workers |
-| Check Workers | `src/workers/` | Executes HTTP/TLS/keyword probes; performs 2nd worker confirmation | PostgreSQL, External Targets |
-| Incident Engine | `src/incidents/` | State machine opening/closing incidents and calculating uptime | PostgreSQL, Alert Dispatcher |
-| Alert Dispatcher | `src/alerts/` | Sends Telegram and email notifications with escalation | Telegram API, SMTP |
-| Roll-up Job | `src/jobs/rollup/`| Aggregates raw check data older than 7 days | PostgreSQL |
+| Web Server | `src/web/` (`app.ts`, `server.ts`) | Serves Fastify REST API, SSR status pages, admin views; `GET /health` | PostgreSQL, in-memory cache |
+| In-Memory Cache | `src/web/` _planned_ | Caches rendered status payloads under 100ms | Web Server |
+| Scheduler | `src/worker/` _planned_ | Drift-free execution planning for monitor probes | Check Workers |
+| Check Workers | `src/worker/` _planned_ | Executes HTTP/TLS/keyword probes; performs 2nd worker confirmation | PostgreSQL, External Targets |
+| Incident Engine | `src/shared/` _planned_ | State machine opening/closing incidents and calculating uptime | PostgreSQL, Alert Dispatcher |
+| Alert Dispatcher | `src/worker/` _planned_ | Sends Telegram and email notifications with escalation | Telegram API, SMTP |
+| Roll-up Job | `src/worker/` _planned_ | Aggregates raw check data older than 7 days | PostgreSQL |
+| Clock | `src/shared/clock.ts` | `Clock` interface, `systemClock`, `FakeClock` for simulated-time tests | All time-dependent code |
 
 ## Data flow
 1. **Probe Trigger:** Scheduler dispatches scheduled monitor checks to Worker 1 without timing drift.
@@ -67,6 +72,7 @@ sends alerts, and serves sub-100ms cached public status pages per organization.
 | Name | Where set | Used by | Notes |
 |---|---|---|---|
 | `PORT` | Environment | Web Server | HTTP listening port (default 3000) |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | `.env` | `docker-compose.yml` | Local PostgreSQL container credentials |
 | `DATABASE_URL` | Environment | All parts | PostgreSQL connection string |
 | `TELEGRAM_BOT_TOKEN` | Environment | Alert Dispatcher | Telegram bot token |
 | `SMTP_HOST` | Environment | Alert Dispatcher | Outbound SMTP email server |
@@ -77,7 +83,9 @@ sends alerts, and serves sub-100ms cached public status pages per organization.
 ## Build, deploy, runtime
 - Node.js (v20+) runtime with TypeScript.
 - Build step: `npm run build` compiles TypeScript to `dist/`.
-- Runtime: Web server (`dist/web/server.js`) and Workers (`dist/workers/worker.js`) run as separate processes.
+- Runtime: Web server (`dist/web/server.js`, started with `npm run start:web`) and Workers (entry under `dist/worker/`, _planned_) run as separate processes.
+- Local database: `docker-compose.yml` runs PostgreSQL 17 only, configured from `.env` (template: `.env.example`).
+- CI (`.github/workflows/ci.yml`): ledger lint, `npm ci`, `npm run build`, `npm test` on Node 22.
 
 ## Boundaries
 - Public Status Page: Publicly readable; cached in-memory with sub-100ms response time; isolated from administrative write routes.

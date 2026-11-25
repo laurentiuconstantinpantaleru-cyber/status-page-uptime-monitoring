@@ -15,8 +15,8 @@
 ## PATTERN-001 · Injectable clock interface for simulated-time tests
 - **Status:** candidate
 - **Use when:** Implementing or testing the drift-free scheduler, uptime calculations, or maintenance windows.
-- **How:** Accept an injectable `Clock` interface (`now(): Date`, `advance(ms: number)`) across domain services rather than calling `Date.now()` or `new Date()` directly.
-- **Example:** docs/brief.md:24
+- **How:** Accept an injectable `Clock` interface (`now(): Date`) across domain services rather than calling `Date.now()` or `new Date()` directly. Production code gets `systemClock`; tests get `FakeClock`, which alone has `advance(ms: number)`, so production code cannot move time.
+- **Example:** src/shared/clock.ts, test/shared/clock.test.ts
 - **Why:** Enables instant, 100% deterministic testing of 30-day/90-day intervals and cross-month uptime boundaries without test delays or flaky sleeps.
 - **Source:** user · confidence high
 
