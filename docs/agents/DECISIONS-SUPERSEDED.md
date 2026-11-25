@@ -8,5 +8,7 @@
 <!-- graffino-agentic:end -->
 
 ## Index
+### [Architecture](decisions/architecture.md)
+- D-003 · PostgreSQL with versioned migrations and in-memory cache for status page · _superseded-by D-020_
 
 ---

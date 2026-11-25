@@ -21,14 +21,23 @@
 - **Confirmed:** 2026-11-19
 
 ## D-003 · PostgreSQL with versioned migrations and in-memory cache for status page
-- **Status:** approved
+- **Status:** superseded-by D-020
 - **Date:** 2026-11-19
 - **Rule:** Use PostgreSQL as the relational datastore with versioned migrations. Do not use Redis; use an in-process in-memory cache with immediate invalidation on monitor state transition to serve public status page data.
 - **Why:** Reliable ACID transactions for incidents, maintenance windows, and roll-ups, while in-memory caching keeps operational complexity low without external caching services.
 - **Rejected:** Redis (unnecessary complexity for single-host setup), MongoDB (weak relational consistency for incident tracking).
 - **Evidence:** docs/brief.md:21, docs/brief.md:22
 - **Source:** user · confidence high
-- **Confirmed:** 2026-11-19
+
+## D-020 · MySQL 8 with versioned migrations and in-memory cache for status page
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** Use MySQL 8 as the relational datastore with versioned migrations. All timestamps are stored in UTC as `DATETIME(3)`, and every connection sets `time_zone = '+00:00'`. Do not use Redis; use an in-process in-memory cache in the web process. Workers increment a version number in the database on every monitor state change; the web process reads it periodically and invalidates the cache when it changes. The read interval is open (Q-007).
+- **Why:** The user knows MySQL better.
+- **Rejected:** PostgreSQL (the user knows MySQL better); Redis (unnecessary complexity for single-host setup, as in D-003); MongoDB (weak relational consistency for incident tracking, as in D-003); LISTEN/NOTIFY for invalidation (not available in MySQL).
+- **Evidence:** docs/brief.md:21, docs/brief.md:22
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
 
 ## D-004 · Vitest with injectable clock for simulated-time tests
 - **Status:** approved

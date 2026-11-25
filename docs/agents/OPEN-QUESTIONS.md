@@ -14,7 +14,8 @@
 - Q-003 · What is the alert escalation contact and timeout policy? · _answered_
 - Q-004 · Which email transport/provider will be used for alerts and reports?
 - Q-005 · What are the specific requirements requested in the 3 student interviews? · _answered_
-- Q-006 · How does the web in-memory cache learn about worker state changes?
+- Q-006 · How does the web in-memory cache learn about worker state changes? · _answered_
+- Q-007 · How often does the web process read the cache version number?
 
 ---
 
@@ -51,7 +52,13 @@
 - **Answer:** The colleague interviews were run as an online form with 4 respondents; results are in `docs/survey-results.md` and `INTERVIEW.md`, both written by the user. The 2 local businesses gave consent by phone on 2026-11-25 (recorded in `MONITORS.md`).
 
 ## Q-006 · How does the web in-memory cache learn about worker state changes?
-- **Status:** open
+- **Status:** answered 2026-11-26
 - **Blocks:** Inter-process cache invalidation mechanism between check workers and the web process.
 - **Who answers:** user
-- **Proposed answer:** Options under evaluation include PostgreSQL LISTEN/NOTIFY, version polling in the database, or an internal local socket/IPC.
+- **Answer:** Workers increment a version number in the database on every monitor state change; the web process reads it periodically and invalidates the cache when it changes. MySQL has no LISTEN/NOTIFY. Read interval: Q-007.
+- **Recorded as:** D-020
+
+## Q-007 · How often does the web process read the cache version number?
+- **Status:** open
+- **Blocks:** Status page cache invalidation (D-020); how soon after a monitor status change visitors see it.
+- **Who answers:** user
