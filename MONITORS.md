@@ -4,8 +4,13 @@ Live monitoring targets for the project. Minimum 12 monitors required (10 studen
 
 ## Local Companies (2/2 Confirmed)
 
-| Target Name | URL | Check Interval | Check Types | Contact / Notes |
-|---|---|---|---|---|
+
+
+| # | Proprietar | URL  | Ce verific | Interval |
+|---|---|---|---|---|---|
+| 1 | Hug The Mug, https://hugthemug.ro/ | 25.11.2026, telefon | HTTP 200, timp de răspuns, expirare TLS | 5 min |
+| 2 | Cafe Wien Sibiu | http://cafewien.ro/ | 25.11.2026, telefon | HTTP 200, timp de răspuns | 5 min |
+
 
 ## Student Projects (0/10 Confirmed — In Progress)
 
