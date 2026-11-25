@@ -1,17 +1,20 @@
 services:
-  postgres:
-    image: postgres:17
+  mysql:
+    image: mysql:8.4
     restart: unless-stopped
     env_file: .env
     ports:
-      - "5432:5432"
+      # Host 3307: 3306 is often taken by a locally installed MySQL.
+      - "3307:3306"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      # TCP ping: the temporary init server runs without networking, so this stays
+      # unhealthy until the real server is up. A ping needs no credentials.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
 
 volumes:
-  postgres-data:
+  mysql-data:

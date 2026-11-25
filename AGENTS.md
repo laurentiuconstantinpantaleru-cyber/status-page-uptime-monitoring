@@ -82,7 +82,7 @@ Provides HTTP/TLS/keyword/latency checks, automated incident lifecycle, maintena
 email/Telegram alerts, sub-100ms cached public status pages, and monthly uptime reporting.
 
 ## 2. Stack and commands
-Node.js, TypeScript, Fastify, PostgreSQL, Vitest.
+Node.js, TypeScript, Fastify, MySQL 8, Vitest.
 
 ```bash
 # install dependencies
@@ -109,7 +109,7 @@ python3 docs/agents/tools/ledger-lint.py
 - Run check workers in separate processes; require secondary confirmation before declaring an incident.
 - Drift-free scheduling: all timing logic must be verified using simulated clocks, never sleep.
 - Raw check retention is 7 days, compacted into hourly and daily roll-ups thereafter.
-- Cache public status pages in-memory and invalidate within one version-read interval (D-020, Q-007) of a monitor status change.
+- Cache public status pages in-memory and invalidate within 30 seconds of a monitor status change (D-020).
 
 ## 5. Release
 Branch `main`. Releases tagged with semver (`v1.x.y`).

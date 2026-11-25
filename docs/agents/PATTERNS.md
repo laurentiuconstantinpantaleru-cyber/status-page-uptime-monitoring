@@ -8,7 +8,7 @@
 ## Index
 - PATTERN-001 · Injectable clock interface for simulated-time tests · candidate
 - PATTERN-002 · Multi-worker ping confirmation before state change · candidate
-- PATTERN-003 · Event-driven in-memory cache invalidation on monitor state change · candidate
+- PATTERN-003 · Version-polled in-memory cache invalidation on monitor state change · candidate
 
 ---
 
@@ -28,10 +28,10 @@
 - **Why:** Avoids false positives from isolated worker network or DNS interruptions.
 - **Source:** docs · confidence high
 
-## PATTERN-003 · Event-driven in-memory cache invalidation on monitor state change
+## PATTERN-003 · Version-polled in-memory cache invalidation on monitor state change
 - **Status:** candidate
 - **Use when:** Serving public status page components and uptime summaries.
-- **How:** Cache rendered payload/HTML in memory with a short TTL (e.g. 60s) and emit an internal event to invalidate and recompute the cache immediately whenever an incident opens, closes, or updates.
-- **Example:** docs/brief.md:22
-- **Why:** Guarantees sub-100ms response time while ensuring visitors see up-to-the-minute status changes.
+- **How:** Cache rendered payload/HTML in memory in the web process. Workers increment a version number in the database whenever an incident opens, closes, or updates; the web process reads it every 30 seconds and drops the cache when it changed (D-020).
+- **Example:** docs/brief.md:22, D-020
+- **Why:** Guarantees sub-100ms response time while ensuring visitors see a status change within 30 seconds.
 - **Source:** docs · confidence high
