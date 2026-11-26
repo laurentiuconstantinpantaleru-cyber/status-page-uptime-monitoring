@@ -48,7 +48,7 @@
 - **Rejected:** Fully automated binary up/down incident messages without human status notes.
 - **Evidence:** docs/survey-results.md:14
 - **Source:** user · confidence high
-- **Confirmed:** 2026-11-19
+- **Confirmed:** 2026-11-26
 
 ## D-028 · Checks keep running during maintenance; no incident opens
 - **Status:** approved
@@ -77,5 +77,15 @@
 - **Why:** D-012 asks for recurring calendar windows; the user answered Q-009 on 2026-11-26 (daily and weekly, UTC, several weekdays, a chosen first day, extension on a second press). Expanding at read time needs no job and keeps a rule's edits from leaving stale rows.
 - **Rejected:** Generating rows in `maintenance_windows` from a job (a new job; stale rows after an edit); a full RRULE field or a recurrence library (daily and weekly do not need one); deleting a rule (would rewrite past uptime and monthly reports, D-019).
 - **Evidence:** src/shared/maintenance.ts, src/db/maintenance.ts, src/web/maintenance/store.ts, db/migrations/0006_maintenance_schedules.sql, test/shared/maintenance.test.ts
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
+
+## D-032 · Incidents and uptime on the public status page
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** Each component shows two uptime numbers from `uptime()` (D-030): over the 90 × 24 h and the 30 × 24 h before now, "—" without history; the page loads incidents and maintenance over those 90 × 24 h. Each open incident shows as an "Active incident" card with its updates newest first, the newest stage in its eyebrow; with no update yet it says "No updates yet." and shows no stage and no generated text (D-014). Incidents have no written title: the title is the monitor's name and a phrase for the cause the incident opened with (e.g. "Bookings API timed out"). Past incidents: resolved ones of the last 90 days, grouped by the UTC day they started, newest first (Q-013).
+- **Why:** The user approved the plan's recommendations on 2026-11-26: both periods on the card, a title without a migration, no automated message standing in for a human update.
+- **Rejected:** A `title` column on `incidents` (a migration and an admin field nobody writes yet); a stock "We are looking into it." update (D-014 rejects automated messages); only the 90-day number (the request asks for 30 too).
+- **Evidence:** src/web/status/model.ts (`monitorUptime`, `pastIncidents`), src/web/status/render.ts, src/web/views/status.html, test/web/status-page.test.ts
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26

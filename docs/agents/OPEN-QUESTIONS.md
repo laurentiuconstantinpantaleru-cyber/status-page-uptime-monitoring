@@ -38,7 +38,7 @@
 ### [Status page](questions/status-page.md)
 - Q-011 · Which time zone does the public status page show times in? · _answered_
 - Q-012 · What period and which monitor does the public response time chart show? · _investigating_
-- Q-013 · How far back does the public status page list past incidents?
+- Q-013 · How far back does the public status page list past incidents? · _answered_
 - Q-014 · How are monitors grouped on the public status page? · _answered_
 - Q-015 · Which status wins when several apply, in the overall banner and in a daily bar? · _answered_
 - Q-017 · Does the public status page share DS-p26-header or keep its own header variant?

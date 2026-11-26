@@ -25,6 +25,7 @@
 - **Rules:** Status page endpoints must be cached in-memory and respond in under 100ms. Monitor management routes require API key authentication.
 - **Evidence:** docs/brief.md:14, docs/brief.md:16, docs/brief.md:22
 - **Source:** docs · confidence high
+- **Confirmed:** 2026-11-26
 
 ## Consumed
 

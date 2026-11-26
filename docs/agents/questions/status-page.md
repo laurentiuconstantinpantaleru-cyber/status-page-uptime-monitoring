@@ -16,11 +16,11 @@
 - **Confirmed:** 2026-11-26
 
 ## Q-013 · How far back does the public status page list past incidents?
-- **Status:** open
+- **Status:** answered 2026-11-26
 - **Blocks:** The past incidents list on DS-p26-public-status.
 - **Who answers:** user
-- **Proposed answer:** The same 90 days as the uptime bars; the empty state reads "No incidents in the last 90 days."
-- **Confirmed:** 2026-11-26
+- **Answer:** Resolved incidents of the last 90 days, grouped by the UTC day they started, newest first; the empty state reads "No incidents in the last 90 days."
+- **Recorded as:** D-032
 
 ## Q-014 · How are monitors grouped on the public status page?
 - **Status:** answered 2026-11-26

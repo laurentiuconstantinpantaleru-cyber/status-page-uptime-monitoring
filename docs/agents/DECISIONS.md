@@ -32,6 +32,7 @@
 - D-028 · Checks keep running during maintenance; no incident opens
 - D-030 · Uptime ratio from incidents and maintenance
 - D-031 · Recurring maintenance rules and the quick button's extension
+- D-032 · Incidents and uptime on the public status page
 
 ### [Monitoring](decisions/monitoring.md)
 - D-016 · Default check interval of 5 minutes, range 1–60 minutes
