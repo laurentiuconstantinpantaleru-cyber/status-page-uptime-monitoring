@@ -22,8 +22,8 @@
 - Q-011 · Which time zone does the public status page show times in? · _answered_
 - Q-012 · What period and which monitor does the public response time chart show? · _investigating_
 - Q-013 · How far back does the public status page list past incidents?
-- Q-014 · How are monitors grouped on the public status page?
-- Q-015 · Which status wins when several apply, in the overall banner and in a daily bar?
+- Q-014 · How are monitors grouped on the public status page? · _answered_
+- Q-015 · Which status wins when several apply, in the overall banner and in a daily bar? · _answered_
 - Q-016 · Where do the API and status badge docs live?
 - Q-017 · Does the public status page share DS-p26-header or keep its own header variant?
 
@@ -113,18 +113,16 @@
 - **Confirmed:** 2026-11-26
 
 ## Q-014 · How are monitors grouped on the public status page?
-- **Status:** open
+- **Status:** answered 2026-11-26
 - **Blocks:** The grouped component cards on DS-p26-public-status ("Local businesses", "Student projects"); `monitors` has no group column today (`db/migrations/0001_initial_schema.sql`).
 - **Who answers:** user
-- **Proposed answer:** A nullable group name on each monitor, set by an organization admin; monitors without one go in a card titled "Other". Cards keep the order in which groups were created.
-- **Confirmed:** 2026-11-26
+- **Answer:** For now `GET /status` shows every monitor, one card per organization, in the order organizations were created; no schema change. A group name per monitor (the earlier proposed answer) can come later.
 
 ## Q-015 · Which status wins when several apply, in the overall banner and in a daily bar?
-- **Status:** open
+- **Status:** answered 2026-11-26
 - **Blocks:** The overall status banner and the colour of each daily uptime bar on DS-p26-public-status.
 - **Who answers:** user
-- **Proposed answer:** Down, then Degraded, then Maintenance, then Operational, as drawn in the mock. "No data" counts only when no monitor (or no check that day) has data. A day shows the worst status it had.
-- **Confirmed:** 2026-11-26
+- **Answer:** Down, then Degraded, then Maintenance, then Operational. "No data" counts only when no monitor (or no check that day) has data. A day shows the worst status it had.
 
 ## Q-016 · Where do the API and status badge docs live?
 - **Status:** open

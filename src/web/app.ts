@@ -1,9 +1,49 @@
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify';
+import { type Clock, systemClock } from '../shared/clock.js';
+import { StatusCache } from './status/cache.js';
+import type { StatusData } from './status/model.js';
+import { renderErrorPage, renderStatusPage } from './status/render.js';
 
-export function buildApp(options: FastifyServerOptions = {}): FastifyInstance {
+/** Where the public status page reads from: MySQL in production, a fake in tests. */
+export interface StatusSource {
+  load(now: Date): Promise<StatusData>;
+  readVersion(): Promise<number>;
+}
+
+export interface AppDeps {
+  clock?: Clock;
+  /** Without one, `GET /status` is not registered. */
+  status?: StatusSource;
+}
+
+export function buildApp(options: FastifyServerOptions = {}, deps: AppDeps = {}): FastifyInstance {
   const app = Fastify(options);
+  const clock = deps.clock ?? systemClock;
 
   app.get('/health', async () => ({ status: 'ok' }));
+
+  const source = deps.status;
+  if (source) {
+    const cache = new StatusCache({
+      clock,
+      readVersion: () => source.readVersion(),
+      render: async () => {
+        const now = clock.now();
+        return renderStatusPage(await source.load(now), now);
+      },
+    });
+
+    app.get('/status', async (request, reply) => {
+      reply.type('text/html; charset=utf-8');
+      try {
+        return await cache.get();
+      } catch (error) {
+        request.log.error(error, 'status page could not load');
+        reply.code(503);
+        return renderErrorPage();
+      }
+    });
+  }
 
   return app;
 }

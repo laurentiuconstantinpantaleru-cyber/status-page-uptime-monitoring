@@ -38,6 +38,7 @@
 - **Example:** docs/brief.md:22, D-020
 - **Why:** Guarantees sub-100ms response time while ensuring visitors see a status change within 30 seconds.
 - **Source:** docs · confidence high
+- **Confirmed:** 2026-11-26
 
 ## PATTERN-004 · Time columns get their value from the Clock, never a database default
 - **Status:** candidate
