@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monthly reports — Campus Uptime (DS-p26-admin-reports, draft)</title>
+<style>
+/* Design tokens from docs/design/DESIGN.md (the token source in code). Nothing else goes here. */
+:root {
+  --color-bg-base: #f8fafc;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-strong: #64748b;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-brand: #2563eb;
+  --color-on-brand: #ffffff;
+  --color-status-ok: #059669;
+  --color-status-degraded: #d97706;
+  --color-status-outage: #dc2626;
+  --color-status-maint: #7c3aed;
+  --color-status-nodata: #64748b;
+  --shadow-card: 0 1px 3px 0 rgba(15,23,42,0.08), 0 1px 2px -1px rgba(15,23,42,0.08);
+  --wash-mix: 6%;
+  --gradient-brand-soft: linear-gradient(to bottom, color-mix(in srgb, var(--color-brand) var(--wash-mix), var(--color-bg-base)) 0, var(--color-bg-base) 320px);
+  --bg-dots: radial-gradient(circle, var(--color-border) 1px, transparent 1.5px) 0 0 / var(--space-6) var(--space-6);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --text-xs: 400 12px/16px var(--font-sans);
+  --text-sm: 400 13px/20px var(--font-sans);
+  --text-sm-strong: 500 13px/20px var(--font-sans);
+  --text-base: 400 15px/24px var(--font-sans);
+  --text-lg: 600 17px/26px var(--font-sans);
+  --text-2xl: 600 28px/34px var(--font-sans);
+  --text-metric: 500 13px/20px var(--font-mono);
+  --text-metric-lg: 600 20px/28px var(--font-mono);
+
+  --space-0-5: 2px; --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px;
+
+  --radius-sm: 3px; --radius-md: 6px; --radius-lg: 12px; --radius-pill: 9999px;
+  --border-accent: 4px;
+
+  --container-max: 800px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+    --color-border: #23272f; --color-border-strong: #64748b;
+    --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
+    --color-brand: #60a5fa; --color-on-brand: #0f172a;
+    --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
+    --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
+    --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+    --wash-mix: 14%;
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+  --color-border: #23272f; --color-border-strong: #64748b;
+  --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
+  --color-brand: #60a5fa; --color-on-brand: #0f172a;
+  --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
+  --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
+  --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+  --wash-mix: 14%;
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+/* Brand wash at the top, dots over it; no --color-text-muted on the wash (DESIGN.md) */
+body { margin: 0; min-height: 100vh; color: var(--color-text-primary); font: var(--text-base);
+  background: var(--bg-dots), var(--gradient-brand-soft) no-repeat, var(--color-bg-base); }
+.num, time, code { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+a { color: var(--color-brand); text-decoration-color: currentColor; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; border-radius: var(--radius-sm); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+h1, h2, h3, h4, p, ol, ul, dl, dd, fieldset, figure { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+fieldset { border: 0; padding: 0; min-width: 0; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- Layout: one narrow centered column; the header aligns to it ---------- */
+.col { width: min(100% - 2 * var(--space-12), var(--container-max)); margin: 0 auto; }
+@media (max-width: 1024px) { .col { width: min(100% - 2 * var(--space-8), var(--container-max)); } }
+@media (max-width: 640px) { .col { width: calc(100% - 2 * var(--space-4)); } }
+.page { padding: var(--space-12) 0 var(--space-16); display: grid; gap: var(--space-12); }
+@media (max-width: 640px) { .page { padding: var(--space-6) 0 var(--space-12); gap: var(--space-8); } }
+.section { display: grid; gap: var(--space-4); min-width: 0; }
+.section-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); align-items: baseline; justify-content: space-between; }
+.section-head h2 { font: var(--text-lg); }
+.meta { font: var(--text-sm); color: var(--color-text-muted); }
+.card { background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); min-width: 0; }
+
+/* ================= Header (same as DS-p26-public-status) ================= */
+.site-header { border-bottom: 1px solid var(--color-border); position: relative; }
+.bar { display: flex; align-items: center; gap: var(--space-6); min-height: var(--space-16); }
+.brand-group { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.brand { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--color-text-primary);
+  text-decoration: none; font: var(--text-lg); border-radius: var(--radius-md); }
+.brand svg { width: var(--space-8); height: var(--space-8); flex: none; color: var(--color-brand); }
+.brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav { display: flex; align-items: center; gap: var(--space-1); }
+.nav-link { display: inline-flex; align-items: center; min-height: var(--space-8); padding: 0 var(--space-3);
+  border-radius: var(--radius-pill); white-space: nowrap; font: var(--text-sm-strong); color: var(--color-text-secondary); text-decoration: none; }
+.nav-link:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+.nav-link[aria-current="page"] { color: var(--color-text-primary); background: var(--color-bg-subtle); }
+.actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; flex: none; }
+.pill { display: inline-flex; align-items: center; justify-content: center; min-height: var(--space-8); padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer;
+  font: var(--text-sm-strong); color: var(--color-text-primary); text-decoration: none; white-space: nowrap; }
+.pill:hover { background: var(--color-bg-subtle); }
+.icon-btn { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); flex: none; padding: 0;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer; color: var(--color-text-primary); }
+.icon-btn:hover { background: var(--color-bg-subtle); }
+.icon-btn svg { width: var(--space-4); height: var(--space-4); }
+.theme-btn .i-sun, :root[data-effective="dark"] .theme-btn .i-moon { display: none; }
+:root[data-effective="dark"] .theme-btn .i-sun { display: block; }
+.menu { display: none; position: static; }
+.menu > summary { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); list-style: none; cursor: pointer;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); color: var(--color-text-primary); }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu > summary:hover { background: var(--color-bg-subtle); }
+.menu > summary svg { width: var(--space-4); height: var(--space-4); }
+.menu .i-close, .menu[open] .i-open { display: none; }
+.menu[open] .i-close { display: block; }
+@media (pointer: coarse) { .pill, .nav-link { min-height: var(--space-12); } .icon-btn, .menu > summary { width: var(--space-12); height: var(--space-12); } }
+
+.drawer { position: absolute; left: 0; right: 0; top: 100%; z-index: 20; background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border); box-shadow: var(--shadow-card); padding: var(--space-2) 0 var(--space-6); }
+.drawer-list > li { border-bottom: 1px solid var(--color-border); }
+.drawer-link { display: flex; align-items: center; min-height: var(--space-12); font: var(--text-base); font-weight: 500;
+  color: var(--color-text-primary); text-decoration: none; }
+.drawer-actions { display: none; gap: var(--space-2); margin-top: var(--space-4); }
+.drawer-actions .pill { min-height: var(--space-12); width: 100%; }
+@media (max-width: 1024px) {
+  .bar { gap: var(--space-4); }
+  .nav { display: none; }
+  .menu { display: block; }
+}
+@media (max-width: 640px) {
+  .bar { gap: var(--space-2); min-height: var(--space-16); }
+  .actions .pill { display: none; }
+  .drawer-actions { display: grid; }
+}
+/* ================= end header ================= */
+
+/* ---------- Status icons (shape + text, never color alone) ---------- */
+.icon { width: var(--space-4); height: var(--space-4); flex: none; }
+.icon-sm { width: var(--space-3); height: var(--space-3); flex: none; }
+.s-ok { color: var(--color-status-ok); }
+.s-degraded { color: var(--color-status-degraded); }
+.s-outage { color: var(--color-status-outage); }
+.s-maint { color: var(--color-status-maint); }
+.s-nodata { color: var(--color-status-nodata); }
+/* Status badge: pill on the surface, icon in the status color, label in text-primary */
+.badge { display: inline-flex; gap: var(--space-1); align-items: center; min-height: var(--space-6); padding: 0 var(--space-2);
+  border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-bg-surface);
+  font: var(--text-sm-strong); color: var(--color-text-primary); white-space: nowrap; }
+.badge .icon { width: var(--space-3); height: var(--space-3); }
+
+/* ---------- Empty and error (shared)  ---------- */
+.empty { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-6); }
+.empty p { font: var(--text-base); color: var(--color-text-secondary); }
+.btn { font: var(--text-sm-strong); min-height: var(--space-8); padding: 0 var(--space-4); border-radius: var(--radius-pill); cursor: pointer;
+  background: var(--color-bg-surface); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); }
+.btn:hover { background: var(--color-bg-subtle); }
+.btn:active { background: var(--color-border); }
+@media (pointer: coarse) { .btn { min-height: var(--space-12); } }
+
+/* ---------- Footer ---------- */
+.site-footer:focus { outline: none; }
+.site-footer { scroll-margin-top: var(--space-8); display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); justify-content: space-between;
+  padding-top: var(--space-6); border-top: 1px solid var(--color-border); font: var(--text-sm); color: var(--color-text-muted); }
+.site-footer .f-notes { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-6); }
+
+/* ---------- This screen ---------- */
+.head { display: grid; gap: var(--space-1); }
+.head h1 { font: var(--text-2xl); letter-spacing: -0.02em; }
+.org { font: var(--text-sm-strong); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.role-note { font: var(--text-sm); color: var(--color-text-secondary); max-width: 60ch; }
+.section { display: grid; gap: var(--space-4); }
+.section-head h2 { font: var(--text-lg); overflow-wrap: anywhere; }
+.meta { font: var(--text-sm); color: var(--color-text-muted); }
+.months { display: grid; }
+.month { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: center;
+  padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); }
+.month:first-child { border-top: 0; }
+@media (max-width: 640px) { .month { grid-template-columns: 1fr; padding: var(--space-4); } }
+.month h3 { font: var(--text-lg); }
+.groups { display: grid; gap: var(--space-12); }
+@media (max-width: 640px) { .groups { gap: var(--space-8); } }
+.sent { display: flex; gap: var(--space-2); align-items: start; font: var(--text-sm); color: var(--color-text-secondary); }
+.sent .icon { margin-top: var(--space-0-5); }
+.download { justify-self: start; }
+@media (pointer: coarse) { .download { min-height: var(--space-12); } }
+.older summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer; min-height: var(--space-8); display: inline-flex; align-items: center; }
+@media (pointer: coarse) { .older summary { min-height: var(--space-12); } }
+.older[open] summary { margin-bottom: var(--space-4); }
+.empty { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-6); }
+.empty p { font: var(--text-base); color: var(--color-text-secondary); }
+.alert { display: flex; gap: var(--space-3); align-items: start; padding: var(--space-4); border: 1px solid var(--color-border);
+  border-left: var(--border-accent) solid var(--color-status-outage); border-radius: var(--radius-md); background: var(--color-bg-surface); }
+.alert svg { width: var(--space-4); height: var(--space-4); flex: none; margin-top: var(--space-1); color: var(--color-status-outage); }
+.alert p { font: var(--text-sm); color: var(--color-text-secondary); }
+.alert strong { display: block; font: var(--text-sm-strong); color: var(--color-text-primary); }
+</style>
+<script>
+/* Theme: ?theme= for review, else the saved choice, else the system's; set before the page paints. */
+(function () {
+  var q = new URLSearchParams(location.search).get('theme');
+  var saved = q === 'light' || q === 'dark' ? q : localStorage.getItem('theme');
+  if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+  document.documentElement.dataset.effective = saved === 'light' || saved === 'dark'
+    ? saved : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+})();
+</script>
+</head>
+
+<body>
+<header class="site-header">
+  <div class="bar col">
+    <div class="brand-group">
+      <a class="brand" href="DS-p26-public-status.html" title="Campus Uptime: back to the status page"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 17h5l3-7 4 12 3-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Campus Uptime</span></a>
+      <button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme"><svg class="i-moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.8A6 6 0 016.2 2.5a6 6 0 107.3 7.3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><svg class="i-sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7L13 13M13 3l-1.3 1.3M4.3 11.7L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </div>
+    <nav class="nav" aria-label="Main">
+        <a class="nav-link" href="DS-p26-public-status.html">Status</a>
+        <a class="nav-link" href="DS-p26-admin-monitors.html">Dashboard</a>
+        <a class="nav-link" href="DS-p26-admin-incidents.html">Incidents</a>
+        <a class="nav-link" href="DS-p26-admin-reports.html" aria-current="page">Reports</a>
+        <a class="nav-link" href="DS-p26-api-docs.html">API</a>
+        <a class="nav-link" href="DS-p26-docs.html">Docs</a>
+    </nav>
+    <div class="actions">
+      <form method="post" action="DS-p26-login.html"><button class="pill" type="submit">Log out</button></form>
+      <details class="menu">
+        <summary aria-label="Menu"><svg class="i-open" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><svg class="i-close" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></summary>
+        <nav class="drawer" aria-label="Main">
+          <div class="col">
+            <ul class="drawer-list">
+            <li><a class="drawer-link" href="DS-p26-public-status.html">Status</a></li>
+            <li><a class="drawer-link" href="DS-p26-admin-monitors.html">Dashboard</a></li>
+            <li><a class="drawer-link" href="DS-p26-admin-incidents.html">Incidents</a></li>
+            <li><a class="drawer-link" href="DS-p26-admin-reports.html" aria-current="page">Reports</a></li>
+            <li><a class="drawer-link" href="DS-p26-api-docs.html">API</a></li>
+            <li><a class="drawer-link" href="DS-p26-docs.html">Docs</a></li>
+            </ul>
+            <div class="drawer-actions"><form method="post" action="DS-p26-login.html"><button class="pill" type="submit">Log out</button></form></div>
+          </div>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+<main class="page col" id="main">
+<div class="head">
+  <p class="org" id="org">Campus projects</p><h1>Monthly reports</h1>
+  <p class="role-note">On the 1st of each month, every org admin gets last month's uptime report as a PDF by email. Download any month that has ended here. Months are UTC.</p>
+</div>
+<div id="content"></div>
+  <footer class="site-footer">
+    <div class="f-notes"><p>All times are in UTC.</p></div>
+    <a href="DS-p26-public-status.html">Back to the status page</a>
+  </footer>
+</main>
+<script>
+/* Theme toggle: switches light and dark and remembers the choice (D-024). */
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme-btn');
+  function label() { btn.setAttribute('aria-label', root.dataset.effective === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'); }
+  btn.addEventListener('click', function () {
+    var next = root.dataset.effective === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', next);
+    root.dataset.theme = next; root.dataset.effective = next; label();
+  });
+  label();
+  /* The menu closes with Esc and returns focus to its button. */
+  var menu = document.querySelector('.menu');
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && menu.open) { menu.open = false; menu.querySelector('summary').focus(); }
+  });
+})();
+</script>
+<script>
+/* Mock-only data and states: ?state=default|global|empty|error|long. The real page is rendered
+   on the server with plain links; no script. */
+(function () {
+  var I = {
+    ok: '<svg class="icon s-ok" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    degraded: '<svg class="icon s-degraded" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.2l7 13H1z" fill="currentColor"/><path d="M8 6v3.6M8 11.6v.1" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    nodata: '<svg class="icon s-nodata" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.4 2"/></svg>',
+    error: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>'
+  };
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  /* Closed months, newest first: [year, month (1-12), how it was sent]. */
+  function months(n) {
+    var out = [], y = 2026, m = 10;
+    for (var i = 0; i < n; i += 1) { out.push([y, m]); m -= 1; if (m === 0) { m = 12; y -= 1; } }
+    return out;
+  }
+  var SENT = {
+    emailed: function (y, m) { return I.ok + '<span>Emailed to 2 org admins on 1 ' + MONTHS[m % 12].slice(0, 3) + ' ' + (m === 12 ? y + 1 : y) + ', 00:00 UTC.</span>'; },
+    retrying: function () { return I.degraded + '<span>Not emailed yet: the mail server did not take it. It is tried again every hour.</span>'; },
+    ondemand: function () { return I.nodata + '<span>Made when you download it. Months before reports existed were not emailed.</span>'; }
+  };
+  function row(org, y, m, sent) {
+    var name = MONTHS[m - 1] + ' ' + y, file = y + '-' + String(m).padStart(2, '0');
+    return '<li class="month"><div><h3>' + name + '</h3><p class="sent">' + SENT[sent](y, m) + '</p></div>' +
+      '<a class="pill download" href="#" download="uptime-report-' + file + '.pdf">Download PDF<span class="visually-hidden"> for ' + esc(org) + ', ' + name + '</span></a></li>';
+  }
+  function card(org, list, showOrg) {
+    var recent = list.slice(0, 12), older = list.slice(12);
+    var head = showOrg ? '<div class="section-head"><h2>' + esc(org) + '</h2></div>' : '';
+    var html = '<section class="section"' + (showOrg ? '' : ' aria-label="Months"') + '>' + head +
+      '<ul class="months card">' + recent.map(function (r) { return row(org, r[0], r[1], r[2]); }).join('') + '</ul>';
+    if (older.length) {
+      html += '<details class="older"><summary>Older months (' + older.length + ')</summary><ul class="months card">' +
+        older.map(function (r) { return row(org, r[0], r[1], r[2]); }).join('') + '</ul></details>';
+    }
+    return html + '</section>';
+  }
+  function withSent(list) {
+    return list.map(function (r, i) { return [r[0], r[1], i === 0 ? 'retrying' : i < 2 ? 'emailed' : 'ondemand']; });
+  }
+  var state = new URLSearchParams(location.search).get('state') || 'default';
+  var content = document.getElementById('content'), org = document.getElementById('org');
+  if (state === 'empty') {
+    content.innerHTML = '<div class="empty card"><p>No month has ended since this organization was added. The first report comes by email on 1 December 2026.</p></div>';
+  } else if (state === 'error') {
+    content.innerHTML = '<div class="alert" role="alert">' + I.error + '<p><strong>The reports could not load.</strong>The server could not reach its database. Reload the page in a moment.</p></div>';
+  } else if (state === 'global') {
+    org.textContent = 'All organizations';
+    content.innerHTML = '<div class="groups">' + card('Campus projects', withSent(months(3)), true) + card('Local businesses', withSent(months(2)), true) + '</div>';
+  } else if (state === 'long') {
+    var long = 'Școala Gimnazială „Țara Bârsei” — Laboratorul de informatică și robotică';
+    org.textContent = long;
+    content.innerHTML = card(long, withSent(months(15)), false);
+  } else {
+    content.innerHTML = card('Campus projects', withSent(months(3)), false);
+  }
+})();
+</script>
+</body>
+</html>

@@ -25,7 +25,7 @@
 ### [Incidents](questions/incidents.md)
 - Q-002 · What are the thresholds for N (open incident) and M (resolve incident)? · _answered_
 - Q-003 · What is the alert escalation contact and timeout policy? · _answered_
-- Q-004 · Which email transport/provider will be used for alerts and reports?
+- Q-004 · Which email transport/provider will be used for alerts and reports? · _answered_
 - Q-009 · How are recurring maintenance windows expressed? · _answered_
 - Q-020 · Can quick maintenance be stopped before it expires?
 - Q-021 · Who writes incident updates, and does that code bump `status_version`? · _answered_

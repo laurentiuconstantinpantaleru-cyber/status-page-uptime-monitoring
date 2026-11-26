@@ -8,6 +8,7 @@ import {
 import type { AuthStore } from '../auth/store.js';
 import { parseUpdate } from './incidents.js';
 import { renderDeleteConfirm, renderIncidents, renderLogin, renderMonitors, type FormState } from './render.js';
+import type { ReportDownloads } from '../reports/job.js';
 import type { AdminStore } from './store.js';
 
 // Sign-in and the admin pages (D-034, D-036–D-038, D-040). Every check runs on the server: the role (D-018)
@@ -18,12 +19,16 @@ export interface AdminDeps {
   store: AdminStore;
   /** `Secure` on the session cookie; true in production (D-040). */
   secureCookies: boolean;
+  /** Without it, the monthly report download is not registered. */
+  reports?: ReportDownloads;
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const QUICK_MINUTES = ['15', '30', '60'];
 /** Only digits: anything else in an id is a page that does not exist. */
 const ID = /^[1-9][0-9]{0,15}$/;
+/** A monthly report file: `YYYY-MM.pdf`. */
+const REPORT_FILE = /^([0-9]{4})-(0[1-9]|1[0-2])\.pdf$/;
 
 type Fields = Record<string, string>;
 
@@ -46,7 +51,7 @@ const notFound = (reply: FastifyReply) => plain(reply, 404, 'This page does not 
 const html = (reply: FastifyReply, code: number, body: string) => reply.code(code).type('text/html; charset=utf-8').send(body);
 
 export function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps, clock: Clock): void {
-  const { auth, store, secureCookies } = deps;
+  const { auth, store, secureCookies, reports } = deps;
 
   // Forms arrive URL-encoded; repeated names keep the last value.
   app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string', bodyLimit: 64 * 1024 }, (_req, body, done) => {
@@ -180,6 +185,33 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps, clock
     await store.deleteMonitor(monitor.id);
     return reply.redirect(`/admin/monitors?${new URLSearchParams({ deleted: monitor.name })}`, 303);
   });
+
+  /* ---------- Monthly reports (D-019, D-041) ---------- */
+
+  if (reports) {
+    app.get<{ Params: { orgId: string; file: string } }>(
+      '/admin/reports/:orgId/:file',
+      { preHandler: guard('manage_monitors') },
+      async (request, reply) => {
+        const { orgId: rawOrg, file } = request.params;
+        const match = REPORT_FILE.exec(file);
+        const scope = scopeOf(user(request));
+        if (!ID.test(rawOrg) || !match || (scope !== null && scope !== Number(rawOrg))) return notFound(reply);
+        const year = Number(match[1]);
+        const month = Number(match[2]);
+        const now = clock.now();
+        // Closed months only: the month must start before the current UTC month does.
+        if (Date.UTC(year, month - 1, 1) >= Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)) return notFound(reply);
+        const pdf = await reports.pdf(Number(rawOrg), year, month, now);
+        if (!pdf) return notFound(reply);
+        return reply
+          .type('application/pdf')
+          .header('content-disposition', `attachment; filename="uptime-report-${match[1]}-${match[2]}.pdf"`)
+          .header('cache-control', 'private, no-store')
+          .send(pdf);
+      },
+    );
+  }
 
   /* ---------- Incidents (DS-p26-admin-incidents, D-038) ---------- */
 

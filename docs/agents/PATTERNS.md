@@ -18,6 +18,7 @@
 - PATTERN-010 · An admin route: a guard preHandler for the role, the organization in the SQL, 404 outside it · candidate
 - PATTERN-011 · A form posts, then redirects with 303 to a page that says what happened · candidate
 - PATTERN-012 · A JSON API route group: its own plugin, the key checked in onRequest, its own error handler · candidate
+- PATTERN-013 · A once-per-period job: a unique key per (owner, period), and its side effect claimed by one UPDATE · candidate
 
 ---
 
@@ -124,4 +125,12 @@
 - **How:** Register the routes inside `app.register(async (api) => { … }, { prefix: '/api/v1' })`. Check the key and take from the rate limit in the plugin's `onRequest` hook, so a request without a valid key is refused before its body is parsed; check the key's level in a route-level `onRequest`. Give the plugin its own `setErrorHandler`, which turns Fastify's body errors (status < 500) into the API's 400 JSON and anything else into a logged 500. Add the route to the `API_ROUTES` table in `test/web/access-matrix.test.ts` with one expectation per kind of key.
 - **Example:** src/web/api/routes.ts, test/web/api-routes.test.ts, test/web/access-matrix.test.ts (`API access matrix`)
 - **Why:** The error shape and the key check stay the same on every API route without touching the HTML routes' handlers, and an unauthenticated client cannot make the server parse a large body.
+- **Source:** session 2026-11-26 · confidence medium
+
+## PATTERN-013 · A once-per-period job: a unique key per (owner, period), and its side effect claimed by one UPDATE
+- **Status:** candidate
+- **Use when:** A job must do something once per owner and period (a monthly report per organization) and may be re-run, restarted or run twice at once.
+- **How:** Derive the period from `clock.now()` (PATTERN-001), so any run inside it finds the same work. Store the result in a row with `UNIQUE (owner_id, period)`; an `ER_DUP_ENTRY` means it is already there. Claim the outside effect (an email) with `UPDATE … SET claimed_at = ? WHERE … AND done_at IS NULL AND (claimed_at IS NULL OR claimed_at <= now − lease)` and act only when one row changed; set `done_at` after it, or clear the claim and store the error when it fails. Test it with a fake store and a FakeClock: hourly runs, two runs at once, a late start, a failed send.
+- **Example:** db/migrations/0008_monthly_reports.sql, src/web/reports/store.ts (`saveReport`, `claimEmail`), src/web/reports/job.ts, test/web/report-job.test.ts
+- **Why:** No lock or queue is needed for the result to be made once, and the effect is sent once except when a process dies between the send and the UPDATE.
 - **Source:** session 2026-11-26 · confidence medium

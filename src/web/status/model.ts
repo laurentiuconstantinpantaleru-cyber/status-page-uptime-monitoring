@@ -101,7 +101,7 @@ function overlap(start: Date, end: Date, from: Date, to: Date): number {
 }
 
 /** When the monitor's history starts: its first check, or its creation once older checks are gone (D-023). */
-export function dataSince(monitor: MonitorData, now: Date): Date | null {
+export function dataSince(monitor: Pick<MonitorData, 'firstCheckAt' | 'createdAt'>, now: Date): Date | null {
   const first = monitor.firstCheckAt;
   if (first === null) return null;
   if (now.getTime() - first.getTime() < RAW_HISTORY_MS) return first;

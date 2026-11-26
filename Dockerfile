@@ -18,6 +18,8 @@ COPY --from=build /app/dist ./dist
 COPY src/web/views ./src/web/views
 COPY src/web/public ./src/web/public
 COPY db/migrations ./db/migrations
+# The report PDF's font (src/web/reports/pdf.ts).
+COPY assets/fonts ./assets/fonts
 USER node
 EXPOSE 3000
 CMD ["node", "dist/web/server.js"]

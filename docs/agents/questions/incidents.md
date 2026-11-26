@@ -15,10 +15,11 @@
 - **Recorded as:** D-007
 
 ## Q-004 · Which email transport/provider will be used for alerts and reports?
-- **Status:** open
+- **Status:** answered 2026-11-26
 - **Blocks:** Email alerting implementation and PDF/email monthly uptime report dispatcher.
 - **Who answers:** user
-- **Proposed answer:** Standard SMTP credentials via environment variables (e.g. Resend, Sendgrid, or Gmail SMTP).
+- **Answer:** SMTP through `nodemailer`, configured by `SMTP_URL` and `MAIL_FROM` in the environment, so any provider with SMTP works (Resend, SendGrid, Gmail). The provider itself is not chosen yet; without both variables, reports are stored but not emailed.
+- **Recorded as:** D-041
 
 ## Q-009 · How are recurring maintenance windows expressed?
 - **Status:** answered 2026-11-26

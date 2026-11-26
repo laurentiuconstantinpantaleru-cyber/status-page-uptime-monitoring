@@ -55,6 +55,7 @@
 
 ### [Reporting](decisions/reporting.md)
 - D-019 · Monthly uptime report: schedule, recipients, format, and idempotency
+- D-041 · How the monthly report is made, counted, sent and downloaded
 
 ### [Roles](decisions/roles.md)
 - D-018 · Role permission matrix

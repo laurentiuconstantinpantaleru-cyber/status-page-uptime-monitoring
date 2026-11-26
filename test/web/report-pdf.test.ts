@@ -25,13 +25,14 @@ function streams(pdf: Buffer): string {
   while ((m = re.exec(text))) {
     const start = m.index + m[0].length;
     const end = text.indexOf('endstream', start);
+    if (end === -1) break;
     const raw = pdf.subarray(start, end);
     try {
       out.push(inflateSync(raw).toString('latin1'));
     } catch {
       out.push(raw.toString('latin1'));
     }
-    re.lastIndex = end;
+    re.lastIndex = end + 'endstream'.length;
   }
   return out.join('\n');
 }
