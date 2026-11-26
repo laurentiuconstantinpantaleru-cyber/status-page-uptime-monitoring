@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Connection, RowDataPacket } from 'mysql2/promise';
 import { connect, createPool } from '../../src/db/connection.js';
@@ -100,6 +102,7 @@ describe.skipIf(!url)('MySQL schema', () => {
       '0008_monthly_reports.sql',
       '0009_checks_latency_index.sql',
       '0010_alerts.sql',
+      '0011_seed_student_projects.sql',
     ]);
 
     const applied = await rows<{ version: string; applied_at: Date }>(
@@ -226,6 +229,44 @@ describe.skipIf(!url)('MySQL schema', () => {
         latency_threshold_ms: null,
       },
     ]);
+  });
+
+  it('seeds the student projects that gave consent, once even when run twice', async () => {
+    const seeded = () =>
+      rows(
+        conn,
+        `SELECT o.name AS org_name, m.name, m.url, m.interval_minutes, m.expected_status, m.timeout_ms,
+                m.check_tls, m.keyword, m.latency_threshold_ms
+         FROM monitors m JOIN organizations o ON o.id = m.organization_id
+         WHERE o.slug = 'student-projects'
+         ORDER BY m.id`,
+      );
+    const monitor = (name: string, url: string, keyword: string) => ({
+      org_name: 'Student projects',
+      name,
+      url,
+      interval_minutes: 5,
+      expected_status: 200,
+      timeout_ms: 30000,
+      check_tls: 1,
+      keyword,
+      latency_threshold_ms: null,
+    });
+    const expected = [
+      monitor('Peer review', 'https://peer-review-double-blind-pentru-proiecte.onrender.com/', 'Peer review'),
+      monitor('P23 Sneaker Price Monitor', 'https://pricemonitor-ma.onrender.com/catalog', 'PriceMonitor'),
+      monitor('StudRide', 'https://proiectweb1-production.up.railway.app/', 'StudRide'),
+    ];
+
+    expect(await seeded()).toEqual(expected);
+
+    await conn.query(await readFile(join(MIGRATIONS_DIR, '0011_seed_student_projects.sql'), 'utf8'));
+
+    expect(await seeded()).toEqual(expected);
+    const [[{ orgs }]] = await conn.query<RowDataPacket[]>(
+      "SELECT COUNT(*) AS orgs FROM organizations WHERE slug = 'student-projects'",
+    );
+    expect(orgs).toBe(1);
   });
 
   it('serves the main check and incident queries from their indexes', async () => {

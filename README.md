@@ -38,7 +38,8 @@ Not done yet:
   `npm run apikey:create`).
 - Production: no server is configured, so the deploy job is skipped. Email and Telegram need the
   `SMTP_URL`, `MAIL_FROM` and `TELEGRAM_BOT_TOKEN` secrets; without them that channel waits.
-- Monitors: 2 of the 12 targets have consent (`MONITORS.md`).
+- Monitors: 5 of the 12 targets have consent (`MONITORS.md`): 2 local businesses and 3 student
+  projects.
 
 ## Run locally
 

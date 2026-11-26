@@ -68,8 +68,8 @@ Detaliile sunt în `INTERVIEW.md`, `MONITORS.md` și `docs/survey-results.md`.
   la 5 minute.
 - **Proprietari de aplicații (colegi):** un formular online cu 10 întrebări, 4 respondenți
   (`INTERVIEW.md`). Este un formular, nu 3 interviuri față în față.
-- **Proiecte ale colegilor:** 0 din 10 confirmate (`MONITORS.md`, „Student Projects (0/10
-  Confirmed — In Progress)”).
+- **Proiecte ale colegilor:** 3 din 10 confirmate (`MONITORS.md`, „Student Projects (3/10
+  Confirmed — In Progress)”), în migrarea `db/migrations/0011_seed_student_projects.sql`.
 
 ## Variabilele mele
 
@@ -86,7 +86,7 @@ Detaliile sunt în `INTERVIEW.md`, `MONITORS.md` și `docs/survey-results.md`.
 
 | # | Cerință | Stare | Dovadă |
 |---|---|---|---|
-| 1 | Minim 12 monitoare reale rulează pe live de minim 14 zile; status page-ul public e accesibil | **PARTIAL** | Nu există live (vezi „URL live”). `MONITORS.md`: 2 din 12 monitoare au acord. Pagina publică merge local: `GET /status` (`src/web/app.ts`, test `test/web/status-page.test.ts:114` „shows the 90- and 30-day uptime of each component…”), commit `1d7b4ac` |
+| 1 | Minim 12 monitoare reale rulează pe live de minim 14 zile; status page-ul public e accesibil | **PARTIAL** | Nu există live (vezi „URL live”). `MONITORS.md`: 5 din 12 monitoare au acord (`db/migrations/0002_seed_local_businesses.sql`, `0011_seed_student_projects.sql`). Pagina publică merge local: `GET /status` (`src/web/app.ts`, test `test/web/status-page.test.ts:114` „shows the 90- and 30-day uptime of each component…”), commit `1d7b4ac` |
 | 2 | Un incident real (sau provocat) detectat, alertat pe Telegram și închis automat | **PARTIAL** | Detectarea și închiderea automată: `test/worker/worker.test.ts:102` „opens an incident after 2 confirmed failures and resolves it after 2 successes”, commit `476f3a3`. Alertarea pe email și Telegram, o dată la deschidere și o dată la rezolvare: `test/web/alerts.test.ts:113`, `:131`, `:187`; cererea `sendMessage`: `test/web/telegram.test.ts:19`; commit `94ff6c9`. **Lipsește dovada reală:** nu există live și Telegram nu a fost apelat cu un bot real, deci niciun incident real nu a fost alertat |
 | 3 | Calculul de uptime cu mentenanță și incidente peste granița lunii are minim 5 teste | **OK** | `test/shared/uptime.test.ts`: 12 teste `uptime`, între care `:30` „counts for November only the part of a crossing incident outside maintenance: (719 - 1) / 719”, `:37` (aceeași întâmplare pe octombrie), `:44`, `:55`, `:67` (mentenanță suprapusă), `:81` (fereastră recurentă peste miezul nopții), `:159` (30 de zile peste granița lunii). Cod: `src/shared/uptime.ts`, commit `40da385` |
 | 4 | Scheduler-ul nu driftează și nu suprapune (test cu timp simulat) | **OK** | `test/worker/scheduler.test.ts:41` „runs a 1-minute monitor exactly 60 times in an hour”, `:51` „keeps every start on the grid when checks take 40 seconds”, `:61` „skips a slot while the previous check of the monitor still runs”, `:86` „runs 300 1-minute monitors 60 times each in an hour…”. `FakeClock` în `src/shared/clock.ts` (PATTERN-001), commit `476f3a3` |
@@ -104,7 +104,7 @@ Detaliile sunt în `INTERVIEW.md`, `MONITORS.md` și `docs/survey-results.md`.
 - **Deploy și URL live.** Infrastructura e scrisă (`deploy/compose.prod.yml`, `deploy/Caddyfile`,
   job-ul `deploy` din `.github/workflows/ci.yml`), dar serverul și secretele mediului `production` nu
   sunt configurate, așa că job-ul e sărit. Fără live nu pot exista nici cele 14 zile de monitorizare.
-- **10 proiecte ale colegilor.** Niciun acord confirmat încă (`MONITORS.md`).
+- **10 proiecte ale colegilor.** 3 din 10 au acord și sunt în migrări; restul de 7 lipsesc (`MONITORS.md`).
 - **Alerte reale pe Telegram și email.** Dispecerul, escaladarea și confirmarea sunt construite și
   testate cu clienți falși (D-044), dar fără live, fără bot Telegram (`TELEGRAM_BOT_TOKEN`) și fără
   SMTP configurat nu a plecat nicio alertă reală.
