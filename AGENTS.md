@@ -45,6 +45,8 @@ Before you propose, check `docs/agents/REJECTED.md`: never re-propose a rejected
 without new evidence. A rejected proposal is added there with the reason.
 
 ### Hard rules
+- Reply to the user in Romanian (questions, plans, reports); code, comments, commit
+  messages, file names and ledger terms (PROPOSAL, D-, Q-, `Status: approved`) stay in English.
 - Build only from `approved` entries. Unanswered means out of scope: record a Q-,
   never invent a value, a requirement or a behaviour.
 - Add nothing nobody asked for. Note it as a suggestion instead.
