@@ -8,6 +8,9 @@
 <!-- graffino-agentic:end -->
 
 ## Index
+### [Api](decisions/api.md)
+- D-017 · API key levels, storage, and rate limiting · _superseded-by D-025_
+
 ### [Architecture](decisions/architecture.md)
 - D-002 · Server-rendered frontend with minimal vanilla JS for charts · _superseded-by D-024_
 - D-003 · PostgreSQL with versioned migrations and in-memory cache for status page · _superseded-by D-020_

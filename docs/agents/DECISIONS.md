@@ -8,7 +8,7 @@
 
 ## Index
 ### [Api](decisions/api.md)
-- D-017 · API key levels, storage, and rate limiting
+- D-025 · API keys: levels, storage, header, rate limit and public badge
 
 ### [Architecture](decisions/architecture.md)
 - D-001 · Node.js + TypeScript with Fastify for web API, SSR status page, and workers
