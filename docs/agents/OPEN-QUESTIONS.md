@@ -16,7 +16,7 @@
 - Q-005 · What are the specific requirements requested in the 3 student interviews? · _answered_
 - Q-006 · How does the web in-memory cache learn about worker state changes? · _answered_
 - Q-007 · How often does the web process read the cache version number? · _answered_
-- Q-008 · How do users sign in to the admin interface?
+- Q-008 · How do users sign in to the admin interface? · _investigating_
 - Q-009 · How are recurring maintenance windows expressed?
 - Q-010 · What latency threshold do the seeded business monitors use?
 - Q-011 · Which time zone does the public status page show times in? · _answered_
@@ -77,9 +77,10 @@
 - **Answer:** Every 30 seconds.
 
 ## Q-008 · How do users sign in to the admin interface?
-- **Status:** open
+- **Status:** investigating
 - **Blocks:** Credential columns on `users` and the admin login.
 - **Who answers:** user
+- **Proposed answer:** Email and password, as drawn on DS-p26-login (user, 2026-11-26): wrong credentials get one message that does not say which field was wrong. Password storage, sessions and password reset are not decided.
 
 ## Q-009 · How are recurring maintenance windows expressed?
 - **Status:** open

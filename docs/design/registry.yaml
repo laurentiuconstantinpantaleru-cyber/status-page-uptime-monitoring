@@ -44,3 +44,15 @@ designs:
     screenshots: [screens/DS-p26-api-docs.light.png, screens/DS-p26-api-docs.dark.png]
     design_ref: mocks/DS-p26-api-docs.html
     status: draft
+  - id: DS-p26-login
+    kind: screen
+    source: src/web/views/login.html
+    screenshots: [screens/DS-p26-login.light.png, screens/DS-p26-login.dark.png]
+    design_ref: mocks/DS-p26-login.html
+    status: draft
+  - id: DS-p26-docs
+    kind: screen
+    source: src/web/views/docs.html
+    screenshots: [screens/DS-p26-docs.light.png, screens/DS-p26-docs.dark.png]
+    design_ref: mocks/DS-p26-docs.html
+    status: draft

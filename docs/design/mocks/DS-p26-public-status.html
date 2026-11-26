@@ -483,10 +483,9 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /* ---------- Header ---------- */
 /* Each link goes somewhere else: Status to the top of this page, Dashboard to DS-p26-admin-monitors,
-   API to DS-p26-api-docs, Docs and Login to a coming-soon placeholder (Q-016, Q-008).
+   API to DS-p26-api-docs, Docs to DS-p26-docs, Login to DS-p26-login.
    No Subscribe: visitor subscriptions are out of scope (D-009). */
-const SOON = (page) => `coming-soon.html?page=${encodeURIComponent(page)}`;
-const LINKS = [['Status', '#top'], ['Dashboard', 'DS-p26-admin-monitors.html'], ['API', 'DS-p26-api-docs.html'], ['Docs', SOON('Docs')]];
+const LINKS = [['Status', '#top'], ['Dashboard', 'DS-p26-admin-monitors.html'], ['API', 'DS-p26-api-docs.html'], ['Docs', 'DS-p26-docs.html']];
 function header() {
   return `<header class="site-header">
     <div class="bar col">
@@ -498,14 +497,14 @@ function header() {
         ${LINKS.map(([l, h], i) => `<a class="nav-link" href="${h}"${i === 0 ? ' aria-current="page"' : ''}>${l}</a>`).join('')}
       </nav>
       <div class="actions">
-        <a class="pill" href="${SOON('Login')}">Login</a>
+        <a class="pill" href="DS-p26-login.html">Login</a>
         <button class="icon-btn menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="drawer" aria-label="Open menu">${UI.menu}</button>
       </div>
     </div>
     <nav class="drawer" id="drawer" aria-label="Main" hidden>
       <div class="col">
         <ul class="drawer-list">${LINKS.map(([l, h], i) => `<li><a class="drawer-link" href="${h}"${i === 0 ? ' aria-current="page"' : ''}>${l}</a></li>`).join('')}</ul>
-        <div class="drawer-actions"><a class="pill" href="${SOON('Login')}">Login</a></div>
+        <div class="drawer-actions"><a class="pill" href="DS-p26-login.html">Login</a></div>
       </div>
     </nav>
   </header>`;
