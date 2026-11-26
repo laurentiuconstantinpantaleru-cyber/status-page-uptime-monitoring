@@ -1,8 +1,53 @@
 # Status page + uptime monitoring
 
-Availability and uptime monitoring service for student projects and local businesses.
-Provides HTTP/TLS/keyword/latency checks, automated incident lifecycle, maintenance windows,
-email/Telegram alerts, sub-100ms cached public status pages, and monthly uptime reporting.
+Availability and uptime monitoring service for student projects and local businesses:
+HTTP/TLS/keyword/latency checks from two workers, incidents that open and close on their own,
+maintenance windows, a cached public status page, an API with a status badge, and monthly
+uptime reports. Alerts (email, Telegram) are not built yet; see Status.
+
+## Status
+
+Done, with tests:
+
+- Checks: HTTP status, keyword, latency threshold, TLS days left, redirects (D-026), timeout (D-022).
+- Two worker processes; a check is confirmed by the other worker before it counts (D-005, D-027);
+  a scheduler on a fixed grid with no drift and no overlap (`test/worker/scheduler.test.ts`).
+- Incidents open after 2 confirmed failures and close after 2 successes (D-006); a degraded
+  worker opens none (D-015).
+- Uptime from incidents and maintenance, across month boundaries (D-030, `test/shared/uptime.test.ts`).
+- Maintenance: one-off, recurring and the quick 15/30/60 min button (D-012, D-031); only the
+  quick button has a page.
+- Public status page `/status`, cached in memory and dropped on a state change (D-020, D-032).
+- Sign-in, roles, the monitors dashboard and human-written incident updates (D-034–D-038, D-042).
+- API `/api/v1/monitors` with read/write Bearer keys, 60 requests per minute, and the public
+  badge `/badge/:monitor_id.svg` (D-025, D-039, C-004; `API.md`).
+- Monthly PDF reports per organization, emailed to org admins and downloadable at
+  `/admin/reports` (D-019, D-041, D-043).
+
+Not done yet:
+
+- Email and Telegram alerts, escalation and TLS expiry warnings (D-007, D-010, D-013).
+- Raw-check retention (7 days) and the hourly / daily roll-ups (D-011, Q-023).
+- The response time chart on the status page (Q-012).
+- Adding and editing monitors in the dashboard (the API can create them), scheduled maintenance,
+  alert contacts and API keys from the web pages (keys come from `npm run apikey:create`).
+- Production: no server is configured, so the deploy job is skipped; the report email needs
+  `SMTP_URL` and `MAIL_FROM` passed in `deploy/compose.prod.yml`.
+- Monitors: 2 of the 12 targets have consent (`MONITORS.md`).
+
+## Run locally
+
+```bash
+npm install
+cp .env.example .env                 # fill in MYSQL_* and DATABASE_URL
+docker compose up -d                 # MySQL, see Database
+npm run build && npm run db:migrate
+npm run user:create -- --email admin@example.test --name "Admin" --role global_admin   # password from stdin
+npm run start:web                    # http://localhost:3000/status
+```
+
+Then start two workers (Workers below). `npm test` runs the tests; `npm run lint` runs the
+type check and the ledger lint.
 
 ## Database
 
