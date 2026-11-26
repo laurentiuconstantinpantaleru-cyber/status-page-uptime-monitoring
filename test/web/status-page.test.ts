@@ -111,6 +111,119 @@ describe('GET /status', () => {
     expect(response.body).toContain('Bookings API is down; 1 slow, 1 in maintenance. Everything else is working.');
   });
 
+  it('shows the 90- and 30-day uptime of each component, and "—" without checks', async () => {
+    const response = await get({ groups: [{ name: 'Campus', monitors: [
+      monitor('Corner bakery website', {
+        createdAt: new Date('2026-08-01T00:00:00.000Z'),
+        firstCheckAt: new Date('2026-11-19T00:00:00.000Z'),
+        incidents: [{ startedAt: new Date('2026-10-10T11:08:00.000Z'), resolvedAt: new Date('2026-10-10T11:46:00.000Z') }],
+      }),
+      monitor('Library seat map', NO_CHECKS),
+    ] }] });
+    const uptimes = [...response.body.matchAll(/<span class="num">([^<]*)<\/span><span class="label">uptime, (\d+) days<\/span>/g)]
+      .map((m) => `${m[2]}:${m[1]}`);
+
+    expect(uptimes).toEqual(['90:99.97%', '30:100.00%', '90:—', '30:—']);
+    expect(response.body).not.toContain('uptime over 90 days');
+  });
+
+  describe('incidents (D-014)', () => {
+    const at = (iso: string) => new Date(`${iso}Z`);
+    const active = (updates: { stage: 'investigating' | 'identified' | 'monitoring' | 'resolved'; body: string; createdAt: Date }[]) =>
+      monitor('Bookings API', { incidents: [{ startedAt: at('2026-11-26T14:02:00'), resolvedAt: null, cause: 'timeout', updates }] });
+
+    it('shows an active incident with its updates, newest first, and the newest stage on top', async () => {
+      const response = await get({ groups: [{ name: 'Campus', monitors: [active([
+        { stage: 'identified', body: 'The hosting provider confirmed a failed storage volume.', createdAt: at('2026-11-26T14:31:00') },
+        { stage: 'investigating', body: 'Requests to the Bookings API time out.', createdAt: at('2026-11-26T14:09:00') },
+      ])] }] });
+      const body = response.body;
+
+      expect(body).toContain('Active incident · Identified');
+      expect(body).toContain('<h2 id="active-title-0">Bookings API timed out</h2>');
+      expect(body).toContain('Affects Bookings API · Started <time datetime="2026-11-26T14:02:00.000Z">14:02 UTC</time> · Down for <span class="num">53 min</span>');
+      expect(body).toContain('Updates (2)');
+      expect(body.indexOf('failed storage volume')).toBeLessThan(body.indexOf('Requests to the Bookings API time out'));
+      expect(body).toContain('<time datetime="2026-11-26T14:31:00.000Z">14:31 UTC</time>');
+    });
+
+    it('shows an active incident without updates as such, with no written text', async () => {
+      const body = (await get({ groups: [{ name: 'Campus', monitors: [active([])] }] })).body;
+
+      expect(body).toContain('<p class="eyebrow">Active incident</p>');
+      expect(body).toContain('No updates yet.');
+      expect(body).not.toContain('class="timeline"');
+    });
+
+    it('lists past incidents by day, newest first, with how long they lasted and their latest update', async () => {
+      const response = await get({ groups: [{ name: 'Campus', monitors: [monitor('Corner bakery website', { incidents: [
+        { startedAt: at('2026-11-18T11:08:00'), resolvedAt: at('2026-11-18T11:46:00'), cause: 'http_5xx', updates: [
+          { stage: 'resolved', body: 'The site is back.', createdAt: at('2026-11-18T11:46:00') },
+          { stage: 'investigating', body: 'The website does not load.', createdAt: at('2026-11-18T11:08:00') },
+        ] },
+        { startedAt: at('2026-11-24T09:12:00'), resolvedAt: at('2026-11-24T09:37:00'), cause: 'timeout', updates: [] },
+      ] })] }] });
+      const body = response.body;
+
+      expect(body).toContain('<h2 id="past-title">Past incidents</h2>');
+      expect(body).toContain('Last 90 days, newest first');
+      expect(body.indexOf('Tue 24 Nov 2026')).toBeLessThan(body.indexOf('Wed 18 Nov 2026'));
+      expect(body).toContain('Resolved · Lasted <span class="num">38 min</span> · Affects Corner bakery website');
+      expect(body).toContain('<p>The site is back.</p>');
+      expect(body).toContain('Show all 2 updates');
+      expect(count(body, 'class="past"')).toBe(2);
+    });
+
+    it('says so when there were no incidents in the last 90 days', async () => {
+      const body = (await get({ groups: [{ name: 'Campus', monitors: [monitor('Corner bakery website')] }] })).body;
+
+      expect(body).toContain('No incidents in the last 90 days.');
+      expect(body).not.toContain('Active incident');
+    });
+
+    it('escapes the text of an update', async () => {
+      const body = (await get({ groups: [{ name: 'Campus', monitors: [active([
+        { stage: 'investigating', body: '<img src=x onerror=alert(1)>', createdAt: at('2026-11-26T14:09:00') },
+      ])] }] })).body;
+
+      expect(body).not.toContain('<img src=x');
+      expect(body).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    });
+  });
+
+  it('shows a new incident update within 30 seconds of a status version bump, and not before (Q-007)', async () => {
+    const clock = new FakeClock(NOW);
+    let version = 1;
+    const updates: { stage: 'investigating'; body: string; createdAt: Date }[] = [];
+    const load = async (): Promise<StatusData> => ({ groups: [{ name: 'Campus', monitors: [monitor('Bookings API', {
+      incidents: [{ startedAt: new Date('2026-11-26T14:02:00.000Z'), resolvedAt: null, cause: 'timeout', updates: [...updates] }],
+    })] }] });
+    app = buildApp({}, { clock, status: { load, readVersion: async () => version } });
+    const page = async () => (await app!.inject({ method: 'GET', url: '/status' })).body;
+
+    expect(await page()).toContain('No updates yet.');
+    updates.push({ stage: 'investigating', body: 'We are looking at the API.', createdAt: NOW });
+    clock.advance(30_000);
+    expect(await page()).not.toContain('We are looking at the API.');
+    version += 1;
+    clock.advance(30_000);
+    expect(await page()).toContain('We are looking at the API.');
+  });
+
+  it('serves a cached page without loading the data again, in under 100 ms', async () => {
+    let loads = 0;
+    const data: StatusData = { groups: [{ name: 'Campus', monitors: [monitor('Bookings API')] }] };
+    await get(async () => { loads += 1; return data; });
+
+    const started = performance.now();
+    const response = await app!.inject({ method: 'GET', url: '/status' });
+    const elapsedMs = performance.now() - started;
+
+    expect(response.statusCode).toBe(200);
+    expect(loads).toBe(1);
+    expect(elapsedMs).toBeLessThan(100);
+  });
+
   it('escapes text from the database', async () => {
     const response = await get({ groups: [{ name: '<b>Org</b>', monitors: [monitor('<script>alert(1)</script>')] }] });
 

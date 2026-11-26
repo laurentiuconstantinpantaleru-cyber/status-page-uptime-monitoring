@@ -297,6 +297,42 @@ describe.skipIf(!url)('MySQL schema', () => {
       expect(downSite.incidents).toHaveLength(1);
     });
 
+    it('loads each incident with its cause and its updates, newest first, from the 90 days uptime needs', async () => {
+      const org = await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', [
+        'incident-org', 'Incident Org', T0, T0,
+      ]);
+      const site = await insertId(
+        conn,
+        `INSERT INTO monitors (organization_id, name, url, timeout_ms, check_tls, created_at, updated_at)
+         VALUES (?, 'Incident site', 'https://example.test/', 10000, 0, ?, ?)`,
+        [org, T0, T0],
+      );
+      const addIncident = (startedAt: Date, resolvedAt: Date | null, cause: string) =>
+        insertId(conn, 'INSERT INTO incidents (monitor_id, started_at, resolved_at, cause) VALUES (?, ?, ?, ?)', [
+          site, startedAt, resolvedAt, cause,
+        ]);
+      // Ends 90 × 24 h before NOW plus 1 h: inside the 90-day uptime, before the first daily bar.
+      const early = new Date(NOW.getTime() - 90 * 24 * 60 * MIN);
+      await addIncident(new Date(early.getTime() - 60 * MIN), new Date(early.getTime() + 60 * MIN), 'dns');
+      const open = await addIncident(new Date(NOW.getTime() - 50 * MIN), null, 'timeout');
+      const addUpdate = (stage: string, body: string, createdAt: Date) =>
+        conn.query('INSERT INTO incident_updates (incident_id, stage, body, created_at) VALUES (?, ?, ?, ?)', [
+          open, stage, body, createdAt,
+        ]);
+      await addUpdate('investigating', 'Looking into it.', new Date(NOW.getTime() - 45 * MIN));
+      await addUpdate('identified', 'Found it.', new Date(NOW.getTime() - 20 * MIN));
+
+      const data = await loadStatusData(conn, NOW);
+      const incidents = data.groups.find((g) => g.name === 'Incident Org')!.monitors[0].incidents;
+
+      expect(incidents.map((i) => i.cause)).toEqual(['dns', 'timeout']);
+      expect(incidents[0].updates).toEqual([]);
+      expect(incidents[1].updates?.map((u) => [u.stage, u.body, u.createdAt.toISOString()])).toEqual([
+        ['identified', 'Found it.', new Date(NOW.getTime() - 20 * MIN).toISOString()],
+        ['investigating', 'Looking into it.', new Date(NOW.getTime() - 45 * MIN).toISOString()],
+      ]);
+    });
+
     it('lists organizations in the order they were created', async () => {
       const names = (await loadStatusData(conn, NOW)).groups.map((g) => g.name);
 

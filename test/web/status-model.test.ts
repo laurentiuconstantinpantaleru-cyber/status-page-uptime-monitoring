@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { quickWindow } from '../../src/shared/maintenance.js';
-import { days, monitorStatus, nextChange, worstOf, type MonitorData } from '../../src/web/status/model.js';
+import { days, monitorStatus, monitorUptime, nextChange, pastIncidents, worstOf, type MonitorData } from '../../src/web/status/model.js';
 
 const NOW = new Date('2026-11-26T14:55:00.000Z');
 const HOUR = 60 * 60 * 1000;
@@ -176,5 +176,84 @@ describe('quick maintenance (D-012)', () => {
     expect(monitorStatus(m, new Date(expires.getTime() - 1000))).toBe('maint');
     expect(monitorStatus(m, expires)).toBe('ok');
     expect(nextChange({ groups: [{ name: 'A', monitors: [m] }] }, NOW)).toEqual(expires);
+  });
+});
+
+describe('monitorUptime (D-030)', () => {
+  const MIN = 60_000;
+  /** History since August: the first kept check is older than the raw retention (D-023). */
+  const long = (overrides: Partial<MonitorData> = {}) => monitor({ firstCheckAt: new Date('2026-11-19T00:00:00.000Z'), ...overrides });
+  const incident = (start: string, minutes: number) => ({
+    startedAt: new Date(start), resolvedAt: new Date(new Date(start).getTime() + minutes * MIN),
+  });
+
+  it('is "—" for a monitor without checks', () => {
+    expect(monitorUptime(monitor({ firstCheckAt: null, lastCheck: null }), NOW, 90)).toBe('—');
+  });
+
+  it('is 100.00% without incidents', () => {
+    expect(monitorUptime(long(), NOW, 90)).toBe('100.00%');
+    expect(monitorUptime(long(), NOW, 30)).toBe('100.00%');
+  });
+
+  it('counts an incident in the 90 days, and leaves it out of the 30 days when it is older', () => {
+    const m = long({ incidents: [incident('2026-10-10T11:08:00.000Z', 38)] });
+
+    expect(monitorUptime(m, NOW, 90)).toBe('99.97%');
+    expect(monitorUptime(m, NOW, 30)).toBe('100.00%');
+  });
+
+  it('truncates, so one minute down never shows as 100.00%', () => {
+    expect(monitorUptime(long({ incidents: [incident('2026-11-20T10:00:00.000Z', 1)] }), NOW, 90)).toBe('99.99%');
+  });
+
+  it('does not count downtime inside maintenance', () => {
+    const m = long({
+      incidents: [incident('2026-11-20T10:15:00.000Z', 30)],
+      maintenance: [{ startsAt: new Date('2026-11-20T10:00:00.000Z'), endsAt: new Date('2026-11-20T11:00:00.000Z') }],
+    });
+
+    expect(monitorUptime(m, NOW, 90)).toBe('100.00%');
+  });
+
+  it("measures from the monitor's history start", () => {
+    const m = monitor({
+      createdAt: new Date(NOW.getTime() - 10 * DAY),
+      firstCheckAt: new Date('2026-11-19T00:00:00.000Z'),
+      incidents: [incident('2026-11-20T10:00:00.000Z', 60)],
+    });
+
+    // 1 h down in 240 h.
+    expect(monitorUptime(m, NOW, 90)).toBe('99.58%');
+    expect(monitorUptime(m, NOW, 30)).toBe('99.58%');
+  });
+});
+
+describe('pastIncidents (Q-013)', () => {
+  const resolved = (start: string, end: string) => ({ startedAt: new Date(start), resolvedAt: new Date(end), cause: 'timeout', updates: [] });
+
+  it('lists resolved incidents of the last 90 days by UTC day, newest first, without open or older ones', () => {
+    const data = { groups: [{ name: 'A', monitors: [
+      monitor({ name: 'Bakery', incidents: [
+        resolved('2026-11-18T11:08:00.000Z', '2026-11-18T11:46:00.000Z'),
+        resolved('2026-08-01T10:00:00.000Z', '2026-08-01T11:00:00.000Z'),
+        { startedAt: new Date('2026-11-26T14:02:00.000Z'), resolvedAt: null },
+      ] }),
+      monitor({ name: 'Bookings API', incidents: [
+        resolved('2026-11-18T07:03:00.000Z', '2026-11-18T07:15:00.000Z'),
+        resolved('2026-11-24T09:12:00.000Z', '2026-11-24T09:37:00.000Z'),
+      ] }),
+    ] }] };
+
+    const result = pastIncidents(data, NOW);
+
+    expect(result.map((d) => [d.date.toISOString(), d.items.map((i) => [i.monitor, i.incident.startedAt.toISOString()])])).toEqual([
+      ['2026-11-24T00:00:00.000Z', [['Bookings API', '2026-11-24T09:12:00.000Z']]],
+      ['2026-11-18T00:00:00.000Z', [['Bakery', '2026-11-18T11:08:00.000Z'], ['Bookings API', '2026-11-18T07:03:00.000Z']]],
+    ]);
+  });
+
+  it('is empty without resolved incidents', () => {
+    expect(pastIncidents({ groups: [{ name: 'A', monitors: [monitor()] }] }, NOW)).toEqual([]);
   });
 });
