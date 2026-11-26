@@ -15,4 +15,7 @@
 - D-002 · Server-rendered frontend with minimal vanilla JS for charts · _superseded-by D-024_
 - D-003 · PostgreSQL with versioned migrations and in-memory cache for status page · _superseded-by D-020_
 
+### [Auth](decisions/auth.md)
+- D-035 · Server-side sessions in MySQL; SameSite=Lax cookie and an Origin check on POST · _superseded-by D-040_
+
 ---

@@ -13,6 +13,7 @@
 
 ### [Api](decisions/api.md)
 - D-025 · API keys: levels, storage, header, rate limit and public badge
+- D-039 · What the API answers, how its limit counts, and the badge
 
 ### [Architecture](decisions/architecture.md)
 - D-001 · Node.js + TypeScript with Fastify for web API, SSR status page, and workers
@@ -29,7 +30,7 @@
 
 ### [Auth](decisions/auth.md)
 - D-034 · Passwords hashed with bcrypt; accounts created from the command line
-- D-035 · Server-side sessions in MySQL; SameSite=Lax cookie and an Origin check on POST
+- D-040 · Server-side sessions in MySQL; SameSite=Lax cookie and an Origin check on POST outside /api/
 - D-036 · What a refused request gets
 
 ### [Incidents](decisions/incidents.md)

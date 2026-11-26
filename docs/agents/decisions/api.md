@@ -19,3 +19,13 @@
 - **Evidence:** docs/brief.md:16, docs/design/mocks/DS-p26-api-docs.html
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26
+
+## D-039 · What the API answers, how its limit counts, and the badge
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** `/api/v1` answers JSON `{"error", "message"}`. A missing, malformed, unknown, wrong or revoked key gets 401 with `WWW-Authenticate: Bearer`, checked before the body is read; a `read` key that writes gets 403; a body that is not a JSON object with `Content-Type: application/json` gets 400 `invalid_request`; wrong fields get 400 `invalid_request` with `"fields": {<field>: <message>}`; over the limit gets 429 `rate_limited` with `Retry-After` in seconds. The limit is a sliding 60-second window per `public_id`, counted only after the key verifies; a refused request is not counted. Creating a monitor inserts it and bumps `status_version` in one transaction. `status` is `operational`, `degraded`, `outage`, `maintenance` or `no_data` (D-023). Keys come from `npm run apikey:create -- --org <slug> --name <name> --level <read|write>`, which prints the key once. `GET /badge/:monitor_id.svg` needs no key and has no limit, sends `Cache-Control: no-cache`, shows `operational`, `degraded`, `outage`, `maintenance` or `no data`, and answers 404 for an id that is not a monitor.
+- **Why:** The user approved the plan on 2026-11-26. D-036's 303 to `/login` means nothing to a script; counting after verification keeps a stranger from using up someone else's key.
+- **Rejected:** `@fastify/rate-limit` (a dependency for a few lines, and not driven by the injected Clock); counting requests before the key verifies; an admin page for keys (no mock yet).
+- **Evidence:** src/web/api/routes.ts, src/web/api/rate-limit.ts, src/cli/apikey-create.ts, test/web/api-routes.test.ts, test/web/api-rate-limit.test.ts
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26

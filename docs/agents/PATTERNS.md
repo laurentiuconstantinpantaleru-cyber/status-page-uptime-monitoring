@@ -17,6 +17,7 @@
 - PATTERN-009 · A recurring rule is stored as a rule and expanded into spans when read · candidate
 - PATTERN-010 · An admin route: a guard preHandler for the role, the organization in the SQL, 404 outside it · candidate
 - PATTERN-011 · A form posts, then redirects with 303 to a page that says what happened · candidate
+- PATTERN-012 · A JSON API route group: its own plugin, the key checked in onRequest, its own error handler · candidate
 
 ---
 
@@ -106,6 +107,7 @@
 - **Example:** src/web/admin/routes.ts (`guard`, `idOf`, `/admin/monitors/:id/delete`), src/web/admin/store.ts (`orgFilter`), test/web/access-matrix.test.ts
 - **Why:** The role and the organization are checked on the server for every route, another organization's ids do not leak (D-036), and a new route cannot skip the matrix unnoticed.
 - **Source:** session 2026-11-26 · confidence medium
+- **Confirmed:** 2026-11-26
 
 ## PATTERN-011 · A form posts, then redirects with 303 to a page that says what happened
 - **Status:** candidate
@@ -113,4 +115,13 @@
 - **How:** Validate the fields in a pure function that returns the value or one message per field. Invalid: render the same page with 400, the typed values and `aria-invalid` plus the message next to each field. Saved: `303` to the page with a short query (`?posted=<id>`, `?started=<id>&minutes=30`) that the GET turns into a `role="status"` line. A failed save renders the page with 503 and keeps the typed text.
 - **Example:** src/web/admin/routes.ts (`/admin/incidents/:id/updates`, `/admin/monitors/:id/maintenance`), src/web/admin/incidents.ts (`parseUpdate`), test/web/admin-incidents.test.ts
 - **Why:** Reloading after a post does not post again, and errors and success read the same with or without script.
+- **Source:** session 2026-11-26 · confidence medium
+- **Confirmed:** 2026-11-26
+
+## PATTERN-012 · A JSON API route group: its own plugin, the key checked in onRequest, its own error handler
+- **Status:** candidate
+- **Use when:** Adding a route under `/api/v1`, or another group of routes that answer JSON to scripts.
+- **How:** Register the routes inside `app.register(async (api) => { … }, { prefix: '/api/v1' })`. Check the key and take from the rate limit in the plugin's `onRequest` hook, so a request without a valid key is refused before its body is parsed; check the key's level in a route-level `onRequest`. Give the plugin its own `setErrorHandler`, which turns Fastify's body errors (status < 500) into the API's 400 JSON and anything else into a logged 500. Add the route to the `API_ROUTES` table in `test/web/access-matrix.test.ts` with one expectation per kind of key.
+- **Example:** src/web/api/routes.ts, test/web/api-routes.test.ts, test/web/access-matrix.test.ts (`API access matrix`)
+- **Why:** The error shape and the key check stay the same on every API route without touching the HTML routes' handlers, and an unauthenticated client cannot make the server parse a large body.
 - **Source:** session 2026-11-26 · confidence medium

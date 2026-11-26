@@ -20,13 +20,16 @@ describe('RateLimiter (D-025, D-039)', () => {
   it('the window slides: a slot frees exactly 60 s after its request', () => {
     const clock = new FakeClock(NOW);
     const limiter = new RateLimiter(clock, 60, 60_000);
-    for (let i = 0; i < 60; i += 1) limiter.take('k');
+    limiter.take('k');
+    clock.advance(1000);
+    for (let i = 0; i < 59; i += 1) limiter.take('k');
 
-    clock.advance(59_999);
+    clock.advance(58_999);
     expect(limiter.take('k')).toEqual({ ok: false, retryAfterS: 1 });
     clock.advance(1);
+    // Only the first request has left the window; the other 59 leave in 1 s.
     expect(limiter.take('k')).toEqual({ ok: true });
-    expect(limiter.take('k')).toEqual({ ok: false, retryAfterS: 60 });
+    expect(limiter.take('k')).toEqual({ ok: false, retryAfterS: 1 });
   });
 
   it('a refused request does not count', () => {
@@ -50,7 +53,8 @@ describe('RateLimiter (D-025, D-039)', () => {
   });
 });
 
-describe('429 from the API (D-025, D-039)', () => {
+// Each request verifies a real bcrypt hash (~70 ms), and these tests send 60 or more.
+describe('429 from the API (D-025, D-039)', { timeout: 30_000 }, () => {
   let h: ApiHarness | undefined;
   afterEach(async () => {
     await h?.app.close();

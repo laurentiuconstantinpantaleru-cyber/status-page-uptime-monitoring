@@ -14,8 +14,9 @@
 - Q-019 · Where and how does the admin panel show worker_fault episodes?
 
 ### [Api](questions/api.md)
-- Q-016 · Where do the API and status badge docs live?
-- Q-018 · What do the API's requests and responses look like? · _investigating_
+- Q-016 · Where do the API and status badge docs live? · _answered_
+- Q-018 · What do the API's requests and responses look like? · _answered_
+- Q-022 · Where does the public status page's API link point?
 
 ### [Architecture](questions/architecture.md)
 - Q-006 · How does the web in-memory cache learn about worker state changes? · _answered_

@@ -160,7 +160,6 @@ describe('POST /api/v1/monitors (Q-018, D-039)', () => {
     h = apiHarness();
     const response = await apiPost(h.app, '/api/v1/monitors', NEW, bearer('write'));
 
-    expect(response.request.headers.origin).toBeUndefined();
     expect(response.statusCode).toBe(201);
   });
 

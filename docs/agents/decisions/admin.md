@@ -8,6 +8,7 @@
 - **Rejected:** A `<dialog>` opened by script (D-024); building Add and Edit now (not requested).
 - **Evidence:** src/web/admin/monitors.ts, src/web/views/admin/monitors.html, test/web/admin-monitors.test.ts
 - **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
 
 ## D-038 · Writing incident updates
 - **Status:** approved

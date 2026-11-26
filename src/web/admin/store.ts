@@ -61,10 +61,10 @@ export interface AdminStore {
 const orgFilter = (orgId: number | null, column: string) =>
   orgId === null ? { sql: '', values: [] as unknown[] } : { sql: ` AND ${column} = ?`, values: [orgId] as unknown[] };
 
-const bumpStatusVersion = (db: Queryable) =>
+export const bumpStatusVersion = (db: Queryable) =>
   db.query<RowDataPacket[]>('UPDATE status_version SET version = version + 1 WHERE id = 1');
 
-async function inTransaction(pool: Pool, fn: (conn: PoolConnection) => Promise<void>): Promise<void> {
+export async function inTransaction(pool: Pool, fn: (conn: PoolConnection) => Promise<void>): Promise<void> {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();

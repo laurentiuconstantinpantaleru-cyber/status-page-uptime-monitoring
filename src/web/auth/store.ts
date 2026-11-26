@@ -3,7 +3,7 @@ import type { Queryable } from '../../db/maintenance.js';
 import type { Clock } from '../../shared/clock.js';
 import type { Role, SignedInUser } from './access.js';
 
-// Users and sessions in MySQL (D-034, D-035). Every value goes in as a `?` parameter.
+// Users and sessions in MySQL (D-034, D-040). Every value goes in as a `?` parameter.
 
 export interface UserCredentials extends SignedInUser {
   passwordHash: string | null;

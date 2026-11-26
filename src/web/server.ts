@@ -1,6 +1,7 @@
 import { createPool } from '../db/connection.js';
 import { systemClock } from '../shared/clock.js';
 import { mysqlAdminStore } from './admin/store.js';
+import { mysqlApiStore } from './api/store.js';
 import { mysqlAuthStore } from './auth/store.js';
 import { loadStatusData, readStatusVersion } from './status/data.js';
 import { buildApp } from './app.js';
@@ -19,10 +20,11 @@ const app = buildApp(
         // Behind Caddy's HTTPS in production (D-029); plain HTTP on a laptop.
         secureCookies: process.env.NODE_ENV === 'production',
       },
+      api: { store: mysqlApiStore(pool, systemClock) },
     }
     : {},
 );
-if (!pool) app.log.warn('DATABASE_URL is not set: GET /status and the admin pages are not served');
+if (!pool) app.log.warn('DATABASE_URL is not set: GET /status, the admin pages and the API are not served');
 app.addHook('onClose', async () => {
   await pool?.end();
 });

@@ -10,13 +10,13 @@ import { parseUpdate } from './incidents.js';
 import { renderDeleteConfirm, renderIncidents, renderLogin, renderMonitors, type FormState } from './render.js';
 import type { AdminStore } from './store.js';
 
-// Sign-in and the admin pages (D-034–D-038). Every check runs on the server: the role (D-018)
+// Sign-in and the admin pages (D-034, D-036–D-038, D-040). Every check runs on the server: the role (D-018)
 // in `guard`, the organization in the store's queries, the form fields here.
 
 export interface AdminDeps {
   auth: AuthStore;
   store: AdminStore;
-  /** `Secure` on the session cookie; true in production (D-035). */
+  /** `Secure` on the session cookie; true in production (D-040). */
   secureCookies: boolean;
 }
 
@@ -55,9 +55,10 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps, clock
 
   app.decorateRequest('user', null);
 
-  // D-035: a POST must come from a page of this site.
+  // D-040: a POST must come from a page of this site, except under /api/, where only the
+  // Bearer key counts (a script sends no Origin, and no cookie is read there).
   app.addHook('onRequest', async (request, reply) => {
-    if (request.method === 'POST' && !sameOrigin(request.headers.origin, request.headers.host)) {
+    if (request.method === 'POST' && !request.url.startsWith('/api/') && !sameOrigin(request.headers.origin, request.headers.host)) {
       return plain(reply, 403, 'This form was sent from another site, so it was refused.');
     }
   });

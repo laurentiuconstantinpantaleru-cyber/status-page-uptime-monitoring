@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-// Sessions (D-035): the browser holds a random token; MySQL holds only its SHA-256.
+// Sessions (D-040): the browser holds a random token; MySQL holds only its SHA-256.
 
 export const SESSION_COOKIE = 'sid';
 export const IDLE_MS = 8 * 60 * 60 * 1000;

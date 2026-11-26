@@ -44,9 +44,10 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 | Part | Path | Responsibility | Talks to |
 |---|---|---|---|
 | Web Server | `src/web/` (`app.ts`, `server.ts`) | Serves Fastify REST API, SSR status pages, admin views; `GET /health`; `GET /status` (DS-p26-public-status) and the sign-in and admin routes when `DATABASE_URL` is set | MySQL, in-memory cache |
-| Sign-in | `src/web/auth/` (`password.ts`, `session.ts`, `access.ts`, `store.ts`), `src/web/views/login.html`, `src/cli/user-create.ts` | `GET`/`POST /login`, `POST /logout` (DS-p26-login): bcrypt passwords (D-034), sessions in `sessions` keyed by the token's SHA-256, 8 h idle / 7 days at most, `SameSite=Lax` cookie and an `Origin` check on every POST (D-035); the role matrix (D-018); accounts from `npm run user:create` | MySQL |
+| Sign-in | `src/web/auth/` (`password.ts`, `session.ts`, `access.ts`, `store.ts`), `src/web/views/login.html`, `src/cli/user-create.ts` | `GET`/`POST /login`, `POST /logout` (DS-p26-login): bcrypt passwords (D-034), sessions in `sessions` keyed by the token's SHA-256, 8 h idle / 7 days at most, `SameSite=Lax` cookie and an `Origin` check on every POST outside `/api/` (D-040); the role matrix (D-018); accounts from `npm run user:create` | MySQL |
 | Admin pages | `src/web/admin/` (`routes.ts`, `store.ts`, `render.ts`, `incidents.ts`), `src/web/views/admin/`, `src/web/public/admin.css` | `/admin/monitors` (DS-p26-admin-monitors): list, quick maintenance, delete after a confirmation page (D-037); `/admin/incidents` (DS-p26-admin-incidents): human updates, inserted with a `status_version` bump in one transaction (D-033, D-038). A `guard` preHandler checks the session and the role; the store limits every query to the user's organization; refusals per D-036 | MySQL |
 | Public Status Page | `src/web/status/` (`model.ts`, `data.ts`, `render.ts`), `src/web/views/status.html`, `src/web/public/` | Loads monitors, last checks, incidents with their updates and maintenance windows over the 90 × 24 h before now; derives each monitor's status, 90- and 30-day uptime and 90 daily bars, the active incidents and the past incidents (D-032); renders the Eta template with the tokens inlined. The admin pages write `incident_updates` and bump `status_version` (D-033) | MySQL, In-Memory Cache |
+| Public API | `src/web/api/` (`routes.ts`, `keys.ts`, `rate-limit.ts`, `monitor-input.ts`, `store.ts`, `badge.ts`), `src/cli/apikey-create.ts`, `API.md` | `GET`/`POST /api/v1/monitors` with a Bearer key (D-025): auth and the in-memory rate limit in an `onRequest` hook before the body is read, JSON errors per D-039, a create bumps `status_version`; `GET /badge/:monitor_id.svg`, public, from the same status rules (D-023); keys from `npm run apikey:create` (C-004) | MySQL |
 | Docs Page | `src/web/docs/` (`search.ts`, `render.ts`), `src/web/views/docs.html`, `src/web/views/docs/*.html` | `GET /docs` (DS-p26-docs): how monitoring works, filtered by `?q=` on the server (D-024: no script) | — |
 | Shared page parts | `src/web/page.ts`, `src/web/views/partials/`, `src/web/public/base.css` | Eta, inlined tokens and shared styles, icons, the header (Login or Log out) and the theme toggle used by `/status`, `/docs`, `/login` and the admin pages | Web Server |
 | In-Memory Cache | `src/web/status/cache.ts` | Keeps the rendered status page; reads `status_version` at most every 30 s on a request, re-renders on a new version, at UTC midnight or a maintenance boundary; serves the last copy if MySQL fails | Web Server |
@@ -73,7 +74,7 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 | What | Where | Owner | Notes |
 |---|---|---|---|
 | Orgs, users, roles | MySQL `organizations`, `users` | Web / Admin | One organization per user; `global_admin` has none (D-018); `password_hash` is bcrypt (D-034) |
-| Sessions | MySQL `sessions` | Web (sign-in) | SHA-256 of the token, never the token; 8 h idle, 7 days at most (D-035) |
+| Sessions | MySQL `sessions` | Web (sign-in) | SHA-256 of the token, never the token; 8 h idle, 7 days at most (D-040) |
 | Monitors | MySQL `monitors` | Web / Admin | Targets, interval 1–60 min (D-016), expected status, timeout, keyword, TLS, latency threshold |
 | Workers | MySQL `workers` | Check Workers | Worker processes and when each was last seen |
 | Worker faults | MySQL `worker_faults` | Check Workers | One row per episode of a degraded worker (D-015), open while `ended_at` is NULL, at most one open per worker; the counts the judgment saw |
@@ -81,7 +82,7 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 | Incidents & Updates | MySQL `incidents`, `incident_updates` | Incident Engine | Start, end, cause; at most one open incident per monitor; human updates by stage (D-014) |
 | Maintenance Windows | MySQL `maintenance_windows` | Web / Admin | Scheduled and quick windows per monitor (D-012), excluded from uptime |
 | Alert contacts | MySQL `alert_contacts` | Web / Admin | Email/Telegram, primary or secondary (D-007), per organization |
-| API keys | MySQL `api_keys` | Web / Admin | `read`/`write`, public id + bcrypt hash of the secret (D-025; sent as `Authorization: Bearer`) |
+| API keys | MySQL `api_keys` | `npm run apikey:create` | `read`/`write`, public id + bcrypt hash of the secret (D-025; sent as `Authorization: Bearer`); the plaintext is printed once |
 | Status version | MySQL `status_version` (one row) | Check Workers (writers, _planned_); Web Server reads | Bumped on every monitor state change; polled every 30 s (D-020, Q-007) |
 | Migrations | MySQL `schema_migrations` | `npm run db:migrate` | Applied migration files (D-021) |
 | Aggregated Metrics | MySQL `rollup_hourly`, `rollup_daily` _planned_ | Roll-up Job | 90-day uptime and latency history |
@@ -239,6 +240,6 @@ on `organizations`, `monitors`), left out of the diagram.
 
 ## Boundaries
 - Public Status Page: Publicly readable; cached in-memory with sub-100ms response time; isolated from administrative write routes (it never looks up a session).
-- Admin pages: a session and a role checked on the server for every route (D-018, D-036); another organization's monitor or incident is 404; every POST needs a same-site `Origin` (D-035).
-- API Key Auth: Guarded routes for creating and editing monitors (`/api/v1/monitors`).
+- Admin pages: a session and a role checked on the server for every route (D-018, D-036); another organization's monitor or incident is 404; every POST outside `/api/` needs a same-site `Origin` (D-040).
+- API Key Auth: every `/api/v1` route needs `Authorization: Bearer <public_id>.<secret>`; no cookie is read there; the key's organization limits every query; 60 requests per minute per key in each web process (D-025, D-039, C-004). `GET /badge/:monitor_id.svg` is public.
 - Multi-Worker Confirmation: Protects against false alarms caused by single worker host failure.

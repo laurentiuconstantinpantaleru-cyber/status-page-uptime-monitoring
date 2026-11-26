@@ -8,15 +8,26 @@
 - **Rejected:** argon2id from `node:crypto` (needs Node 24 in CI and in the image); the native `argon2` package (a native build); a password on the command line (it would land in the shell history and the process list).
 - **Evidence:** src/web/auth/password.ts, src/cli/user-create.ts, db/migrations/0007_auth.sql, test/web/auth-password.test.ts
 - **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
 
 ## D-035 · Server-side sessions in MySQL; SameSite=Lax cookie and an Origin check on POST
-- **Status:** approved
+- **Status:** superseded-by D-040
 - **Date:** 2026-11-26
 - **Rule:** A sign-in creates a row in `sessions` keyed by the SHA-256 of a random 32-byte token; the browser gets only the token, in the cookie `sid` (`HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` when `NODE_ENV=production`). A session ends 8 hours after its last request or 7 days after sign-in, whichever comes first; an ended session is deleted when it is next presented. `POST /logout` deletes the row and clears the cookie. Every POST must carry an `Origin` header whose host equals the request's `Host`, else 403.
 - **Why:** The user approved the plan on 2026-11-26 (8 h idle, 7 days at most). A stored hash means a leaked database does not hand out live sessions; `SameSite=Lax` and the Origin check stop cross-site form posts without a token in every form.
 - **Rejected:** A signed cookie holding the session (cannot be revoked on logout); a per-session CSRF token in every form (more code for the same protection with current browsers).
 - **Evidence:** src/web/auth/session.ts, src/web/auth/access.ts, test/web/session.test.ts, test/web/access-matrix.test.ts
 - **Source:** user · confidence high
+
+## D-040 · Server-side sessions in MySQL; SameSite=Lax cookie and an Origin check on POST outside /api/
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** A sign-in creates a row in `sessions` keyed by the SHA-256 of a random 32-byte token; the browser gets only the token, in the cookie `sid` (`HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` when `NODE_ENV=production`). A session ends 8 hours after its last request or 7 days after sign-in, whichever comes first; an ended session is deleted when it is next presented. `POST /logout` deletes the row and clears the cookie. Every POST outside `/api/` must carry an `Origin` header whose host equals the request's `Host`, else 403. Routes under `/api/` authenticate only by Bearer key (D-025) and read no cookie.
+- **Why:** As D-035; the user approved the narrowing on 2026-11-26 with the API plan. API clients (curl, CI) send no `Origin`, and a Bearer header cannot be sent by a cross-site form, so the check protects nothing there.
+- **Rejected:** As D-035; requiring `Origin` on API POSTs (breaks every script client).
+- **Evidence:** src/web/admin/routes.ts (`onRequest`), src/web/auth/session.ts, test/web/api-routes.test.ts, test/web/access-matrix.test.ts
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
 
 ## D-036 · What a refused request gets
 - **Status:** approved
@@ -26,3 +37,4 @@
 - **Rejected:** 401 for a visitor (a browser shows nothing useful); 403 for another organization's resources (confirms that the id exists).
 - **Evidence:** src/web/auth/access.ts, test/web/access-matrix.test.ts
 - **Source:** user · confidence high
+- **Confirmed:** 2026-11-26

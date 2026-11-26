@@ -20,7 +20,7 @@ export function css(pageFile: string): string {
 }
 
 /* Status icons: shape and text together, never color alone (DESIGN.md). */
-const ICON_PATHS: Record<Status, string> = {
+export const ICON_PATHS: Record<Status, string> = {
   ok: '<circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
   degraded: '<path d="M8 1.2l7 13H1z" fill="currentColor"/><path d="M8 6v3.6M8 11.6v.1" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/>',
   outage: '<rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/>',
