@@ -20,6 +20,7 @@
 - D-008 · Check workers co-located as separate processes on the same host
 - D-015 · Worker degradation detection and fault suppression
 - D-009 · Explicit out-of-scope architectural and functional boundaries
+- D-027 · Scheduling and work split of check workers
 
 ### [Incidents](decisions/incidents.md)
 - D-006 · Incident lifecycle thresholds: N=2 confirmed failures to open, M=2 successes to close
@@ -27,6 +28,7 @@
 - D-012 · Quick maintenance mode button (15/30/60 min) in addition to scheduled calendar windows
 - D-013 · Alert payload structure: HTTP code, error cause, and time since last successful check
 - D-014 · Human-authored incident timeline updates with standardized lifecycle stages
+- D-028 · Checks keep running during maintenance; no incident opens
 
 ### [Monitoring](decisions/monitoring.md)
 - D-016 · Default check interval of 5 minutes, range 1–60 minutes

@@ -48,10 +48,10 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 | Docs Page | `src/web/docs/` (`search.ts`, `render.ts`), `src/web/views/docs.html`, `src/web/views/docs/*.html` | `GET /docs` (DS-p26-docs): how monitoring works, filtered by `?q=` on the server (D-024: no script) | — |
 | Shared page parts | `src/web/page.ts`, `src/web/views/partials/`, `src/web/public/base.css` | Eta, inlined tokens and shared styles, icons, the header and the theme toggle used by `/status` and `/docs` | Web Server |
 | In-Memory Cache | `src/web/status/cache.ts` | Keeps the rendered status page; reads `status_version` at most every 30 s on a request, re-renders on a new version, at UTC midnight or a maintenance boundary; serves the last copy if MySQL fails | Web Server |
-| Scheduler | `src/worker/` _planned_ | Drift-free execution planning for monitor probes | Check Workers |
+| Scheduler | `src/worker/scheduler.ts` | Fixed grid per monitor (interval plus a per-monitor offset), no catch-up, a slot skipped while the previous check runs (D-027) | Check Workers |
 | Check Engine | `src/worker/check.ts`, `src/worker/http-client.ts` | One check through an injected `HttpClient` and `Clock`: status, keyword, latency threshold, TLS days left, failure cause; default timeout 30 s (D-022). `nodeHttpClient` is the real client: GET, up to 5 redirects, whole body, certificate of the last hop (D-026) | External Targets (via the client) |
-| Check Workers | `src/worker/` _planned_ | Schedules probes and runs the check engine; performs 2nd worker confirmation | MySQL, External Targets |
-| Incident Engine | `src/shared/` _planned_ | State machine opening/closing incidents and calculating uptime | MySQL, Alert Dispatcher |
+| Check Workers | `src/worker/main.ts`, `worker.ts`, `assignment.ts`, `store.ts` | One process per `WORKER_NAME` (`npm run start:worker`): heartbeat 10 s, monitors re-read 60 s, scheduled checks of the monitors it is primary for (`monitor_id % active workers`), confirmations of the other worker's `down` checks polled every 5 s; records each check under the monitor's row lock (D-027) | MySQL, External Targets |
+| Incident Engine | `src/shared/incidents.ts` (uptime: _planned_) | Opens after 2 confirmed failures outside maintenance, resolves after 2 successes (D-006, D-028); says when the status version must change; run by the workers inside `recordCheck` | MySQL, Alert Dispatcher (_planned_) |
 | Alert Dispatcher | `src/worker/` _planned_ | Sends Telegram and email notifications with escalation | Telegram API, SMTP |
 | Roll-up Job | `src/worker/` _planned_ | Aggregates raw check data older than 7 days | MySQL |
 | Database | `src/db/connection.ts`, `src/db/migrate.ts`, `db/migrations/` | UTC connections (D-020); forward-only SQL migrations recorded in `schema_migrations` (D-021) | MySQL |
@@ -71,7 +71,7 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 | Orgs, users, roles | MySQL `organizations`, `users` | Web / Admin | One organization per user; `global_admin` has none (D-018) |
 | Monitors | MySQL `monitors` | Web / Admin | Targets, interval 1–60 min (D-016), expected status, timeout, keyword, TLS, latency threshold |
 | Workers | MySQL `workers` | Check Workers | Worker processes and when each was last seen |
-| Raw checks | MySQL `checks` | Check Workers | One row per probe or confirmation; kept 7 days then rolled up (D-011) |
+| Raw checks | MySQL `checks` | Check Workers | One row per probe or confirmation; a confirmation points at its check by `confirms_check_id` (unique); kept 7 days then rolled up (D-011) |
 | Incidents & Updates | MySQL `incidents`, `incident_updates` | Incident Engine | Start, end, cause; at most one open incident per monitor; human updates by stage (D-014) |
 | Maintenance Windows | MySQL `maintenance_windows` | Web / Admin | Scheduled and quick windows per monitor (D-012), excluded from uptime |
 | Alert contacts | MySQL `alert_contacts` | Web / Admin | Email/Telegram, primary or secondary (D-007), per organization |

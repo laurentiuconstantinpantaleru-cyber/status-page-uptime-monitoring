@@ -27,10 +27,11 @@
 ## PATTERN-002 · Multi-worker ping confirmation before state change
 - **Status:** candidate
 - **Use when:** A worker probe fails (timeout, non-200 status code, TLS expiration, or missing keyword).
-- **How:** Worker 1 records potential failure and enqueues immediate verification task for Worker 2. Incident transition to DOWN occurs only if Worker 2 independently confirms failure.
-- **Example:** docs/brief.md:24
+- **How:** The primary worker stores its `down` check; the other worker polls every 5 s for unconfirmed `down` checks of other workers, probes the target itself and stores the result with `confirms_check_id` (D-027). The incident engine counts a failure only when its confirmation is also `down`.
+- **Example:** src/worker/worker.ts (`confirmPending`, `recordCheck`), src/shared/incidents.ts, test/worker/worker.test.ts
 - **Why:** Avoids false positives from isolated worker network or DNS interruptions.
 - **Source:** docs · confidence high
+- **Confirmed:** 2026-11-26
 
 ## PATTERN-003 · Version-polled in-memory cache invalidation on monitor state change
 - **Status:** candidate
@@ -48,6 +49,7 @@
 - **Example:** db/migrations/0001_initial_schema.sql, src/db/migrate.ts (`applied_at`)
 - **Why:** A database default reads the server's clock, which simulated-time tests cannot move (D-004, D-021).
 - **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
 
 ## PATTERN-005 · Mock screenshots through headless Chrome inside fixed-width iframes
 - **Status:** candidate

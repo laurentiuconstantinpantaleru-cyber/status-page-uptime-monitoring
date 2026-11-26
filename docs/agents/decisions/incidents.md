@@ -49,3 +49,13 @@
 - **Evidence:** docs/survey-results.md:14
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-19
+
+## D-028 · Checks keep running during maintenance; no incident opens
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** During a maintenance window checks keep running and are stored. No incident opens; an open incident can still resolve. An incident opens after 2 consecutive scheduled failures, each confirmed `down` by the other worker (an `up` or missing confirmation breaks the run); it starts at the first failure, takes cause and HTTP code from the latest confirmation, and resolves at the first of 2 consecutive successful scheduled checks (D-006).
+- **Why:** The response time chart keeps its data through maintenance, and downtime inside the window is excluded from uptime anyway (D-012).
+- **Rejected:** Pausing checks during maintenance (gaps in the charts).
+- **Evidence:** src/shared/incidents.ts, test/shared/incidents.test.ts
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26

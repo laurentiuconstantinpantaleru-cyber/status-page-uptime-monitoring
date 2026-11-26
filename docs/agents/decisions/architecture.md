@@ -97,7 +97,7 @@
 - **Rejected:** Always trusting a single-worker failure without cross-worker comparison (causes false incidents on worker network blips).
 - **Evidence:** docs/brief.md:24, docs/brief.md:39
 - **Source:** user · confidence high
-- **Confirmed:** 2026-11-25
+- **Confirmed:** 2026-11-26
 
 ## D-009 · Explicit out-of-scope architectural and functional boundaries
 - **Status:** approved
@@ -108,3 +108,13 @@
 - **Evidence:** docs/brief.md:2, docs/survey-results.md:16
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-19
+
+## D-027 · Scheduling and work split of check workers
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** Each monitor runs on a fixed grid: slot k = k × interval + (monitor_id × 1000 ms) mod interval. Missed slots are not caught up, and a slot whose previous check of the same monitor still runs is skipped. The primary worker of a monitor is `active_workers[monitor_id % count]`, where active means a heartbeat (`workers.last_seen_at`) within 30 s; heartbeats every 10 s, monitors re-read every 60 s. The other worker polls every 5 s for scheduled `down` checks of other workers from the last 2 minutes without a confirmation, probes them and stores the result with `checks.confirms_check_id`, unique per check. Recording a check, and opening or resolving its incident, runs in one transaction that locks the monitor row.
+- **Why:** The brief asks for no drift (a 1-minute monitor runs 60 times an hour) and no overlap; MySQL has no notifications, so confirmation is polled (D-020); the monitor lock and unique keys keep two workers from double-confirming or double-opening.
+- **Rejected:** Both workers checking every monitor (doubles requests to the sites); a separate `confirmation_requests` table (more code for the same guarantee); an external queue or Redis (D-009, D-020).
+- **Evidence:** src/worker/scheduler.ts, src/worker/assignment.ts, src/worker/worker.ts, src/worker/store.ts, db/migrations/0004_check_confirmations.sql
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26

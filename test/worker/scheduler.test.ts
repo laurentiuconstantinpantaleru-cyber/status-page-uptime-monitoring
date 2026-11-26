@@ -106,18 +106,18 @@ describe('Scheduler', () => {
     const clock = new FakeClock(HOUR);
     const scheduler = new Scheduler(clock);
     scheduler.setMonitors([
-      { id: 60, intervalMinutes: 1 },
+      { id: 300, intervalMinutes: 1 },
       { id: 120, intervalMinutes: 1 },
     ]);
-    expect(scheduler.due().sort()).toEqual([120, 60].sort());
-    scheduler.finished(60);
+    expect(scheduler.due().sort()).toEqual([120, 300].sort());
+    scheduler.finished(300);
     scheduler.finished(120);
 
     clock.advance(30_000);
-    scheduler.setMonitors([{ id: 60, intervalMinutes: 5 }]);
+    scheduler.setMonitors([{ id: 300, intervalMinutes: 5 }]);
 
     const starts = simulate(scheduler, clock, END_OF_HOUR);
-    expect(starts.get(60)?.slice(0, 2)).toEqual([5 * MINUTE_MS, 10 * MINUTE_MS]);
+    expect(starts.get(300)?.slice(0, 2)).toEqual([5 * MINUTE_MS, 10 * MINUTE_MS]);
     expect(starts.has(120)).toBe(false);
   });
 });
