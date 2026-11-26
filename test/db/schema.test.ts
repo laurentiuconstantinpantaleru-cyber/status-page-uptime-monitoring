@@ -940,9 +940,19 @@ describe.skipIf(!url)('MySQL schema', () => {
       expect(failed).toMatchObject({ last_error: 'SMTP 421', sending_at: null });
 
       expect(await store.claimEmail(otherOrg, MONTH, NOW)).not.toBeNull();
-      await store.markEmailed(otherOrg, MONTH, NOW);
+      await store.markEmailed(otherOrg, MONTH, NOW, 1);
       expect(await store.reportState(otherOrg, MONTH)).toEqual({ emailed: true });
       expect(await store.claimEmail(otherOrg, MONTH, new Date(NOW.getTime() + 2 * 60 * 60 * 1000))).toBeNull();
+    });
+
+    it('lists the organizations with their stored reports and how each was sent; an org admin sees only theirs', async () => {
+      const store = mysqlReportStore(pool);
+      const all = await store.list(null);
+      const b = all.find((o) => o.id === otherOrg)!;
+
+      expect(b).toMatchObject({ name: 'Rep B', createdAt: T0 });
+      expect(b.reports).toEqual([{ month: MONTH, emailedAt: NOW, emailedTo: 1, lastError: null }]);
+      expect((await store.list(orgId)).map((o) => o.id)).toEqual([orgId]);
     });
 
     it('a claim left by a crashed send is taken again after an hour', async () => {

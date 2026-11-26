@@ -101,6 +101,21 @@ describe('runMonthlyReports (D-019, D-041)', () => {
     expect(store.rows.get('1/2026-11')!.emailedAt).toEqual(clock.now());
   });
 
+  it('records how many org admins the email went to', async () => {
+    const clock = new FakeClock(new Date('2026-12-01T00:00:00.000Z'));
+    const store = fakeStore();
+    const marked: [number, string, number][] = [];
+    const mark = store.markEmailed.bind(store);
+    store.markEmailed = async (orgId, month, now, to) => {
+      marked.push([orgId, month, to]);
+      return mark(orgId, month, now, to);
+    };
+
+    await runMonthlyReports({ clock, store, mailer: fakeMailer(), log: quiet });
+
+    expect(marked).toEqual([[1, '2026-11', 2], [2, '2026-11', 1]]);
+  });
+
   it('one millisecond before the 1st, November is not reported yet', async () => {
     const clock = new FakeClock(new Date('2026-11-30T23:59:59.999Z'));
     const store = fakeStore();

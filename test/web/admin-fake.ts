@@ -5,6 +5,7 @@ import type { AdminGroup, AdminIncident, AdminStore, NewIncidentUpdate } from '.
 import { hashPassword } from '../../src/web/auth/password.js';
 import type { AuthStore, SessionRow, UserCredentials } from '../../src/web/auth/store.js';
 import type { ReportDownloads } from '../../src/web/reports/job.js';
+import type { ReportOrg } from '../../src/web/reports/months.js';
 import type { StatusData } from '../../src/web/status/model.js';
 
 // In-memory stores for the admin routes (D-034–D-038): what the routes ask and write, without MySQL.
@@ -137,11 +138,28 @@ export function fakeAdmin(opts: { groups?: AdminGroup[]; incidents?: (AdminIncid
 /** Monthly report PDFs (D-019): one fake file per organization and month asked for. */
 export interface FakeReports extends ReportDownloads {
   asked: { orgId: number; year: number; month: number }[];
+  orgs: ReportOrg[];
+  fail: boolean;
 }
 
 export function fakeReports(): FakeReports {
   const reports: FakeReports = {
     asked: [],
+    fail: false,
+    orgs: [
+      {
+        id: ORG_A, name: 'Campus projects', createdAt: new Date('2026-08-15T09:00:00.000Z'),
+        reports: [
+          { month: '2026-10', emailedAt: null, emailedTo: null, lastError: 'SMTP 421 try again later' },
+          { month: '2026-09', emailedAt: new Date('2026-10-01T00:00:04.000Z'), emailedTo: 2, lastError: null },
+        ],
+      },
+      { id: ORG_B, name: 'Local businesses', createdAt: new Date('2026-09-01T00:00:00.000Z'), reports: [] },
+    ],
+    async list(orgId) {
+      if (reports.fail) throw new Error('database down');
+      return reports.orgs.filter((o) => orgId === null || o.id === orgId);
+    },
     async pdf(orgId, year, month) {
       if (orgId !== ORG_A && orgId !== ORG_B) return null;
       reports.asked.push({ orgId, year, month });
