@@ -18,7 +18,7 @@
 - **Rejected:** Unconditional continuous alert spamming; non-configurable single timeout.
 - **Evidence:** docs/survey-results.md:9, docs/survey-results.md:13
 - **Source:** user · confidence high
-- **Confirmed:** 2026-11-19
+- **Confirmed:** 2026-11-26
 
 ## D-012 · Quick maintenance mode button (15/30/60 min) in addition to scheduled calendar windows
 - **Status:** approved
@@ -99,3 +99,14 @@
 - **Evidence:** src/worker/store.ts (`bumpStatusVersion`), src/web/maintenance/store.ts, src/web/status/cache.ts, test/web/status-page.test.ts
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26
+
+## D-044 · The alert dispatcher: who gets which alert, once, and how they acknowledge it
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** A dispatcher in the web process runs at start and every 30 seconds; the workers are unchanged. For an open incident it sends the opened alert at once to the organization's `primary` contacts. When nobody acknowledged the incident within `escalation_timeout_minutes` (D-007) after its first opened alert went out, it sends the escalated alert to the `secondary` contacts; with no opened alert sent there is nothing to escalate. When the incident is resolved, everyone who got an opened or escalated alert gets one resolved alert. An incident that opened and resolved between two runs sends nothing. Each (incident, kind, contact) is a row in `incident_alerts` claimed by one UPDATE (PATTERN-013): sent once, a failed send retried at the next run (Telegram's `retry_after` honoured through `next_try_at`), a claim older than 10 minutes taken as a crashed send. `last_error` and the logs keep only the error's code, reply code and command, never an address, chat id or token. Email goes through SMTP (Q-004), Telegram through `sendMessage` (C-002); a channel without settings (`SMTP_URL`/`MAIL_FROM`, `TELEGRAM_BOT_TOKEN`) waits and its contacts get the alert once it is set. Alerts are plain English text with the D-013 fields; each opened or escalated alert carries its own acknowledge link `PUBLIC_URL/ack/<token>`, a random token of which only the SHA-256 is stored (`incident_ack_tokens`); without `PUBLIC_URL` the alert says to acknowledge in the admin panel. Contacts come from `npm run contact:add` (a Telegram address is the numeric chat id).
+- **Why:** The user approved the plan on 2026-11-26 with its recommendations: contacts from the command line, acknowledgment through a page with a POST button and on the incidents page, TLS warnings in a separate plan, a 30-second run. One token per message lets a retry or an escalation carry a working link while no token is stored in clear.
+- **Rejected:** The dispatcher in the workers (two of them would split the alerts); an outbox written by the workers (changes `recordCheck`'s transaction for nothing); a Telegram SDK (one HTTP call); one row per (incident, kind) for every contact (a retry after a partial failure would send the others twice); acknowledging on GET (mail scanners open links).
+- **Evidence:** src/shared/alerts.ts, src/web/alerts/dispatcher.ts, src/web/alerts/store.ts, src/web/alerts/telegram.ts, db/migrations/0010_alerts.sql, test/web/alerts.test.ts, test/shared/alerts.test.ts
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
+

@@ -150,11 +150,16 @@ jobs:
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
           MYSQL_USER: ${{ secrets.MYSQL_USER }}
           MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          # Optional (D-041, D-044): without them reports and alerts wait for that channel.
+          SMTP_URL: ${{ secrets.SMTP_URL }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p ~/uptime'
           scp -i ~/.ssh/id_deploy deploy/compose.prod.yml deploy/Caddyfile "$DEPLOY_USER@$DEPLOY_HOST:uptime/"
-          printf 'IMAGE=ghcr.io/%s:%s\nDOMAIN=%s\nMYSQL_DATABASE=%s\nMYSQL_USER=%s\nMYSQL_PASSWORD=%s\n' \
+          printf 'IMAGE=ghcr.io/%s:%s\nDOMAIN=%s\nMYSQL_DATABASE=%s\nMYSQL_USER=%s\nMYSQL_PASSWORD=%s\nSMTP_URL=%s\nMAIL_FROM=%s\nTELEGRAM_BOT_TOKEN=%s\n' \
             "${GITHUB_REPOSITORY,,}" "$GITHUB_SHA" "$DOMAIN" "$MYSQL_DATABASE" "$MYSQL_USER" "$MYSQL_PASSWORD" \
+            "$SMTP_URL" "$MAIL_FROM" "$TELEGRAM_BOT_TOKEN" \
             | ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" 'umask 077 && cat > ~/uptime/.env'
 
       - name: Pull the image and restart the stack

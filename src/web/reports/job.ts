@@ -1,5 +1,6 @@
 import type { Clock } from '../../shared/clock.js';
 import { buildReport, monthKey, monthTitle, previousMonth, type ReportInput } from '../../shared/report.js';
+import { mailErrorFields, mailErrorText, type Mailer } from '../mail.js';
 import type { PdfCache } from './cache.js';
 import type { ReportOrg } from './months.js';
 import { renderReportPdf } from './pdf.js';
@@ -9,35 +10,9 @@ import { renderReportPdf } from './pdf.js';
 // find them made. A report is stored once per (organization, month) by a unique key, and the
 // right to email it is claimed in the database, so re-runs and overlapping runs send it once.
 
-export interface Mail {
-  to: string[];
-  subject: string;
-  text: string;
-  attachments: { filename: string; content: Buffer }[];
-}
-
-/** Injected so tests never send mail (PATTERN-006); `smtpMailer` is the real one. */
-export interface Mailer {
-  /** Resolves with how many recipients the mail server accepted; throws when it took none. */
-  send(mail: Mail): Promise<{ accepted: number }>;
-}
-
-/** What of a failed send may be stored and logged. An SMTP error's message, `response`,
- *  `rejected` and `rejectedErrors` quote the recipients' addresses (personal data, AGENTS.md). */
-export function mailErrorFields(error: unknown): { code?: string; responseCode?: number; command?: string; name: string } {
-  const e = (error ?? {}) as { code?: unknown; responseCode?: unknown; command?: unknown; name?: unknown };
-  return {
-    name: typeof e.name === 'string' ? e.name : 'Error',
-    ...(typeof e.code === 'string' ? { code: e.code } : {}),
-    ...(typeof e.responseCode === 'number' ? { responseCode: e.responseCode } : {}),
-    ...(typeof e.command === 'string' ? { command: e.command } : {}),
-  };
-}
-
-const mailErrorText = (f: ReturnType<typeof mailErrorFields>) =>
-  f.code === undefined && f.responseCode === undefined && f.command === undefined
-    ? f.name
-    : [f.code, f.responseCode, f.command].filter((x) => x !== undefined).join(' ');
+// Mail lives in ../mail.ts (shared with the alerts); re-exported for the report tests and callers.
+export type { Mail, Mailer } from '../mail.js';
+export { mailErrorFields } from '../mail.js';
 
 export interface ReportStore {
   organizations(): Promise<{ id: number; name: string }[]>;

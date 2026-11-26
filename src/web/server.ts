@@ -1,10 +1,13 @@
 import { createPool } from '../db/connection.js';
 import { systemClock } from '../shared/clock.js';
 import { mysqlAdminStore } from './admin/store.js';
+import { startAlerts } from './alerts/dispatcher.js';
+import { mysqlAlertStore } from './alerts/store.js';
+import { telegramClient } from './alerts/telegram.js';
 import { mysqlApiStore } from './api/store.js';
 import { PdfCache } from './reports/cache.js';
 import { reportPdf, startMonthlyReports } from './reports/job.js';
-import { mailerFromEnv } from './reports/mailer.js';
+import { mailerFromEnv } from './mail.js';
 import { mysqlReportStore } from './reports/store.js';
 import { mysqlAuthStore } from './auth/store.js';
 import { loadStatusData, readStatusVersion } from './status/data.js';
@@ -37,11 +40,25 @@ const app = buildApp(
 );
 if (!pool) app.log.warn('DATABASE_URL is not set: GET /status, the admin pages and the API are not served');
 
-// Monthly reports (D-019, D-041): made in this process, the only web process (D-029).
+// Monthly reports (D-019, D-041) and alerts (D-007, D-044): run in this process, the only web
+// process (D-029). Without SMTP or a Telegram token, that channel waits.
 let stopReports = () => {};
-if (reportStore) {
+let stopAlerts = () => {};
+if (reportStore && pool) {
   const { mailer, missing } = mailerFromEnv(process.env);
-  if (!mailer) app.log.warn(`${missing.join(' and ')} not set: monthly reports are stored but not emailed`);
+  if (!mailer) app.log.warn(`${missing.join(' and ')} not set: monthly reports are stored but not emailed, and email alerts wait`);
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) app.log.warn('TELEGRAM_BOT_TOKEN not set: Telegram alerts wait');
+  const publicUrl = process.env.PUBLIC_URL || null;
+  if (!publicUrl) app.log.warn('PUBLIC_URL not set: alerts have no acknowledge link');
+  stopAlerts = startAlerts({
+    clock: systemClock,
+    store: mysqlAlertStore(pool),
+    mailer,
+    telegram: token ? telegramClient(token) : null,
+    publicUrl,
+    log: (message, fields) => app.log.error(fields, message),
+  });
   stopReports = startMonthlyReports({
     clock: systemClock,
     store: reportStore,
@@ -52,6 +69,7 @@ if (reportStore) {
 
 app.addHook('onClose', async () => {
   stopReports();
+  stopAlerts();
   await pool?.end();
 });
 

@@ -11,7 +11,7 @@
 ## Index
 - C-001 · Public status page JSON API · provided · _proposed_
 - C-004 · Monitors API v1 and status badge · provided
-- C-002 · Telegram Bot API notification dispatch · external · _proposed_
+- C-002 · Telegram Bot API notification dispatch · external
 - C-003 · Target HTTP/HTTPS Services & TLS probing · external
 
 ---
@@ -48,11 +48,12 @@
 ## External
 
 ### C-002 · Telegram Bot API notification dispatch
-- **Status:** proposed
-- **Interface:** Telegram Bot HTTP API (`sendMessage`)
-- **We rely on:** Immediate delivery of outage and resolution alerts to target chat IDs.
-- **Known quirks:** Rate limits on group messages; duplicate alerts suppressed at the application layer.
-- **Evidence:** docs/brief.md:12
+- **Status:** approved
+- **Interface:** `POST https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/sendMessage` with JSON `{chat_id, text, link_preview_options: {is_disabled: true}}`; plain text, no `parse_mode`.
+- **We rely on:** `200` with `{"ok": true}` for a delivered message; `chat_id` is `alert_contacts.address` (the numeric chat id, negative for groups).
+- **Known quirks:** `429` with `parameters.retry_after` (seconds): no new try before it (`incident_alerts.next_try_at`); `400` (chat not found) and `403` (bot blocked) keep `last_error` and are tried at the next run; the token is in the URL, so no error, log or `last_error` carries the URL, the token or the chat id; duplicates are suppressed by `incident_alerts` (D-044).
+- **Evidence:** docs/brief.md:12, src/web/alerts/telegram.ts, test/web/telegram.test.ts
+- **Confirmed:** 2026-11-26
 
 ### C-003 · Target HTTP/HTTPS Services & TLS probing
 - **Status:** approved

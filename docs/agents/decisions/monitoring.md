@@ -18,7 +18,7 @@
 - **Rejected:** Single late alert (e.g. at 2 days); excessive daily warning spam.
 - **Evidence:** docs/survey-results.md:10
 - **Source:** user · confidence high
-- **Confirmed:** 2026-11-19
+- **Confirmed:** 2026-11-26
 
 ## D-011 · Raw check retention for 7 days with hourly and daily roll-up compaction
 - **Status:** approved
