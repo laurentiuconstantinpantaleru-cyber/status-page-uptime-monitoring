@@ -5,6 +5,7 @@
 - **Blocks:** Live monitoring deployment and verification of the 14-day pre-delivery requirement.
 - **Who answers:** user
 - **Proposed answer:** The 2 local businesses are confirmed: `https://hugthemug.ro/` and `http://cafewien.ro/` at 5-minute interval (confirmed by user 2026-11-25, see D-016). 3 of the 10 student projects are confirmed (reported by the user 2026-11-27) and seeded by `db/migrations/0011_seed_student_projects.sql` in the `student-projects` organization: Peer review, P23 Sneaker Price Monitor and StudRide, 5 min, 30 s timeout, TLS, each with a keyword found in its served HTML. The other 7 are still being gathered in `MONITORS.md`.
+- **Confirmed:** 2026-11-27
 
 ## Q-010 · What latency threshold do the seeded business monitors use?
 - **Status:** open
