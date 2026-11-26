@@ -49,3 +49,88 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  # Builds the production image and checks it starts; on main it is pushed for the deploy.
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t app:ci .
+
+      - name: Start the image and call /health
+        run: |
+          docker run -d --name smoke -p 3000:3000 app:ci
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:3000/health; then exit 0; fi
+            sleep 1
+          done
+          docker logs smoke
+          exit 1
+
+      - name: Push to GitHub Container Registry
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:${GITHUB_SHA}"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker tag app:ci "$image"
+          docker push "$image"
+
+  # Only main, only after the tests and the image check pass; one deploy at a time.
+  deploy:
+    needs: [lint-and-test, image]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_deploy ~/.ssh/known_hosts
+
+      - name: Copy the compose files and write .env from the secrets
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+        run: |
+          ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" 'mkdir -p ~/uptime'
+          scp -i ~/.ssh/id_deploy deploy/compose.prod.yml deploy/Caddyfile "$DEPLOY_USER@$DEPLOY_HOST:uptime/"
+          printf 'IMAGE=ghcr.io/%s:%s\nDOMAIN=%s\nMYSQL_DATABASE=%s\nMYSQL_USER=%s\nMYSQL_PASSWORD=%s\n' \
+            "${GITHUB_REPOSITORY,,}" "$GITHUB_SHA" "$DOMAIN" "$MYSQL_DATABASE" "$MYSQL_USER" "$MYSQL_PASSWORD" \
+            | ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" 'umask 077 && cat > ~/uptime/.env'
+
+      - name: Pull the image and restart the stack
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd ~/uptime && docker login ghcr.io -u '$GITHUB_ACTOR' --password-stdin \
+             && docker compose -f compose.prod.yml pull \
+             && docker logout ghcr.io \
+             && docker compose -f compose.prod.yml up -d --wait --remove-orphans"

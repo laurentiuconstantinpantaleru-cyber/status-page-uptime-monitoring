@@ -1,0 +1,95 @@
+# Production on one host (D-008): MySQL, migrations, web, two check workers and Caddy for HTTPS.
+# Values come from .env next to this file, written by the deploy job from GitHub Secrets.
+# MYSQL_PASSWORD goes into a URL: use letters and digits only (e.g. `openssl rand -hex 24`).
+
+name: uptime
+
+x-app: &app
+  image: ${IMAGE:?IMAGE is not set}
+  restart: unless-stopped
+  environment:
+    DATABASE_URL: mysql://${MYSQL_USER:?}:${MYSQL_PASSWORD:?}@mysql:3306/${MYSQL_DATABASE:?}
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    # Every session starts in UTC (D-020).
+    command: --default-time-zone=+00:00
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?}
+      MYSQL_USER: ${MYSQL_USER:?}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # Applies db/migrations/ forward only (D-021), then exits; web and workers wait for it.
+  migrate:
+    <<: *app
+    restart: "no"
+    command: ["node", "dist/db/migrate.js"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  web:
+    <<: *app
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:?}:${MYSQL_PASSWORD:?}@mysql:3306/${MYSQL_DATABASE:?}
+      PORT: "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker-1:
+    <<: *app
+    command: ["node", "dist/worker/main.js"]
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:?}:${MYSQL_PASSWORD:?}@mysql:3306/${MYSQL_DATABASE:?}
+      WORKER_NAME: worker-1
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker-2:
+    <<: *app
+    command: ["node", "dist/worker/main.js"]
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:?}:${MYSQL_PASSWORD:?}@mysql:3306/${MYSQL_DATABASE:?}
+      WORKER_NAME: worker-2
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Gets and renews the Let's Encrypt certificate for DOMAIN (e.g. 203-0-113-7.sslip.io).
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  caddy-data:
+  caddy-config:

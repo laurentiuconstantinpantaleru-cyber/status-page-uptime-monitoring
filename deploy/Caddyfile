@@ -1,0 +1,5 @@
+# HTTPS for the public URL; Caddy redirects HTTP to HTTPS and renews the certificate itself.
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy web:3000
+}
