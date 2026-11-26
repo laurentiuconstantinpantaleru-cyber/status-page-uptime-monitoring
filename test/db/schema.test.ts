@@ -114,6 +114,18 @@ describe.skipIf(!url)('MySQL schema', () => {
     ).rejects.toThrow(/foreign key/i);
   });
 
+  it('checks a monitor every 5 minutes when no interval is given (D-016)', async () => {
+    const id = await insertId(
+      conn,
+      `INSERT INTO monitors (organization_id, name, url, timeout_ms, check_tls, created_at, updated_at)
+       VALUES (?, 'default-interval', 'https://example.test/', 10000, 0, ?, ?)`,
+      [orgId, T0, T0],
+    );
+
+    const [monitor] = await rows<{ interval_minutes: number }>(conn, 'SELECT interval_minutes FROM monitors WHERE id = ?', [id]);
+    expect(monitor.interval_minutes).toBe(5);
+  });
+
   it('accepts check intervals from 1 to 60 minutes only', async () => {
     const insert = (interval: number) =>
       conn.query(
