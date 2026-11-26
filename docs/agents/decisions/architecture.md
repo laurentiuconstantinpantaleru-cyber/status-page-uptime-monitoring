@@ -122,9 +122,9 @@
 ## D-029 · Production on one VPS, deployed from CI after the tests
 - **Status:** approved
 - **Date:** 2026-11-26
-- **Rule:** Production runs on one VPS with `deploy/compose.prod.yml`: MySQL 8.4, a one-shot `migrate`, `web`, `worker-1`, `worker-2` and Caddy for HTTPS on `DOMAIN` (`<ip>.sslip.io` without an own domain). CI deploys only pushes to `main`, after `lint-and-test` and the `image` check, running the image `ghcr.io/<repo>:<sha>`. Secrets live only in the GitHub `production` environment and the server's `~/uptime/.env`, written by the deploy job.
+- **Rule:** Production runs on one VPS with `deploy/compose.prod.yml`: MySQL 8.4, a one-shot `migrate`, `web`, `worker-1`, `worker-2` and Caddy for HTTPS on `DOMAIN`. `DOMAIN` is a host name whose registered domain is the user's own or is on the Public Suffix List; sslip.io and nip.io are not used (not on the list, so all their users share Let's Encrypt's 50 certificates per 7 days). Without such a name, the deploy waits. CI deploys only pushes to `main`, after `lint-and-test` and the `image` check, running the image `ghcr.io/<repo>:<sha>`. Secrets live only in the GitHub `production` environment and the server's `~/uptime/.env`, written by the deploy job.
 - **Why:** Keeps both workers on one host (D-008) and one web process for the in-memory cache (D-020), never sleeps, and costs a fixed small amount.
 - **Rejected:** Railway (usage-based cost, two worker services could land on different hosts); Render (no managed MySQL, no free background workers).
-- **Evidence:** Dockerfile, deploy/compose.prod.yml, deploy/Caddyfile, .github/workflows/ci.yml
+- **Evidence:** Dockerfile, deploy/compose.prod.yml, deploy/Caddyfile, .github/workflows/ci.yml; publicsuffix.org list checked 2026-11-26 (no sslip.io, no nip.io)
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26

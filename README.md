@@ -52,7 +52,7 @@ One-time setup:
 | `DEPLOY_USER` | the deploy user |
 | `DEPLOY_SSH_KEY` | the private key of step 2 |
 | `DEPLOY_KNOWN_HOSTS` | the output of `ssh-keyscan <DEPLOY_HOST>`, checked against the server's own fingerprints |
-| `DOMAIN` | the public host name; without a domain, `<ip with dashes>.sslip.io`, e.g. `203-0-113-7.sslip.io` |
+| `DOMAIN` | the public host name, e.g. `status.example.ro`, with a DNS `A` record to the server's IP; its registered domain must be your own or on the Public Suffix List (not sslip.io or nip.io: D-029) |
 | `MYSQL_DATABASE`, `MYSQL_USER` | e.g. `uptime` |
 | `MYSQL_PASSWORD` | letters and digits only, e.g. `openssl rand -hex 24` (it goes into a URL) |
 

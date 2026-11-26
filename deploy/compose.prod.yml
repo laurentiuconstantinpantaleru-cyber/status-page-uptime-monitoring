@@ -72,7 +72,7 @@ services:
       migrate:
         condition: service_completed_successfully
 
-  # Gets and renews the Let's Encrypt certificate for DOMAIN (e.g. 203-0-113-7.sslip.io).
+  # Gets and renews the Let's Encrypt certificate for DOMAIN (e.g. status.example.ro, D-029).
   caddy:
     image: caddy:2
     restart: unless-stopped

@@ -211,7 +211,7 @@ on `organizations`, `monitors`), left out of the diagram.
 - Runtime: Web server (`dist/web/server.js`, `npm run start:web`) and two or more workers (`dist/worker/main.js`, `npm run start:worker`, one `WORKER_NAME` each) run as separate processes.
 - Local database: `docker-compose.yml` runs MySQL 8.4 only, published on host port 3307, configured from `.env` (template: `.env.example`).
 - CI (`.github/workflows/ci.yml`): `lint-and-test` (ledger lint, `npm ci`, `npm run build`, `npm test` on Node 22, with a `mysql:8.4` service for the schema tests); `image` (builds the `Dockerfile`, checks `/health`, and on `main` pushes `ghcr.io/<repo>:<sha>`); `deploy` (only pushes to `main`, after both: copies `deploy/` to `~/uptime/` on the VPS over SSH, writes `.env` from the `production` secrets, `docker compose up -d --wait`).
-- Production: one VPS (D-008) running `deploy/compose.prod.yml`: MySQL 8.4, `migrate` (one-shot, before web and workers), `web`, `worker-1`, `worker-2`, and Caddy for HTTPS on `DOMAIN` (`<ip>.sslip.io` without a domain).
+- Production: one VPS (D-008) running `deploy/compose.prod.yml`: MySQL 8.4, `migrate` (one-shot, before web and workers), `web`, `worker-1`, `worker-2`, and Caddy for HTTPS on `DOMAIN` (own domain or one on the Public Suffix List, D-029).
 
 ## Boundaries
 - Public Status Page: Publicly readable; cached in-memory with sub-100ms response time; isolated from administrative write routes.
