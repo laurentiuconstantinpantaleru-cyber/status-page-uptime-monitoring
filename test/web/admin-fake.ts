@@ -6,6 +6,8 @@ import { hashPassword } from '../../src/web/auth/password.js';
 import type { AuthStore, SessionRow, UserCredentials } from '../../src/web/auth/store.js';
 import type { ReportDownloads } from '../../src/web/reports/job.js';
 import type { ReportOrg } from '../../src/web/reports/months.js';
+import type { AckIncident, AckStore } from '../../src/web/alerts/ack.js';
+import { hashToken } from '../../src/web/auth/session.js';
 import type { StatusData } from '../../src/web/status/model.js';
 
 // In-memory stores for the admin routes (D-034–D-038): what the routes ask and write, without MySQL.
@@ -65,6 +67,7 @@ export function fakeAuth(): FakeAuth {
 
 export interface FakeAdmin extends AdminStore {
   maintenance: { monitorId: number; minutes: number; userId: number }[];
+  acks: { incidentId: number; userId: number; at: Date }[];
   deleted: number[];
   updates: (NewIncidentUpdate & { at: Date })[];
   fail: { monitors?: boolean; incidents?: boolean; addUpdate?: boolean };
@@ -96,6 +99,7 @@ export function fakeAdmin(opts: { groups?: AdminGroup[]; incidents?: (AdminIncid
   }];
   const store: FakeAdmin = {
     maintenance: [],
+    acks: [],
     deleted: [],
     updates: [],
     fail: {},
@@ -127,12 +131,56 @@ export function fakeAdmin(opts: { groups?: AdminGroup[]; incidents?: (AdminIncid
       const i = incidents.find((x) => x.id === id && (orgId === null || x.organizationId === orgId));
       return i ? { id: i.id } : null;
     },
+    async acknowledgeIncident(id, userId, now) {
+      const i = incidents.find((x) => x.id === id);
+      if (!i || i.resolvedAt !== null || i.acknowledged) return false;
+      i.acknowledged = { at: now, byUserId: userId, by: Object.values(USERS).find((u) => u.id === userId)?.displayName ?? null };
+      store.acks.push({ incidentId: id, userId, at: now });
+      return true;
+    },
     async addIncidentUpdate(u, now) {
       if (store.fail.addUpdate) throw new Error('database down');
       store.updates.push({ ...u, at: now });
     },
   };
   return store;
+}
+
+/** Acknowledge links (D-044): token → incident, as the alert dispatcher stores them (hashed). */
+export const ACK_TOKEN = 'a'.repeat(43);
+export const ACK_TOKEN_RESOLVED = 'r'.repeat(43);
+
+export interface FakeAck extends AckStore {
+  incidents: Map<string, AckIncident>;
+  acks: { incidentId: number; at: Date }[];
+}
+
+export function fakeAck(): FakeAck {
+  const incidents = new Map<string, AckIncident>([
+    [hashToken(ACK_TOKEN), {
+      id: INCIDENT_A, organization: 'Campus projects', monitor: 'Bookings API', cause: 'timeout',
+      startedAt: new Date('2026-11-26T14:02:00.000Z'), resolvedAt: null, acknowledgedAt: null, acknowledgedBy: null,
+    }],
+    [hashToken(ACK_TOKEN_RESOLVED), {
+      id: 37, organization: 'Campus projects', monitor: 'Hug The Mug', cause: 'connection',
+      startedAt: new Date('2026-11-24T09:08:00.000Z'), resolvedAt: new Date('2026-11-24T09:20:00.000Z'), acknowledgedAt: null, acknowledgedBy: null,
+    }],
+  ]);
+  const ack: FakeAck = {
+    incidents,
+    acks: [],
+    async incidentByToken(tokenHash) {
+      return incidents.get(tokenHash) ?? null;
+    },
+    async acknowledge(incidentId, now) {
+      const i = [...incidents.values()].find((x) => x.id === incidentId)!;
+      if (i.resolvedAt !== null || i.acknowledgedAt !== null) return false;
+      i.acknowledgedAt = now;
+      ack.acks.push({ incidentId, at: now });
+      return true;
+    },
+  };
+  return ack;
 }
 
 /** Monthly report PDFs (D-019): one fake file per organization and month asked for. */
@@ -175,6 +223,7 @@ export interface Harness {
   auth: FakeAuth;
   admin: FakeAdmin;
   reports: FakeReports;
+  ack: FakeAck;
 }
 
 export function harness(opts: { admin?: FakeAdmin; secureCookies?: boolean; status?: StatusData } = {}): Harness {
@@ -182,13 +231,14 @@ export function harness(opts: { admin?: FakeAdmin; secureCookies?: boolean; stat
   const auth = fakeAuth();
   const admin = opts.admin ?? fakeAdmin();
   const reports = fakeReports();
+  const ack = fakeAck();
   const status = opts.status ?? { groups: [] };
   const app = buildApp({}, {
     clock,
     status: { load: async () => status, readVersion: async () => 1 },
-    admin: { auth, store: admin, secureCookies: opts.secureCookies ?? false, reports },
+    admin: { auth, store: admin, secureCookies: opts.secureCookies ?? false, reports, ack },
   });
-  return { app, clock, auth, admin, reports };
+  return { app, clock, auth, admin, reports, ack };
 }
 
 export const form = (fields: Record<string, string>) => new URLSearchParams(fields).toString();

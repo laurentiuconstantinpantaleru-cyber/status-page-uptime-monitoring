@@ -23,6 +23,7 @@ import { createApiKey, mysqlApiStore } from '../../src/web/api/store.js';
 import { mysqlReportStore } from '../../src/web/reports/store.js';
 import { loadMaintenance } from '../../src/db/maintenance.js';
 import { createContact, mysqlAlertStore } from '../../src/web/alerts/store.js';
+import { mysqlAckStore } from '../../src/web/alerts/ack.js';
 
 // Integration tests against a real MySQL 8. CI always sets TEST_DATABASE_URL.
 // The database is wiped, so its name must end in `_test`.
@@ -1096,6 +1097,30 @@ describe.skipIf(!url)('MySQL schema', () => {
       await mysqlAlertStore(pool).saveAckToken(incident, 'b'.repeat(64), NOW);
       const [row] = await rows<{ incident_id: number }>(conn, 'SELECT incident_id FROM incident_ack_tokens WHERE token_hash = ?', ['b'.repeat(64)]);
       expect(Number(row.incident_id)).toBe(incident);
+    });
+
+    it('finds the incident by a token hash and acknowledges it once; the admin store says who (D-044)', async () => {
+      const ack = mysqlAckStore(pool);
+      await mysqlAlertStore(pool).saveAckToken(incident, 'c'.repeat(64), NOW);
+
+      expect(await ack.incidentByToken("' OR '1'='1")).toBeNull();
+      expect(await ack.incidentByToken('c'.repeat(64))).toEqual({
+        id: incident, organization: 'Alert A', monitor: 'Alerted API', cause: 'http_5xx',
+        startedAt: new Date('2026-12-01T10:02:00.000Z'), resolvedAt: null, acknowledgedAt: null, acknowledgedBy: null,
+      });
+      expect(await ack.acknowledge(incident, NOW)).toBe(true);
+      expect(await ack.acknowledge(incident, new Date(NOW.getTime() + 1000))).toBe(false);
+      expect((await ack.incidentByToken('c'.repeat(64)))?.acknowledgedAt).toEqual(NOW);
+      expect((await mysqlAlertStore(pool).openIncidents()).find((i) => i.id === incident)?.acknowledgedAt).toEqual(NOW);
+
+      const admin = mysqlAdminStore(pool, new FakeClock(NOW));
+      const listed = (await admin.incidents(orgId, NOW)).find((i) => i.id === incident);
+      expect(listed?.acknowledged).toEqual({ at: NOW, byUserId: null, by: null });
+      await conn.query('UPDATE incidents SET acknowledged_at = NULL WHERE id = ?', [incident]);
+      const [[user]] = await conn.query<RowDataPacket[]>("SELECT id FROM users WHERE email = 'admin@rep-a.test'");
+      expect(await admin.acknowledgeIncident(incident, Number(user.id), NOW)).toBe(true);
+      expect((await admin.incidents(null, NOW)).find((i) => i.id === incident)?.acknowledged)
+        .toEqual({ at: NOW, byUserId: Number(user.id), by: 'admin@rep-a.test' });
     });
 
     it('a resolved incident is listed for its resolved alert until everyone alerted has it', async () => {

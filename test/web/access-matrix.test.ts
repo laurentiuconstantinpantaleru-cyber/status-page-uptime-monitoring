@@ -43,6 +43,11 @@ const ROUTES: Route[] = [
     roles: { visitor: 'login', member: 403, orgAdmin: 'ok', otherAdmin: 'ok', global: 'ok' } },
   { method: 'GET', url: '/admin/reports/1/2026-10.pdf', ok: { status: 200 },
     roles: { visitor: 'login', member: 403, orgAdmin: 'ok', otherAdmin: 404, global: 'ok' } },
+  { method: 'POST', url: `/admin/incidents/${INCIDENT_A}/ack`, fields: {},
+    ok: { status: 303, location: `/admin/incidents?acked=${INCIDENT_A}#incident-${INCIDENT_A}` },
+    roles: { visitor: 'login', member: 'ok', orgAdmin: 'ok', otherAdmin: 404, global: 'ok' } },
+  { method: 'GET', url: `/ack/${'a'.repeat(43)}`, ok: { status: 200 },
+    roles: { visitor: 'ok', ...ALL_SIGNED_IN } },
   { method: 'POST', url: '/logout', fields: {}, ok: { status: 303, location: '/login' },
     roles: { visitor: 'login', ...ALL_SIGNED_IN } },
 ];
@@ -80,6 +85,7 @@ describe('access matrix', () => {
         expect(h.admin.maintenance).toEqual([]);
         expect(h.admin.deleted).toEqual([]);
         expect(h.admin.updates).toEqual([]);
+        expect(h.admin.acks).toEqual([]);
       }
     },
   );
