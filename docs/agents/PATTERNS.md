@@ -14,6 +14,7 @@
 - PATTERN-006 · Network calls through an injected client, errors classified by a pure function · candidate
 - PATTERN-007 · A CI job that needs secrets is skipped, not failed, while they are missing · candidate
 - PATTERN-008 · At most one open row per owner through a generated column and a unique key · candidate
+- PATTERN-009 · A recurring rule is stored as a rule and expanded into spans when read · candidate
 
 ---
 
@@ -86,3 +87,11 @@
 - **Why:** The database itself refuses a second open row (`ER_DUP_ENTRY`), so no application lock or check-then-insert race is needed.
 - **Source:** session 2026-11-26 · confidence medium
 - **Confirmed:** 2026-11-26
+
+## PATTERN-009 · A recurring rule is stored as a rule and expanded into spans when read
+- **Status:** candidate
+- **Use when:** Something repeats on a calendar (recurring maintenance, later perhaps report schedules) and code needs the concrete time ranges in a period.
+- **How:** Store the rule's fields (frequency, weekdays, start time, duration, first day, `ended_at`). A pure function takes the rule and [from, to) and returns the ranges that overlap it, starting from the day `duration` before `from` so a range crossing midnight is not lost. Readers merge those ranges with the stored one-off ones and pass them on unchanged.
+- **Example:** src/shared/maintenance.ts (`occurrences`), src/db/maintenance.ts (`loadMaintenance`), test/shared/maintenance.test.ts
+- **Why:** No job has to generate rows ahead of time, an edit or an end leaves no stale rows, and the expansion is tested with plain dates instead of a database (D-004).
+- **Source:** session 2026-11-26 · confidence medium

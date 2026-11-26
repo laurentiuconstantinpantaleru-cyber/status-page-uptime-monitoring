@@ -21,6 +21,13 @@
 - **Proposed answer:** Standard SMTP credentials via environment variables (e.g. Resend, Sendgrid, or Gmail SMTP).
 
 ## Q-009 · How are recurring maintenance windows expressed?
-- **Status:** open
+- **Status:** answered 2026-11-26
 - **Blocks:** Recurring calendar windows (D-012); `maintenance_windows` holds one-off ranges only.
+- **Who answers:** user
+- **Answer:** Daily, or weekly on one or more weekdays, with a start time in UTC and a duration under 24 h (daily) or under 7 days (weekly); a rule starts on a chosen date. Pressing the quick button during maintenance extends it.
+- **Recorded as:** D-031
+
+## Q-020 · Can quick maintenance be stopped before it expires?
+- **Status:** open
+- **Blocks:** A "stop maintenance" action; today a quick window always runs to its end (D-031).
 - **Who answers:** user

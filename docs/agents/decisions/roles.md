@@ -13,4 +13,4 @@
 - **Rejected:** Flat single-role model (no access control); exposing alert contacts to Members (privacy concern).
 - **Evidence:** docs/brief.md:17
 - **Source:** user · confidence high
-- **Confirmed:** 2026-11-25
+- **Confirmed:** 2026-11-26

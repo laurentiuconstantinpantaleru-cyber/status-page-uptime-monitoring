@@ -28,7 +28,7 @@
 - **Rejected:** Requiring full calendar entry setup for routine short deploys.
 - **Evidence:** docs/survey-results.md:16
 - **Source:** user · confidence high
-- **Confirmed:** 2026-11-19
+- **Confirmed:** 2026-11-26
 
 ## D-013 · Alert payload structure: HTTP code, error cause, and time since last successful check
 - **Status:** approved
@@ -67,5 +67,15 @@
 - **Why:** docs/brief.md:24 asks for uptime from incidents, across month boundaries and with partial maintenance overlap; the history start, the all-maintenance case and the rounding were answered by the user on 2026-11-26.
 - **Rejected:** Counting checks (a 1-minute and a 60-minute monitor would not be comparable); counting the days before a monitor existed as available; 100 % for a period that was all maintenance; rounding to the nearest (99.996 % would show 100.00 % despite downtime).
 - **Evidence:** src/shared/uptime.ts, test/shared/uptime.test.ts, src/web/views/docs/uptime.html
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
+
+## D-031 · Recurring maintenance rules and the quick button's extension
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** A recurring maintenance window is a per-monitor rule in `maintenance_schedules`: daily, or weekly on one or more chosen weekdays; a start time in UTC and a duration in minutes, under 24 h for daily and under 7 days for weekly; windows start on a chosen first day at the earliest. The rule is expanded into windows when read, never stored as generated rows. Ending a rule sets `ended_at`: no window starts after it, one in progress ends there, and past windows stay in uptime history. The quick button pressed while maintenance is in force extends that maintenance (with any window that follows on without a gap) by the chosen 15, 30 or 60 minutes. Creating or ending any window or rule bumps `status_version` (D-020).
+- **Why:** D-012 asks for recurring calendar windows; the user answered Q-009 on 2026-11-26 (daily and weekly, UTC, several weekdays, a chosen first day, extension on a second press). Expanding at read time needs no job and keeps a rule's edits from leaving stale rows.
+- **Rejected:** Generating rows in `maintenance_windows` from a job (a new job; stale rows after an edit); a full RRULE field or a recurrence library (daily and weekly do not need one); deleting a rule (would rewrite past uptime and monthly reports, D-019).
+- **Evidence:** src/shared/maintenance.ts, src/db/maintenance.ts, src/web/maintenance/store.ts, db/migrations/0006_maintenance_schedules.sql, test/shared/maintenance.test.ts
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26

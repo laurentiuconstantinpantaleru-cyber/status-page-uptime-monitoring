@@ -31,6 +31,7 @@
 - D-014 · Human-authored incident timeline updates with standardized lifecycle stages
 - D-028 · Checks keep running during maintenance; no incident opens
 - D-030 · Uptime ratio from incidents and maintenance
+- D-031 · Recurring maintenance rules and the quick button's extension
 
 ### [Monitoring](decisions/monitoring.md)
 - D-016 · Default check interval of 5 minutes, range 1–60 minutes
