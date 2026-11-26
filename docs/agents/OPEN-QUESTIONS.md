@@ -26,6 +26,7 @@
 - Q-015 · Which status wins when several apply, in the overall banner and in a daily bar? · _answered_
 - Q-016 · Where do the API and status badge docs live?
 - Q-017 · Does the public status page share DS-p26-header or keep its own header variant?
+- Q-018 · What do the API's requests and responses look like? · _investigating_
 
 ---
 
@@ -135,3 +136,9 @@
 - **Blocks:** Building the header partial (`src/web/views/partials/header.html`) for DS-p26-public-status.
 - **Who answers:** user
 - **Context:** DS-p26-public-status draws a header with Status, Dashboard, API, Docs, a Login pill and a theme toggle, not sticky. DS-p26-header has a Features menu and a "Get started" pill, is sticky and has no theme toggle.
+
+## Q-018 · What do the API's requests and responses look like?
+- **Status:** investigating
+- **Blocks:** `GET /api/v1/monitors` and `GET /api/v1/status/:org_slug` (C-001, proposed) and the examples on DS-p26-api-docs.
+- **Who answers:** user
+- **Proposed answer:** Keys travel as `Authorization: Bearer <public_id>.<secret>` (user, 2026-11-26). `GET /api/v1/monitors` returns `{"monitors": [{"id", "name", "url", "interval_minutes", "status"}]}`; `GET /api/v1/status/:org_slug` returns `{"organization", "status", "updated_at", "components": [{"name", "status"}], "active_incidents": []}`; `status` is `operational`, `degraded` or `outage`. A missing or wrong key gets 401, a `read` key that writes gets 403, and request 61 in a minute gets 429 with `Retry-After` and `{"error": "rate_limited", "message"}`. The badge is `GET /badge/:monitor_id.svg` (user, 2026-11-26), as drawn on DS-p26-api-docs.

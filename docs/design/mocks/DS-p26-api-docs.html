@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API and status badge — Campus Uptime (DS-p26-api-docs, draft)</title>
+<style>
+/* Design tokens from docs/design/DESIGN.md (the token source in code). Nothing else goes here. */
+:root {
+  --color-bg-base: #f8fafc;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-strong: #64748b;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-brand: #2563eb;
+  --color-on-brand: #ffffff;
+  --color-status-ok: #059669;
+  --color-status-degraded: #d97706;
+  --color-status-outage: #dc2626;
+  --color-status-maint: #7c3aed;
+  --color-status-nodata: #64748b;
+  --shadow-card: 0 1px 3px 0 rgba(15,23,42,0.08), 0 1px 2px -1px rgba(15,23,42,0.08);
+  --wash-mix: 6%;
+  --gradient-brand-soft: linear-gradient(to bottom, color-mix(in srgb, var(--color-brand) var(--wash-mix), var(--color-bg-base)) 0, var(--color-bg-base) 320px);
+  --bg-dots: radial-gradient(circle, var(--color-border) 1px, transparent 1.5px) 0 0 / var(--space-6) var(--space-6);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --text-xs: 400 12px/16px var(--font-sans);
+  --text-sm: 400 13px/20px var(--font-sans);
+  --text-sm-strong: 500 13px/20px var(--font-sans);
+  --text-base: 400 15px/24px var(--font-sans);
+  --text-lg: 600 17px/26px var(--font-sans);
+  --text-2xl: 600 28px/34px var(--font-sans);
+  --text-metric: 500 13px/20px var(--font-mono);
+  --text-metric-lg: 600 20px/28px var(--font-mono);
+
+  --space-0-5: 2px; --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px;
+
+  --radius-sm: 3px; --radius-md: 6px; --radius-lg: 12px; --radius-pill: 9999px;
+  --border-accent: 4px;
+
+  --container-max: 800px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+    --color-border: #23272f; --color-border-strong: #64748b;
+    --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
+    --color-brand: #60a5fa; --color-on-brand: #0f172a;
+    --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
+    --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
+    --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+    --wash-mix: 14%;
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+  --color-border: #23272f; --color-border-strong: #64748b;
+  --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
+  --color-brand: #60a5fa; --color-on-brand: #0f172a;
+  --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
+  --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
+  --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+  --wash-mix: 14%;
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+/* Brand wash at the top, dots over it; no --color-text-muted on the wash (DESIGN.md) */
+body { margin: 0; min-height: 100vh; color: var(--color-text-primary); font: var(--text-base);
+  background: var(--bg-dots), var(--gradient-brand-soft) no-repeat, var(--color-bg-base); }
+.num, time, code { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+a { color: var(--color-brand); text-decoration-color: currentColor; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; border-radius: var(--radius-sm); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+h1, h2, h3, h4, p, ol, ul, dl, dd, fieldset, figure { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+fieldset { border: 0; padding: 0; min-width: 0; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- Layout: one narrow centered column; the header aligns to it ---------- */
+.col { width: min(100% - 2 * var(--space-12), var(--container-max)); margin: 0 auto; }
+@media (max-width: 1024px) { .col { width: min(100% - 2 * var(--space-8), var(--container-max)); } }
+@media (max-width: 640px) { .col { width: calc(100% - 2 * var(--space-4)); } }
+.page { padding: var(--space-12) 0 var(--space-16); display: grid; gap: var(--space-12); }
+@media (max-width: 640px) { .page { padding: var(--space-6) 0 var(--space-12); gap: var(--space-8); } }
+.section { display: grid; gap: var(--space-4); min-width: 0; }
+.section-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); align-items: baseline; justify-content: space-between; }
+.section-head h2 { font: var(--text-lg); }
+.meta { font: var(--text-sm); color: var(--color-text-muted); }
+.card { background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); min-width: 0; }
+
+/* ================= Header (same as DS-p26-public-status) ================= */
+.site-header { border-bottom: 1px solid var(--color-border); position: relative; }
+.bar { display: flex; align-items: center; gap: var(--space-6); min-height: var(--space-16); }
+.brand-group { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.brand { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--color-text-primary);
+  text-decoration: none; font: var(--text-lg); border-radius: var(--radius-md); }
+.brand svg { width: var(--space-8); height: var(--space-8); flex: none; color: var(--color-brand); }
+.brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav { display: flex; align-items: center; gap: var(--space-1); }
+.nav-link { display: inline-flex; align-items: center; min-height: var(--space-8); padding: 0 var(--space-3);
+  border-radius: var(--radius-pill); white-space: nowrap; font: var(--text-sm-strong); color: var(--color-text-secondary); text-decoration: none; }
+.nav-link:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+.nav-link[aria-current="page"] { color: var(--color-text-primary); background: var(--color-bg-subtle); }
+.actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; flex: none; }
+.pill { display: inline-flex; align-items: center; justify-content: center; min-height: var(--space-8); padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer;
+  font: var(--text-sm-strong); color: var(--color-text-primary); text-decoration: none; white-space: nowrap; }
+.pill:hover { background: var(--color-bg-subtle); }
+.icon-btn { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); flex: none; padding: 0;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer; color: var(--color-text-primary); }
+.icon-btn:hover { background: var(--color-bg-subtle); }
+.icon-btn svg { width: var(--space-4); height: var(--space-4); }
+.theme-btn .i-sun, :root[data-effective="dark"] .theme-btn .i-moon { display: none; }
+:root[data-effective="dark"] .theme-btn .i-sun { display: block; }
+.menu { display: none; position: static; }
+.menu > summary { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); list-style: none; cursor: pointer;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); color: var(--color-text-primary); }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu > summary:hover { background: var(--color-bg-subtle); }
+.menu > summary svg { width: var(--space-4); height: var(--space-4); }
+.menu .i-close, .menu[open] .i-open { display: none; }
+.menu[open] .i-close { display: block; }
+@media (pointer: coarse) { .pill, .nav-link { min-height: var(--space-12); } .icon-btn, .menu > summary { width: var(--space-12); height: var(--space-12); } }
+
+.drawer { position: absolute; left: 0; right: 0; top: 100%; z-index: 20; background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border); box-shadow: var(--shadow-card); padding: var(--space-2) 0 var(--space-6); }
+.drawer-list > li { border-bottom: 1px solid var(--color-border); }
+.drawer-link { display: flex; align-items: center; min-height: var(--space-12); font: var(--text-base); font-weight: 500;
+  color: var(--color-text-primary); text-decoration: none; }
+.drawer-actions { display: none; gap: var(--space-2); margin-top: var(--space-4); }
+.drawer-actions .pill { min-height: var(--space-12); width: 100%; }
+@media (max-width: 1024px) {
+  .bar { gap: var(--space-4); }
+  .nav { display: none; }
+  .menu { display: block; }
+}
+@media (max-width: 640px) {
+  .bar { gap: var(--space-2); min-height: var(--space-16); }
+  .actions .pill { display: none; }
+  .drawer-actions { display: grid; }
+}
+/* ================= end header ================= */
+
+/* ---------- Status icons (shape + text, never color alone) ---------- */
+.icon { width: var(--space-4); height: var(--space-4); flex: none; }
+.icon-sm { width: var(--space-3); height: var(--space-3); flex: none; }
+.s-ok { color: var(--color-status-ok); }
+.s-degraded { color: var(--color-status-degraded); }
+.s-outage { color: var(--color-status-outage); }
+.s-maint { color: var(--color-status-maint); }
+.s-nodata { color: var(--color-status-nodata); }
+/* Status badge: pill on the surface, icon in the status color, label in text-primary */
+.badge { display: inline-flex; gap: var(--space-1); align-items: center; min-height: var(--space-6); padding: 0 var(--space-2);
+  border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-bg-surface);
+  font: var(--text-sm-strong); color: var(--color-text-primary); white-space: nowrap; }
+.badge .icon { width: var(--space-3); height: var(--space-3); }
+
+/* ---------- Empty and error ---------- */
+.empty { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-6); }
+.empty p { font: var(--text-base); color: var(--color-text-secondary); }
+.btn { font: var(--text-sm-strong); min-height: var(--space-8); padding: 0 var(--space-4); border-radius: var(--radius-pill); cursor: pointer;
+  background: var(--color-bg-surface); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); }
+.btn:hover { background: var(--color-bg-subtle); }
+.btn:active { background: var(--color-border); }
+@media (pointer: coarse) { .btn { min-height: var(--space-12); } }
+
+/* ---------- Footer ---------- */
+.site-footer:focus { outline: none; }
+.site-footer { scroll-margin-top: var(--space-8); display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); justify-content: space-between;
+  padding-top: var(--space-6); border-top: 1px solid var(--color-border); font: var(--text-sm); color: var(--color-text-muted); }
+.site-footer .f-notes { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-6); }
+
+/* ---------- This screen ---------- */
+.doc { display: grid; gap: var(--space-12); min-width: 0; }
+.doc-head { display: grid; gap: var(--space-2); }
+.doc-head h1 { font: var(--text-2xl); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.doc-head p { color: var(--color-text-secondary); }
+.note { padding: var(--space-4) var(--space-6); display: flex; gap: var(--space-3); align-items: start; }
+.note p { font: var(--text-sm); color: var(--color-text-secondary); }
+.note strong { color: var(--color-text-primary); font-weight: 600; }
+.toc { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.toc a { display: inline-flex; align-items: center; min-height: var(--space-8); padding: 0 var(--space-3);
+  border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-bg-surface);
+  font: var(--text-sm-strong); color: var(--color-text-primary); text-decoration: none; }
+.toc a:hover { background: var(--color-bg-subtle); }
+@media (pointer: coarse) { .toc a { min-height: var(--space-12); } }
+.doc-section { display: grid; gap: var(--space-4); scroll-margin-top: var(--space-8); min-width: 0; }
+.doc-section h2 { font: var(--text-lg); }
+.doc-section h3 { font: var(--text-sm-strong); color: var(--color-text-secondary); }
+.doc-section p, .doc-section li { color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.doc-section ul.plain { display: grid; gap: var(--space-2); padding-left: var(--space-4); list-style: disc; }
+.levels { width: 100%; border-collapse: collapse; font: var(--text-sm); }
+.levels th, .levels td { text-align: left; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-border); vertical-align: top; }
+.levels thead th { border-top: 0; font: var(--text-sm-strong); color: var(--color-text-secondary); }
+.levels td:first-child { white-space: nowrap; }
+.levels code { font: var(--text-metric); }
+.endpoint { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
+.method { font: var(--text-metric); font-weight: 600; padding: 0 var(--space-2); border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill); color: var(--color-text-primary); }
+.endpoint code { font: var(--text-metric); color: var(--color-text-primary); overflow-wrap: anywhere; }
+.code { margin: 0; padding: var(--space-4); overflow-x: auto; background: var(--color-bg-subtle); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); font: var(--text-metric); font-weight: 400; color: var(--color-text-primary); tab-size: 2; }
+.code:focus-visible { outline-offset: 0; }
+.code-label { font: var(--text-xs); color: var(--color-text-muted); margin-bottom: calc(var(--space-4) * -1 + var(--space-1)); }
+.badge-demo { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; padding: var(--space-6); }
+.badge-demo .meta { flex: 1 1 200px; }
+.shield { display: inline-flex; font: var(--text-xs); font-weight: 600; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--color-border-strong); }
+.shield span { padding: var(--space-0-5) var(--space-2); }
+.shield .k { background: var(--color-text-secondary); color: var(--color-bg-surface); }
+.shield .v { background: var(--color-bg-surface); color: var(--color-text-primary); display: inline-flex; gap: var(--space-1); align-items: center; }
+.shield .v svg { width: var(--space-3); height: var(--space-3); color: var(--color-status-ok); }
+.snippet { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: start; }
+.copied { font: var(--text-xs); color: var(--color-text-secondary); min-height: var(--space-4); }
+</style>
+<script>
+/* Theme: ?theme= for review, else the saved choice, else the system's; set before the page paints. */
+(function () {
+  var q = new URLSearchParams(location.search).get('theme');
+  var saved = q === 'light' || q === 'dark' ? q : localStorage.getItem('theme');
+  if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+  document.documentElement.dataset.effective = saved === 'light' || saved === 'dark'
+    ? saved : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+})();
+</script>
+</head>
+<body>
+<header class="site-header">
+  <div class="bar col">
+    <div class="brand-group">
+      <a class="brand" href="DS-p26-public-status.html" title="Campus Uptime: back to the status page"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 17h5l3-7 4 12 3-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Campus Uptime</span></a>
+      <button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme"><svg class="i-moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.8A6 6 0 016.2 2.5a6 6 0 107.3 7.3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><svg class="i-sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7L13 13M13 3l-1.3 1.3M4.3 11.7L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </div>
+    <nav class="nav" aria-label="Main">
+        <a class="nav-link" href="DS-p26-public-status.html">Status</a>
+        <a class="nav-link" href="DS-p26-admin-monitors.html">Dashboard</a>
+        <a class="nav-link" href="DS-p26-api-docs.html" aria-current="page">API</a>
+        <a class="nav-link" href="coming-soon.html?page=Docs">Docs</a>
+    </nav>
+    <div class="actions">
+      <a class="pill" href="coming-soon.html?page=Login">Login</a>
+      <details class="menu">
+        <summary aria-label="Menu"><svg class="i-open" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><svg class="i-close" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></summary>
+        <nav class="drawer" aria-label="Main">
+          <div class="col">
+            <ul class="drawer-list">
+            <li><a class="drawer-link" href="DS-p26-public-status.html">Status</a></li>
+            <li><a class="drawer-link" href="DS-p26-admin-monitors.html">Dashboard</a></li>
+            <li><a class="drawer-link" href="DS-p26-api-docs.html" aria-current="page">API</a></li>
+            <li><a class="drawer-link" href="coming-soon.html?page=Docs">Docs</a></li>
+            </ul>
+            <div class="drawer-actions"><a class="pill" href="coming-soon.html?page=Login">Login</a></div>
+          </div>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+<main class="page col" id="main">
+<article class="doc" aria-labelledby="doc-title">
+  <div class="doc-head">
+    <h1 id="doc-title">API and status badge</h1>
+    <p>Read your organization's monitors and status from scripts and dashboards, and show live status in a README.</p>
+  </div>
+
+  <div class="note card" role="note"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true" style="color: var(--color-text-secondary)"><circle cx="8" cy="8" r="6.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 7.2v4M8 4.8v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    <p><strong>Draft.</strong> The request and response shapes below are a proposal and may still change before the API ships (C-001, Q-018).</p>
+  </div>
+
+  <nav class="toc" aria-label="On this page">
+    <a href="#auth">Authentication</a><a href="#monitors">List monitors</a><a href="#status">Read status</a><a href="#limits">Rate limit</a><a href="#badge">Status badge</a>
+  </nav>
+
+  <section class="doc-section" id="auth" aria-labelledby="auth-title">
+    <h2 id="auth-title">Authentication</h2>
+    <p>An organization admin creates API keys in the dashboard. A key is shown once, when it is created; store it somewhere safe. Send it in the <code>Authorization</code> header of every request.</p>
+    <p class="code-label">Request header</p>
+    <pre class="code" tabindex="0"><code>Authorization: Bearer &lt;public_id&gt;.&lt;secret&gt;</code></pre>
+    <div class="card">
+      <table class="levels">
+        <caption class="visually-hidden">What each key level can do</caption>
+        <thead><tr><th scope="col">Level</th><th scope="col">Can</th></tr></thead>
+        <tbody>
+          <tr><td><code>read</code></td><td>List monitors and read their current status.</td></tr>
+          <tr><td><code>write</code></td><td>Everything <code>read</code> can, plus create, change and delete monitors.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="plain">
+      <li>A missing or wrong key gets <code>401 Unauthorized</code>.</li>
+      <li>A <code>read</code> key that tries to change a monitor gets <code>403 Forbidden</code>.</li>
+    </ul>
+  </section>
+
+  <section class="doc-section" id="monitors" aria-labelledby="monitors-title">
+    <h2 id="monitors-title">List monitors</h2>
+    <p class="endpoint"><span class="method">GET</span><code>/api/v1/monitors</code></p>
+    <p>Every monitor of the key's organization, with its current status: <code>operational</code>, <code>degraded</code> or <code>outage</code>.</p>
+    <p class="code-label">Request</p>
+    <pre class="code" tabindex="0"><code>curl https://&lt;your-status-host&gt;/api/v1/monitors \
+  -H "Authorization: Bearer &lt;public_id&gt;.&lt;secret&gt;"</code></pre>
+    <p class="code-label">Response · 200 OK</p>
+    <pre class="code" tabindex="0"><code>{
+  "monitors": [
+    {
+      "id": 12,
+      "name": "Hug The Mug",
+      "url": "https://hugthemug.ro/",
+      "interval_minutes": 5,
+      "status": "operational"
+    }
+  ]
+}</code></pre>
+  </section>
+
+  <section class="doc-section" id="status" aria-labelledby="status-title">
+    <h2 id="status-title">Read status</h2>
+    <p class="endpoint"><span class="method">GET</span><code>/api/v1/status/:org_slug</code></p>
+    <p>The same data as the public status page: the overall status, each component and the incidents still open. Times are UTC.</p>
+    <p class="code-label">Request</p>
+    <pre class="code" tabindex="0"><code>curl https://&lt;your-status-host&gt;/api/v1/status/hug-the-mug \
+  -H "Authorization: Bearer &lt;public_id&gt;.&lt;secret&gt;"</code></pre>
+    <p class="code-label">Response · 200 OK</p>
+    <pre class="code" tabindex="0"><code>{
+  "organization": "Hug The Mug",
+  "status": "operational",
+  "updated_at": "2026-11-26T14:55:00Z",
+  "components": [
+    { "name": "Hug The Mug", "status": "operational" }
+  ],
+  "active_incidents": []
+}</code></pre>
+  </section>
+
+  <section class="doc-section" id="limits" aria-labelledby="limits-title">
+    <h2 id="limits-title">Rate limit</h2>
+    <p>Each key can make 60 requests per minute. Request number 61 in the same minute gets <code>429 Too Many Requests</code>; wait the seconds in <code>Retry-After</code> and try again.</p>
+    <p class="code-label">Response · 429 Too Many Requests</p>
+    <pre class="code" tabindex="0"><code>HTTP/1.1 429 Too Many Requests
+Retry-After: 30
+Content-Type: application/json
+
+{
+  "error": "rate_limited",
+  "message": "This key made more than 60 requests in the last minute. Try again in 30 seconds."
+}</code></pre>
+  </section>
+
+  <section class="doc-section" id="badge" aria-labelledby="badge-title">
+    <h2 id="badge-title">Status badge</h2>
+    <p>A small SVG image with a monitor's current status. It is public and needs no key, so it works in a README.</p>
+    <p class="endpoint"><span class="method">GET</span><code>/badge/:monitor_id.svg</code></p>
+    <div class="badge-demo card">
+      <span class="shield" role="img" aria-label="Status: operational"><span class="k">status</span><span class="v"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>operational</span></span>
+      <p class="meta">Preview for monitor 12. The badge shows operational, degraded, outage or maintenance.</p>
+    </div>
+    <p class="code-label" id="snippet-label">Markdown for your README</p>
+    <div class="snippet">
+      <pre class="code" tabindex="0" aria-labelledby="snippet-label"><code id="snippet">[![Status](https://&lt;your-status-host&gt;/badge/12.svg)](https://&lt;your-status-host&gt;/status)</code></pre>
+      <button class="pill" type="button" id="copy-btn" aria-describedby="copied">Copy</button>
+    </div>
+    <p class="copied" id="copied" role="status" aria-live="polite"></p>
+  </section>
+</article>
+  <footer class="site-footer">
+    <div class="f-notes"><p>All times are in UTC.</p></div>
+    <a href="DS-p26-public-status.html">Back to the status page</a>
+  </footer>
+</main>
+<script>
+/* Theme toggle: switches light and dark and remembers the choice (D-024). */
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme-btn');
+  function label() { btn.setAttribute('aria-label', root.dataset.effective === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'); }
+  btn.addEventListener('click', function () {
+    var next = root.dataset.effective === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', next);
+    root.dataset.theme = next; root.dataset.effective = next; label();
+  });
+  label();
+  /* The menu closes with Esc and returns focus to its button. */
+  var menu = document.querySelector('.menu');
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && menu.open) { menu.open = false; menu.querySelector('summary').focus(); }
+  });
+})();
+</script>
+<script>
+/* Copy button: copies the README snippet and says so for screen readers too. */
+(function () {
+  var btn = document.getElementById('copy-btn'), out = document.getElementById('copied');
+  var text = document.getElementById('snippet').textContent;
+  btn.addEventListener('click', function () {
+    function done(ok) {
+      out.textContent = ok ? 'Copied to the clipboard.' : 'Could not copy. Select the text and copy it by hand.';
+      btn.textContent = ok ? 'Copied' : 'Copy';
+      setTimeout(function () { btn.textContent = 'Copy'; }, 2000);
+    }
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+    else {
+      var range = document.createRange(); range.selectNodeContents(document.getElementById('snippet'));
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      done(ok);
+    }
+  });
+})();
+</script>
+</body>
+</html>

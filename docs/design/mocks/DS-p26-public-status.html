@@ -324,8 +324,7 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 @media (pointer: coarse) { .btn { min-height: var(--space-12); } }
 
 /* ---------- Footer ---------- */
-.site-footer:focus { outline: none; }
-.site-footer { scroll-margin-top: var(--space-8); display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); justify-content: space-between;
+.site-footer { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); justify-content: space-between;
   padding-top: var(--space-6); border-top: 1px solid var(--color-border); font: var(--text-sm); color: var(--color-text-muted); }
 .site-footer .f-notes { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-6); }
 </style>
@@ -483,11 +482,11 @@ const badge = (s) => `<span class="badge">${icon(s)}<span>${LABEL[s]}</span></sp
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /* ---------- Header ---------- */
-/* Status scrolls to the top; API goes to the badge and API section in the footer. Dashboard, Docs
-   and Login open placeholders until their screens exist (DS-p26-admin-monitors, Q-016, Q-008).
+/* Each link goes somewhere else: Status to the top of this page, Dashboard to DS-p26-admin-monitors,
+   API to DS-p26-api-docs, Docs and Login to a coming-soon placeholder (Q-016, Q-008).
    No Subscribe: visitor subscriptions are out of scope (D-009). */
 const SOON = (page) => `coming-soon.html?page=${encodeURIComponent(page)}`;
-const LINKS = [['Status', '#top'], ['Dashboard', SOON('Dashboard')], ['API', '#api-docs'], ['Docs', SOON('Docs')]];
+const LINKS = [['Status', '#top'], ['Dashboard', 'DS-p26-admin-monitors.html'], ['API', 'DS-p26-api-docs.html'], ['Docs', SOON('Docs')]];
 function header() {
   return `<header class="site-header">
     <div class="bar col">
@@ -499,7 +498,6 @@ function header() {
         ${LINKS.map(([l, h], i) => `<a class="nav-link" href="${h}"${i === 0 ? ' aria-current="page"' : ''}>${l}</a>`).join('')}
       </nav>
       <div class="actions">
-        <a class="pill" href="#api-docs">API docs</a>
         <a class="pill" href="${SOON('Login')}">Login</a>
         <button class="icon-btn menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="drawer" aria-label="Open menu">${UI.menu}</button>
       </div>
@@ -507,7 +505,7 @@ function header() {
     <nav class="drawer" id="drawer" aria-label="Main" hidden>
       <div class="col">
         <ul class="drawer-list">${LINKS.map(([l, h], i) => `<li><a class="drawer-link" href="${h}"${i === 0 ? ' aria-current="page"' : ''}>${l}</a></li>`).join('')}</ul>
-        <div class="drawer-actions"><a class="pill" href="#api-docs">API docs</a><a class="pill" href="${SOON('Login')}">Login</a></div>
+        <div class="drawer-actions"><a class="pill" href="${SOON('Login')}">Login</a></div>
       </div>
     </nav>
   </header>`;
@@ -706,9 +704,9 @@ function pastIncidents(long) {
 }
 
 function footer() {
-  return `<footer class="site-footer" id="api-docs" tabindex="-1" aria-label="Status badge and API">
+  return `<footer class="site-footer">
     <div class="f-notes"><p>All times are in UTC.</p><p>Uptime excludes maintenance windows.</p></div>
-    <a href="${SOON('API docs')}">Status badge and API docs</a></footer>`;
+    <a href="DS-p26-api-docs.html#badge">Status badge and API docs</a></footer>`;
 }
 
 /* ---------- Loading and error: same layout as the page, no data yet ---------- */
