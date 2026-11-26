@@ -7,7 +7,7 @@ designs:
     source: src/web/views/status.html
     screenshots: [screens/DS-p26-public-status.light.png, screens/DS-p26-public-status.dark.png]
     design_ref: mocks/DS-p26-public-status.html
-    status: draft
+    status: implemented
   - id: DS-p26-admin-monitors
     kind: screen
     source: src/web/views/admin/monitors.html

@@ -34,6 +34,7 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 /* ================= Header (status page variant of DS-p26-header, Q-017) ================= */
 .site-header { border-bottom: 1px solid var(--color-border); position: relative; }
 .bar { display: flex; align-items: center; gap: var(--space-6); min-height: var(--space-16); }
+.brand-group { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .brand { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--color-text-primary);
   text-decoration: none; font: var(--text-lg); border-radius: var(--radius-md); }
 .brand svg { width: var(--space-8); height: var(--space-8); flex: none; color: var(--color-brand); }
@@ -48,6 +49,12 @@ fieldset { border: 0; padding: 0; min-width: 0; }
   border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer;
   font: var(--text-sm-strong); color: var(--color-text-primary); text-decoration: none; white-space: nowrap; }
 .pill:hover { background: var(--color-bg-subtle); }
+.icon-btn { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); flex: none; padding: 0;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer; color: var(--color-text-primary); }
+.icon-btn:hover { background: var(--color-bg-subtle); }
+.icon-btn svg { width: var(--space-4); height: var(--space-4); }
+.theme-btn .i-sun, :root[data-effective="dark"] .theme-btn .i-moon { display: none; }
+:root[data-effective="dark"] .theme-btn .i-sun { display: block; }
 .menu { display: none; position: static; }
 .menu > summary { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); list-style: none; cursor: pointer;
   border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); color: var(--color-text-primary); }
@@ -56,14 +63,14 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .menu > summary svg { width: var(--space-4); height: var(--space-4); }
 .menu .i-close, .menu[open] .i-open { display: none; }
 .menu[open] .i-close { display: block; }
-@media (pointer: coarse) { .pill, .nav-link { min-height: var(--space-12); } .menu > summary { width: var(--space-12); height: var(--space-12); } }
+@media (pointer: coarse) { .pill, .nav-link { min-height: var(--space-12); } .icon-btn, .menu > summary { width: var(--space-12); height: var(--space-12); } }
 
 .drawer { position: absolute; left: 0; right: 0; top: 100%; z-index: 20; background: var(--color-bg-surface);
   border-bottom: 1px solid var(--color-border); box-shadow: var(--shadow-card); padding: var(--space-2) 0 var(--space-6); }
 .drawer-list > li { border-bottom: 1px solid var(--color-border); }
 .drawer-link { display: flex; align-items: center; min-height: var(--space-12); font: var(--text-base); font-weight: 500;
   color: var(--color-text-primary); text-decoration: none; }
-.drawer-actions { display: none; margin-top: var(--space-4); }
+.drawer-actions { display: none; gap: var(--space-2); margin-top: var(--space-4); }
 .drawer-actions .pill { min-height: var(--space-12); width: 100%; }
 @media (max-width: 1024px) {
   .bar { gap: var(--space-4); }
@@ -73,7 +80,7 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 @media (max-width: 640px) {
   .bar { gap: var(--space-2); min-height: var(--space-16); }
   .actions .pill { display: none; }
-  .drawer-actions { display: block; }
+  .drawer-actions { display: grid; }
 }
 /* ================= end header ================= */
 
@@ -163,6 +170,7 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 @media (pointer: coarse) { .btn { min-height: var(--space-12); } }
 
 /* ---------- Footer ---------- */
-.site-footer { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); justify-content: space-between;
+.site-footer:focus { outline: none; }
+.site-footer { scroll-margin-top: var(--space-8); display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); justify-content: space-between;
   padding-top: var(--space-6); border-top: 1px solid var(--color-border); font: var(--text-sm); color: var(--color-text-muted); }
 .site-footer .f-notes { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-6); }

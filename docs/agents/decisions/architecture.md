@@ -11,14 +11,23 @@
 - **Confirmed:** 2026-11-19
 
 ## D-002 · Server-rendered frontend with minimal vanilla JS for charts
-- **Status:** approved
+- **Status:** superseded-by D-024
 - **Date:** 2026-11-19
 - **Rule:** Render public status pages and admin interfaces server-side using Fastify templates with minimal client-side vanilla JavaScript strictly for rendering uptime/latency charts; do not introduce React or heavy SPA frameworks.
 - **Why:** Maximizes page load speed, achieves sub-100ms TTFB for public status pages, keeps build pipeline simple, and avoids frontend hydration overhead.
 - **Rejected:** React, Next.js, Vue SPA (rejected by user in favor of SSR with minimal JS).
 - **Evidence:** docs/brief.md:14, docs/brief.md:22
 - **Source:** user · confidence high
-- **Confirmed:** 2026-11-19
+
+## D-024 · Server-rendered frontend with minimal vanilla JS for charts and the theme toggle
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** Render public status pages and admin interfaces on the server with templates, with minimal client-side vanilla JavaScript only for the uptime and latency charts (including the daily bar tooltips) and for the light/dark theme toggle (saved in localStorage, the system preference on first load). Menus use `<details>`, without JavaScript. Do not introduce React or heavy SPA frameworks.
+- **Why:** Keeps D-002's speed and simplicity; the user asked for a theme toggle on DS-p26-public-status, which needs a few lines of script.
+- **Rejected:** React, Next.js, Vue SPA (as in D-002); a theme toggle without memory (the choice would reset on every visit).
+- **Evidence:** src/web/views/status.html, docs/design/mocks/DS-p26-public-status.html
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
 
 ## D-003 · PostgreSQL with versioned migrations and in-memory cache for status page
 - **Status:** superseded-by D-020

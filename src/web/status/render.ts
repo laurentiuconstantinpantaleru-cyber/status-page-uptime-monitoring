@@ -36,15 +36,18 @@ const iconSet = (size: string) => Object.fromEntries(
 const ICONS = {
   ...iconSet('icon'),
   logo: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 17h5l3-7 4 12 3-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  moon: '<svg class="i-moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.8A6 6 0 016.2 2.5a6 6 0 107.3 7.3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  sun: '<svg class="i-sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7L13 13M13 3l-1.3 1.3M4.3 11.7L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
   menu: '<svg class="i-open" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><svg class="i-close" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
 };
 const SMALL_ICONS = iconSet('icon-sm');
 
-/** Login, Dashboard, API and Docs pages do not exist yet (Q-008, Q-016). */
+/** Status goes to the top, API to the badge and API section in the footer. The Dashboard,
+ *  Docs and Login pages do not exist yet (DS-p26-admin-monitors, Q-016, Q-008). */
 const LINKS = [
-  { label: 'Status', href: '/status', current: true },
+  { label: 'Status', href: '#top', current: true },
   { label: 'Dashboard', href: '/admin', current: false },
-  { label: 'API', href: '/api', current: false },
+  { label: 'API', href: '#api-docs', current: false },
   { label: 'Docs', href: '/docs', current: false },
 ];
 
