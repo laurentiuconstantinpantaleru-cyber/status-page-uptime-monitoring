@@ -65,7 +65,7 @@ describe('occurrences', () => {
   it('stops when the schedule ends, cutting a window in progress, and keeps the windows before', () => {
     const ended = { ...NIGHTLY, endedAt: at('2026-11-26T23:45:00') };
 
-    expect(iso(occurrences(ended, at('2026-11-25T00:00:00'), at('2026-11-29T00:00:00')))).toEqual([
+    expect(iso(occurrences(ended, at('2026-11-25T01:00:00'), at('2026-11-29T00:00:00')))).toEqual([
       ['2026-11-25T23:30:00.000Z', '2026-11-26T00:30:00.000Z'],
       ['2026-11-26T23:30:00.000Z', '2026-11-26T23:45:00.000Z'],
     ]);

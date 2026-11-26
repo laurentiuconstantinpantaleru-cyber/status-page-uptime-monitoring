@@ -1,4 +1,5 @@
 import type { Pool, PoolConnection, RowDataPacket } from 'mysql2/promise';
+import { loadMaintenance } from '../db/maintenance.js';
 import type { RecordedCheck, ScheduledCheck } from '../shared/incidents.js';
 import type { FaultCounts, WindowCheck } from '../shared/worker-fault.js';
 import type { WorkerRow } from './assignment.js';
@@ -126,11 +127,8 @@ function monitorTx(conn: PoolConnection): MonitorTx {
       return (await select('SELECT 1 FROM incidents WHERE monitor_id = ? AND resolved_at IS NULL', [monitorId])).length > 0;
     },
     async inMaintenance(monitorId, at) {
-      const rows = await select(
-        'SELECT 1 FROM maintenance_windows WHERE monitor_id = ? AND starts_at <= ? AND ends_at > ? LIMIT 1',
-        [monitorId, at, at],
-      );
-      return rows.length > 0;
+      const windows = await loadMaintenance(conn, at, new Date(at.getTime() + 1), monitorId);
+      return (windows.get(monitorId) ?? []).length > 0;
     },
     async openIncident(monitorId, startedAt, cause, httpStatus) {
       await conn.query('INSERT INTO incidents (monitor_id, started_at, cause, http_status) VALUES (?, ?, ?, ?)', [

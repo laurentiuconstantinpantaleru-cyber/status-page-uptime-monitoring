@@ -1,10 +1,6 @@
 import type { RowDataPacket } from 'mysql2/promise';
+import { loadMaintenance, type Queryable } from '../../db/maintenance.js';
 import { DAYS_SHOWN, startOfUtcDay, type MonitorData, type StatusData } from './model.js';
-
-/** A connection or a pool: anything that runs a query. */
-export interface Queryable {
-  query<T extends RowDataPacket[]>(sql: string, values?: unknown[]): Promise<[T, unknown]>;
-}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -36,10 +32,7 @@ export async function loadStatusData(db: Queryable, now: Date): Promise<StatusDa
      WHERE started_at < ? AND (resolved_at IS NULL OR resolved_at > ?)`,
     [now, from],
   );
-  const [windows] = await db.query<RowDataPacket[]>(
-    'SELECT monitor_id, starts_at, ends_at FROM maintenance_windows WHERE starts_at < ? AND ends_at > ?',
-    [new Date(startOfUtcDay(now).getTime() + DAY_MS), from],
-  );
+  const windowsOf = await loadMaintenance(db, from, new Date(startOfUtcDay(now).getTime() + DAY_MS));
 
   const lastCheck = new Map(checks.map((c) => [Number(c.monitor_id), c]));
   const byMonitor = <T>(rows: RowDataPacket[], map: (row: RowDataPacket) => T) => {
@@ -51,7 +44,6 @@ export async function loadStatusData(db: Queryable, now: Date): Promise<StatusDa
     return result;
   };
   const incidentsOf = byMonitor(incidents, (r) => ({ startedAt: r.started_at as Date, resolvedAt: r.resolved_at as Date | null }));
-  const windowsOf = byMonitor(windows, (r) => ({ startsAt: r.starts_at as Date, endsAt: r.ends_at as Date }));
 
   const groups: StatusData['groups'] = [];
   let currentOrg: number | null = null;
