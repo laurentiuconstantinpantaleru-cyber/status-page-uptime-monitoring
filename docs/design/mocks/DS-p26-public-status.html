@@ -7,8 +7,8 @@
 <style>
 /* ---------- Tokens: copied from docs/design/DESIGN.md, nothing else ---------- */
 :root {
-  --color-bg-base: #ffffff;
-  --color-bg-surface: #f8fafc;
+  --color-bg-base: #f8fafc;
+  --color-bg-surface: #ffffff;
   --color-bg-subtle: #f1f5f9;
   --color-border: #e2e8f0;
   --color-border-strong: #64748b;
@@ -23,6 +23,9 @@
   --color-status-maint: #7c3aed;
   --color-status-nodata: #64748b;
   --shadow-card: 0 1px 3px 0 rgba(15,23,42,0.08), 0 1px 2px -1px rgba(15,23,42,0.08);
+  --wash-mix: 6%;
+  --gradient-brand-soft: linear-gradient(to bottom, color-mix(in srgb, var(--color-brand) var(--wash-mix), var(--color-bg-base)) 0, var(--color-bg-base) 320px);
+  --bg-dots: radial-gradient(circle, var(--color-border) 1px, transparent 1.5px) 0 0 / var(--space-6) var(--space-6);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
@@ -31,14 +34,15 @@
   --text-sm-strong: 500 13px/20px var(--font-sans);
   --text-base: 400 15px/24px var(--font-sans);
   --text-lg: 600 17px/26px var(--font-sans);
-  --text-xl: 700 22px/30px var(--font-sans);
+  --text-2xl: 600 28px/34px var(--font-sans);
   --text-metric: 500 13px/20px var(--font-mono);
   --text-metric-lg: 600 20px/28px var(--font-mono);
 
   --space-0-5: 2px; --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
   --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px;
 
-  --radius-sm: 3px; --radius-md: 6px; --radius-lg: 10px; --radius-pill: 9999px;
+  --radius-sm: 3px; --radius-md: 6px; --radius-lg: 12px; --radius-pill: 9999px;
+  --border-accent: 4px;
 
   --container-max: 800px;
 }
@@ -51,7 +55,8 @@
     --color-brand: #60a5fa; --color-on-brand: #0f172a;
     --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
     --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
-    --shadow-card: 0 0 0 1px #23272f;
+    --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+    --wash-mix: 14%;
   }
 }
 :root[data-theme="dark"] {
@@ -61,7 +66,8 @@
   --color-brand: #60a5fa; --color-on-brand: #0f172a;
   --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
   --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
-  --shadow-card: 0 0 0 1px #23272f;
+  --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+  --wash-mix: 14%;
 }
 
 /* ---------- Base ---------- */
@@ -69,11 +75,13 @@
 html { color-scheme: light dark; }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
-body { margin: 0; background: var(--color-bg-base); color: var(--color-text-primary); font: var(--text-base); }
+/* Brand wash at the top, dots over it; no --color-text-muted on the wash (DESIGN.md) */
+body { margin: 0; min-height: 100vh; color: var(--color-text-primary); font: var(--text-base);
+  background: var(--bg-dots), var(--gradient-brand-soft) no-repeat, var(--color-bg-base); }
 .num, time, code { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-/* Color is kept for status only: links are neutral and underlined; the focus ring stays --color-brand */
-a { color: var(--color-text-primary); text-decoration-color: var(--color-border-strong); text-underline-offset: 3px; }
-a:hover { text-decoration-color: currentColor; }
+a { color: var(--color-brand); text-decoration-color: currentColor; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; border-radius: var(--radius-sm); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 h1, h2, h3, h4, p, ol, ul, dl, dd, fieldset, figure { margin: 0; }
@@ -81,30 +89,77 @@ ol, ul { padding: 0; list-style: none; }
 fieldset { border: 0; padding: 0; min-width: 0; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
-/* ---------- Mock controls (not part of the design) ---------- */
+/* ---------- Mock controls (not part of the design): a dashed tool strip above the page ---------- */
 .mock-controls { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center;
   padding: var(--space-2) var(--space-4); border-bottom: 1px dashed var(--color-border-strong);
-  font: var(--text-xs); color: var(--color-text-muted); background: var(--color-bg-subtle); }
+  font: var(--text-xs); color: var(--color-text-secondary); background: var(--color-bg-subtle); }
 .mock-controls > span { display: flex; flex-wrap: wrap; gap: var(--space-1); align-items: center; }
+.mock-controls .tag { font: var(--text-metric); font-size: inherit; padding: 0 var(--space-2); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-sm); }
 .mock-controls button { font: var(--text-xs); min-height: var(--space-6); padding: 0 var(--space-2); cursor: pointer;
-  background: var(--color-bg-base); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); }
+  background: var(--color-bg-surface); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); }
 .mock-controls button[aria-pressed="true"] { background: var(--color-text-primary); color: var(--color-bg-base); border-color: var(--color-text-primary); }
 
-/* ---------- Layout: one narrow centered column ---------- */
-.page { width: min(100% - 2 * var(--space-12), var(--container-max)); margin: 0 auto; padding: var(--space-16) 0;
-  display: grid; gap: var(--space-12); }
-@media (max-width: 1024px) { .page { width: min(100% - 2 * var(--space-8), var(--container-max)); } }
-@media (max-width: 640px) { .page { padding: var(--space-8) 0 var(--space-12); gap: var(--space-8); } }
+/* ---------- Layout: one narrow centered column; the header aligns to it ---------- */
+.col { width: min(100% - 2 * var(--space-12), var(--container-max)); margin: 0 auto; }
+@media (max-width: 1024px) { .col { width: min(100% - 2 * var(--space-8), var(--container-max)); } }
+@media (max-width: 640px) { .col { width: calc(100% - 2 * var(--space-4)); } }
+.page { padding: var(--space-12) 0 var(--space-16); display: grid; gap: var(--space-12); }
+@media (max-width: 640px) { .page { padding: var(--space-6) 0 var(--space-12); gap: var(--space-8); } }
 .section { display: grid; gap: var(--space-4); min-width: 0; }
 .section-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); align-items: baseline; justify-content: space-between; }
 .section-head h2 { font: var(--text-lg); }
 .meta { font: var(--text-sm); color: var(--color-text-muted); }
+.card { background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); min-width: 0; }
 
-/* ---------- Header ---------- */
-.site-header { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
-.site-header .logo { width: var(--space-8); height: var(--space-8); flex: none; border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-strong); color: var(--color-text-primary); display: grid; place-items: center; font: var(--text-lg); }
-.site-header .org { font: var(--text-lg); overflow-wrap: anywhere; min-width: 0; }
+/* ================= Header (DS-p26-header styles; status page variant, not sticky, on the wash) ================= */
+.site-header { border-bottom: 1px solid var(--color-border); position: relative; }
+.bar { display: flex; align-items: center; gap: var(--space-6); min-height: var(--space-16); }
+.brand { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--color-text-primary);
+  text-decoration: none; font: var(--text-lg); border-radius: var(--radius-md); }
+.brand svg { width: var(--space-8); height: var(--space-8); flex: none; color: var(--color-brand); }
+.brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav { display: flex; align-items: center; gap: var(--space-1); }
+.nav-link { display: inline-flex; align-items: center; min-height: var(--space-8); padding: 0 var(--space-3);
+  border-radius: var(--radius-pill); white-space: nowrap; font: var(--text-sm-strong); color: var(--color-text-secondary); text-decoration: none; }
+.nav-link:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+.nav-link[aria-current="page"] { color: var(--color-text-primary); background: var(--color-bg-subtle); }
+.actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; flex: none; }
+.pill { display: inline-flex; align-items: center; justify-content: center; min-height: var(--space-8); padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer;
+  font: var(--text-sm-strong); color: var(--color-text-primary); text-decoration: none; white-space: nowrap; }
+.pill:hover { background: var(--color-bg-subtle); }
+.icon-btn { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); flex: none; padding: 0;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer; color: var(--color-text-primary); }
+.icon-btn:hover { background: var(--color-bg-subtle); }
+.icon-btn svg { width: var(--space-4); height: var(--space-4); }
+.theme-btn .i-sun, :root[data-effective="dark"] .theme-btn .i-moon { display: none; }
+:root[data-effective="dark"] .theme-btn .i-sun { display: block; }
+.menu-btn { display: none; }
+.menu-btn .i-close, .menu-btn[aria-expanded="true"] .i-open { display: none; }
+.menu-btn[aria-expanded="true"] .i-close { display: block; }
+@media (pointer: coarse) { .pill, .nav-link { min-height: var(--space-12); } .icon-btn { width: var(--space-12); height: var(--space-12); } }
+
+.drawer { position: absolute; left: 0; right: 0; top: 100%; z-index: 20; background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border); box-shadow: var(--shadow-card); padding: var(--space-2) 0 var(--space-6); }
+.drawer[hidden] { display: none; }
+.drawer-list > li { border-bottom: 1px solid var(--color-border); }
+.drawer-link { display: flex; align-items: center; min-height: var(--space-12); font: var(--text-base); font-weight: 500;
+  color: var(--color-text-primary); text-decoration: none; }
+.drawer-actions { display: none; margin-top: var(--space-4); }
+.drawer-actions .pill { min-height: var(--space-12); width: 100%; }
+@media (max-width: 1024px) {
+  .bar { gap: var(--space-4); }
+  .nav { display: none; }
+  .menu-btn { display: grid; }
+}
+@media (max-width: 640px) {
+  .bar { gap: var(--space-2); min-height: var(--space-16); }
+  .actions .pill { display: none; }
+  .drawer-actions { display: block; }
+}
+@media (min-width: 1025px) { .drawer { display: none; } }
+/* ================= end header ================= */
 
 /* ---------- Status icons (shape + text, never color alone) ---------- */
 .icon { width: var(--space-4); height: var(--space-4); flex: none; }
@@ -114,31 +169,33 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .s-outage { color: var(--color-status-outage); }
 .s-maint { color: var(--color-status-maint); }
 .s-nodata { color: var(--color-status-nodata); }
-.status { display: inline-flex; gap: var(--space-2); align-items: center; font: var(--text-sm-strong); color: var(--color-text-primary); white-space: nowrap; }
+/* Status badge: pill on the surface, icon in the status color, label in text-primary */
+.badge { display: inline-flex; gap: var(--space-1); align-items: center; min-height: var(--space-6); padding: 0 var(--space-2);
+  border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-bg-surface);
+  font: var(--text-sm-strong); color: var(--color-text-primary); white-space: nowrap; }
+.badge .icon { width: var(--space-3); height: var(--space-3); }
 
-/* ---------- Overall status banner: neutral surface, status shown by the border and the icon ---------- */
-.overall { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-1) var(--space-4); align-items: center;
-  padding: var(--space-6); background: var(--color-bg-surface); border: 1px solid var(--color-border);
-  border-left: var(--space-1) solid currentColor; border-radius: var(--radius-lg); }
+/* ---------- Overall status banner: the loudest element ---------- */
+.lead { display: grid; gap: var(--space-2); min-width: 0; }
+.org { font: var(--text-sm-strong); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.overall { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-6); align-items: center;
+  padding: var(--space-8); border-left: var(--border-accent) solid currentColor; }
 .overall.s-none { border-left-color: var(--color-border-strong); }
-.overall .icon { width: var(--space-6); height: var(--space-6); }
+.overall > .icon { width: var(--space-12); height: var(--space-12); }
 .overall .o-body { display: grid; gap: var(--space-1); min-width: 0; }
-.overall h1 { font: var(--text-xl); color: var(--color-text-primary); overflow-wrap: anywhere; }
+.overall h1 { font: var(--text-2xl); letter-spacing: -0.02em; color: var(--color-text-primary); overflow-wrap: anywhere; }
 .overall .o-sum { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
-.overall .o-updated { font: var(--text-sm); color: var(--color-text-muted); white-space: nowrap; align-self: start; }
+.overall .o-updated { font: var(--text-sm); color: var(--color-text-muted); }
 .overall .o-updated time { font: var(--text-metric); }
-.overall .o-action { grid-column: 2 / -1; justify-self: start; margin-top: var(--space-2); }
+.overall .o-action { grid-column: 2; justify-self: start; margin-top: var(--space-2); }
 @media (max-width: 640px) {
-  .overall { grid-template-columns: auto 1fr; padding: var(--space-4); gap: var(--space-1) var(--space-3); align-items: start; }
-  .overall .icon { margin-top: var(--space-1); }
-  .overall .o-updated { grid-column: 2; }
-  .overall .o-action { grid-column: 2; }
+  .overall { padding: var(--space-6) var(--space-4); gap: var(--space-2) var(--space-4); align-items: start; }
+  .overall > .icon { width: var(--space-8); height: var(--space-8); }
 }
 
 /* ---------- Notices: active incident, maintenance ---------- */
 .notices { display: grid; gap: var(--space-4); }
-.notice { display: grid; gap: var(--space-4); padding: var(--space-6); border: 1px solid var(--color-border);
-  border-left: var(--space-1) solid var(--accent); border-radius: var(--radius-lg); min-width: 0; }
+.notice { display: grid; gap: var(--space-6); padding: var(--space-6); }
 @media (max-width: 640px) { .notice { padding: var(--space-4); } }
 .n-head { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: start; }
 .n-head .icon { margin-top: var(--space-1); }
@@ -148,31 +205,34 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .n-head .meta, .n-body { overflow-wrap: anywhere; }
 .n-body { font: var(--text-base); color: var(--color-text-secondary); }
 
-.timeline { display: grid; gap: var(--space-4); }
-.timeline li { position: relative; padding-left: var(--space-6); display: grid; gap: var(--space-1); min-width: 0; }
-.timeline li::before { content: ""; position: absolute; left: 0; top: calc(var(--space-3) / 2); width: var(--space-2); height: var(--space-2);
-  border-radius: var(--radius-pill); background: var(--color-border-strong); }
-.timeline li:first-child::before { background: var(--accent, var(--color-border-strong)); }
-.timeline li::after { content: ""; position: absolute; left: calc(var(--space-1) - 1px); top: var(--space-6); bottom: calc(var(--space-4) * -1);
-  width: 2px; background: var(--color-border); }
+/* Timeline: dots on a vertical line; the newest dot carries the incident's status color */
+.timeline { display: grid; gap: var(--space-6); }
+.timeline li { position: relative; padding-left: var(--space-8); display: grid; gap: var(--space-1); min-width: 0; }
+.timeline li::before { content: ""; position: absolute; left: 0; top: var(--space-1); width: var(--space-3); height: var(--space-3);
+  border-radius: var(--radius-pill); background: var(--color-bg-surface); border: 2px solid var(--color-border-strong); }
+.timeline li:first-child::before { background: var(--accent, var(--color-border-strong)); border-color: var(--accent, var(--color-border-strong)); }
+.timeline li::after { content: ""; position: absolute; left: calc(var(--space-3) / 2 - 1px); top: calc(var(--space-4) + var(--space-1));
+  bottom: calc(var(--space-6) * -1 + var(--space-1)); width: 2px; background: var(--color-border); }
 .timeline li:last-child::after { display: none; }
 .u-head { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); align-items: baseline; }
 .stage { font: var(--text-sm-strong); color: var(--color-text-primary); }
 .u-head time { font: var(--text-metric); color: var(--color-text-muted); }
 .timeline p { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
 
-/* ---------- Components: groups of stacked rows ---------- */
-.group { display: grid; gap: var(--space-2); min-width: 0; }
-.group h3 { font: var(--text-sm-strong); color: var(--color-text-secondary); overflow-wrap: anywhere; }
-.rows { border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
-.component { display: grid; gap: var(--space-2); padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); min-width: 0; }
+/* ---------- Components: one card per group ---------- */
+.groups { display: grid; gap: var(--space-4); }
+.group-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); justify-content: space-between; align-items: baseline;
+  padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-border); }
+.group-head h3 { font: var(--text-sm-strong); font-weight: 600; color: var(--color-text-primary); overflow-wrap: anywhere; min-width: 0; }
+.component { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-6) var(--space-6); border-top: 1px solid var(--color-border); min-width: 0; }
 .component:first-child { border-top: 0; }
-@media (max-width: 640px) { .component { padding: var(--space-4); } }
-.c-top { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); align-items: baseline; justify-content: space-between; }
-.c-name { font: var(--text-base); overflow-wrap: anywhere; flex: 1 1 0; min-width: calc(var(--space-16) * 2); }
+@media (max-width: 640px) { .group-head, .component { padding-left: var(--space-4); padding-right: var(--space-4); } }
+.c-top { display: flex; gap: var(--space-2) var(--space-4); align-items: start; justify-content: space-between; }
+.c-name { font: var(--text-base); font-weight: 500; overflow-wrap: anywhere; min-width: 0; padding-top: var(--space-0-5); }
+.c-uptime { display: flex; gap: var(--space-2); align-items: baseline; }
+.c-uptime .num { font: var(--text-metric-lg); }
+.c-uptime .label { font: var(--text-xs); color: var(--color-text-muted); }
 .c-foot { display: flex; gap: var(--space-2); justify-content: space-between; font: var(--text-xs); color: var(--color-text-muted); }
-.c-foot .c-uptime { color: var(--color-text-secondary); white-space: nowrap; }
-.c-foot .num { font: var(--text-metric); font-size: inherit; line-height: inherit; }
 
 .bars { display: flex; gap: var(--space-0-5); height: var(--space-8); touch-action: pan-y; }
 .bars li { flex: 1 1 0; min-width: 0; border-radius: var(--radius-sm); background: var(--color-status-ok); }
@@ -194,8 +254,8 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .legend li { display: flex; gap: var(--space-1); align-items: center; }
 .hint { font: var(--text-xs); color: var(--color-text-muted); }
 
-.tip { position: fixed; z-index: 10; max-width: calc(var(--space-16) * 4); display: grid; gap: var(--space-1);
-  padding: var(--space-2) var(--space-3); background: var(--color-bg-base); color: var(--color-text-primary);
+.tip { position: fixed; z-index: 30; max-width: calc(var(--space-16) * 4); display: grid; gap: var(--space-1);
+  padding: var(--space-2) var(--space-3); background: var(--color-bg-surface); color: var(--color-text-primary);
   border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-card);
   font: var(--text-sm); pointer-events: none; }
 .tip[hidden] { display: none; }
@@ -204,18 +264,20 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .tip .t-detail { color: var(--color-text-secondary); }
 
 /* ---------- Response time chart (neutral line; only the "no data" gap carries a status color) ---------- */
+.chart-card { padding: var(--space-6); display: grid; gap: var(--space-6); }
+@media (max-width: 640px) { .chart-card { padding: var(--space-4); } }
 .chart-head { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); align-items: center; justify-content: space-between; }
 .chart-head h2 { font: var(--text-lg); }
 .chart-controls { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; min-width: 0; }
 .field { display: flex; gap: var(--space-2); align-items: center; font: var(--text-sm); color: var(--color-text-secondary); min-width: 0; }
-.select { font: var(--text-sm); color: var(--color-text-primary); background: var(--color-bg-base); min-height: var(--space-8); max-width: 100%; min-width: 0;
+.select { font: var(--text-sm); color: var(--color-text-primary); background: var(--color-bg-surface); min-height: var(--space-8); max-width: 100%; min-width: 0;
   border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); padding: 0 var(--space-2); }
 .seg { display: inline-flex; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); overflow: hidden; }
 .seg input { position: absolute; opacity: 0; pointer-events: none; }
 .seg label { font: var(--text-sm-strong); padding: 0 var(--space-3); min-height: var(--space-8); display: grid; place-items: center;
-  cursor: pointer; color: var(--color-text-secondary); background: var(--color-bg-base); }
+  cursor: pointer; color: var(--color-text-secondary); background: var(--color-bg-surface); }
 .seg label:hover { background: var(--color-bg-subtle); }
-.seg input:checked + label { background: var(--color-text-primary); color: var(--color-bg-base); }
+.seg input:checked + label { background: var(--color-text-primary); color: var(--color-bg-surface); }
 .seg input:focus-visible + label { outline: 2px solid var(--color-brand); outline-offset: -4px; }
 @media (max-width: 640px) {
   .chart-controls, .field { width: 100%; }
@@ -231,10 +293,10 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .chart .axis { fill: var(--color-text-muted); font: var(--text-xs); font-family: var(--font-mono); }
 .chart .line { fill: none; stroke: var(--color-text-secondary); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .chart .gap { fill: var(--color-status-outage); opacity: 0.12; }
-.chart .peak { fill: var(--color-bg-base); stroke: var(--color-text-primary); stroke-width: 2; }
+.chart .peak { fill: var(--color-bg-surface); stroke: var(--color-text-primary); stroke-width: 2; }
 .chart-note { font: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-2); }
 
-/* ---------- Past incidents, grouped by day ---------- */
+/* ---------- Past incidents, grouped by day (quiet: no cards) ---------- */
 .days { display: grid; gap: var(--space-8); }
 .day { display: grid; gap: var(--space-4); }
 .day h3 { font: var(--text-sm-strong); color: var(--color-text-secondary); padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
@@ -244,30 +306,28 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .p-head { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-2); align-items: start; }
 .p-head > .icon { margin-top: calc(var(--space-1) + 1px); }
 .p-head h4 { font: var(--text-lg); overflow-wrap: anywhere; }
-.p-head .meta { grid-column: 2; overflow-wrap: anywhere; }
+.p-head .meta { grid-column: 2; overflow-wrap: anywhere; color: var(--color-text-secondary); }
 .past > p, .past details { margin-left: var(--space-6); }
 .past > p { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
-.past summary { font: var(--text-sm-strong); color: var(--color-text-primary); text-decoration: underline;
-  text-decoration-color: var(--color-border-strong); text-underline-offset: 3px; cursor: pointer;
+.past summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer;
   min-height: var(--space-6); display: inline-flex; align-items: center; border-radius: var(--radius-sm); }
 @media (pointer: coarse) { .past summary { min-height: var(--space-12); } }
-.past details .timeline { margin-top: var(--space-3); }
+.past details .timeline { margin-top: var(--space-4); }
 .past details .timeline p { font: var(--text-sm); }
 
 /* ---------- Empty, loading, error ---------- */
-.empty { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-6);
-  border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.empty { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-6); }
 .empty p { font: var(--text-base); color: var(--color-text-secondary); }
 .skeleton { background: var(--color-bg-subtle); border-radius: var(--radius-sm); animation: pulse 1.6s ease-in-out infinite; }
 .sk-line { height: var(--space-4); }
-.sk-title { height: var(--space-6); width: 60%; }
+.sk-title { height: var(--space-8); width: 60%; }
 .sk-name { width: 40%; }
-.sk-status { width: calc(var(--space-16) + var(--space-8)); }
+.sk-status { width: calc(var(--space-16) + var(--space-8)); height: var(--space-6); border-radius: var(--radius-pill); }
 .sk-bars { height: var(--space-8); }
-.sk-chart { height: calc(var(--space-16) * 3); border-radius: var(--radius-lg); }
+.sk-chart { height: calc(var(--space-16) * 3); }
 @keyframes pulse { 50% { opacity: 0.5; } }
 .btn { font: var(--text-sm-strong); min-height: var(--space-8); padding: 0 var(--space-4); border-radius: var(--radius-pill); cursor: pointer;
-  background: var(--color-bg-base); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); }
+  background: var(--color-bg-surface); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); }
 .btn:hover { background: var(--color-bg-subtle); }
 .btn:active { background: var(--color-border); }
 @media (pointer: coarse) { .btn { min-height: var(--space-12); } }
@@ -281,7 +341,8 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 <body>
 
 <div class="mock-controls" role="group" aria-label="Mock controls">
-  <span>Mock DS-p26-public-status · draft · these controls are not part of the design</span>
+  <span class="tag">MOCK</span>
+  <span>DS-p26-public-status · draft · this strip is not part of the design</span>
   <span>State:
     <button type="button" data-set-state="success">Success</button>
     <button type="button" data-set-state="operational">All operational</button>
@@ -290,42 +351,44 @@ fieldset { border: 0; padding: 0; min-width: 0; }
     <button type="button" data-set-state="empty">Empty</button>
     <button type="button" data-set-state="long">Long text</button>
   </span>
-  <span>Theme:
-    <button type="button" data-set-theme="light">Light</button>
-    <button type="button" data-set-theme="dark">Dark</button>
-  </span>
 </div>
 
-<main class="page" id="page"></main>
+<div id="header-slot"></div>
+<main class="page col" id="page"></main>
 <div class="tip" id="tip" aria-hidden="true" hidden></div>
 
 <template id="icons">
-  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="ok"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="var(--color-bg-base)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="degraded"><path d="M8 1.2l7 13H1z" fill="currentColor"/><path d="M8 6v3.6M8 11.6v.1" stroke="var(--color-bg-base)" stroke-width="1.8" stroke-linecap="round"/></svg>
-  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="outage"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-base)" stroke-width="1.8" stroke-linecap="round"/></svg>
-  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="maint"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M8 4.2v4l2.6 1.6" fill="none" stroke="var(--color-bg-base)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="ok"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="degraded"><path d="M8 1.2l7 13H1z" fill="currentColor"/><path d="M8 6v3.6M8 11.6v.1" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>
+  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="outage"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>
+  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="maint"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M8 4.2v4l2.6 1.6" fill="none" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
   <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="nodata"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.4 2"/></svg>
-  <svg class="icon-sm" viewBox="0 0 12 12" aria-hidden="true" data-icon="check"><path d="M2.5 6.3l2.2 2.2 4.8-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </template>
 
 <script>
 /* Mock-only script: builds every state from sample data so all states share one markup.
-   In the product the page is server-rendered (D-002); only the bar tooltips and the
-   response time chart need client-side JavaScript. */
+   In the product the page is server-rendered (D-002); only the bar tooltips, the
+   response time chart, the menu and the theme toggle need client-side JavaScript. */
 const NOW = Date.UTC(2026, 10, 26, 14, 55);
 const DAY = 864e5;
 const LABEL = { ok: 'Operational', degraded: 'Degraded', outage: 'Down', maint: 'Maintenance', nodata: 'No data yet' };
 const DAY_LABEL = { ok: 'Operational', degraded: 'Degraded', outage: 'Down', maint: 'Maintenance', nodata: 'No data' };
-const SEVERITY = ['outage', 'degraded', 'maint', 'ok']; /* worst first; "no data" counts only when nothing else exists */
+const SEVERITY = ['outage', 'degraded', 'maint', 'ok']; /* worst first; "no data" counts only when nothing else exists (Q-015) */
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const tpl = document.getElementById('icons').content;
 const icon = (s, extra = '') => {
   const el = tpl.querySelector(`[data-icon="${s}"]`).cloneNode(true);
-  if (s !== 'check') el.classList.add(`s-${s}`);
+  el.classList.add(`s-${s}`);
   if (extra) el.classList.add(extra);
   return el.outerHTML;
+};
+const UI = {
+  logo: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 17h5l3-7 4 12 3-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  moon: '<svg class="i-moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.8A6 6 0 016.2 2.5a6 6 0 107.3 7.3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  sun: '<svg class="i-sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7L13 13M13 3l-1.3 1.3M4.3 11.7L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  menu: '<svg class="i-open" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><svg class="i-close" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
 };
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const dateOf = (daysAgo) => new Date(NOW - daysAgo * DAY);
@@ -334,8 +397,9 @@ const longDay = (d) => `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.
 const shortDay = (d) => `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 const utc = (hhmm) => `<time datetime="2026-11-26T${hhmm}Z">${hhmm} UTC</time>`;
 
-/* ---------- Sample data ---------- */
+/* ---------- Sample data (names are placeholders) ---------- */
 /* days: { daysAgo: [status, detail, uptime that day] }; since: days of history before "no data" */
+const PRODUCT = 'Campus Uptime';
 const SAMPLE = {
   org: 'Campus projects',
   groups: [
@@ -436,13 +500,35 @@ function worstOf(states) {
 function listNames(names) {
   return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
-const statusLabel = (s, text = LABEL[s]) => `<span class="status">${icon(s)}<span>${text}</span></span>`;
+const badge = (s) => `<span class="badge">${icon(s)}<span>${LABEL[s]}</span></span>`;
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-/* ---------- Sections ---------- */
-function header(org) {
-  return `<header class="site-header"><span class="logo" aria-hidden="true">${esc(org.slice(0, 1))}</span><p class="org">${esc(org)}</p></header>`;
+/* ---------- Header ---------- */
+const LINKS = [['Status', '#status'], ['Dashboard', '#admin'], ['API', '#api'], ['Docs', '#docs']];
+/* Login only: visitor subscriptions are out of scope (D-009); the Docs target is open (Q-016). */
+function header() {
+  return `<header class="site-header">
+    <div class="bar col">
+      <a class="brand" href="#status" title="${PRODUCT}">${UI.logo}<span>${PRODUCT}</span></a>
+      <nav class="nav" aria-label="Main">
+        ${LINKS.map(([l, h], i) => `<a class="nav-link" href="${h}"${i === 0 ? ' aria-current="page"' : ''}>${l}</a>`).join('')}
+      </nav>
+      <div class="actions">
+        <button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme">${UI.moon}${UI.sun}</button>
+        <a class="pill" href="#login">Login</a>
+        <button class="icon-btn menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="drawer" aria-label="Open menu">${UI.menu}</button>
+      </div>
+    </div>
+    <nav class="drawer" id="drawer" aria-label="Main" hidden>
+      <div class="col">
+        <ul class="drawer-list">${LINKS.map(([l, h], i) => `<li><a class="drawer-link" href="${h}"${i === 0 ? ' aria-current="page"' : ''}>${l}</a></li>`).join('')}</ul>
+        <div class="drawer-actions"><a class="pill" href="#login">Login</a></div>
+      </div>
+    </nav>
+  </header>`;
 }
 
+/* ---------- Sections ---------- */
 function overall(data) {
   const ms = allMonitors(data);
   const worst = worstOf(ms.map((m) => m.state));
@@ -455,18 +541,24 @@ function overall(data) {
     ok: 'All components operational',
     nodata: 'No components yet',
   }[worst];
-  const parts = [];
-  if (down.length) parts.push(`${esc(listNames(down))} ${down.length > 1 ? 'are' : 'is'} down.`);
-  if (slow.length) parts.push(`${esc(listNames(slow))} ${slow.length > 1 ? 'are' : 'is'} slow.`);
-  if (maint.length) parts.push(`${esc(listNames(maint))} ${maint.length > 1 ? 'are' : 'is'} in maintenance.`);
-  if (!parts.length && worst === 'ok') parts.push('Every component passed its last check.');
-  if (worst === 'nodata') parts.push('This page shows each component once the organization adds its first monitor.');
-  else if (worst !== 'ok') parts.push('Everything else is working.');
-  return `<section class="overall s-${worst}" aria-labelledby="overall-title">
+  /* One secondary line: the worst components by name, the rest as counts */
+  let sum;
+  if (worst === 'nodata') sum = 'Each component appears here after its first check.';
+  else if (worst === 'ok') sum = 'Every component passed its last check.';
+  else {
+    const named = worst === 'outage' ? down : worst === 'degraded' ? slow : maint;
+    const verb = { outage: 'down', degraded: 'slow', maint: 'in maintenance' }[worst];
+    const rest = [];
+    if (worst !== 'degraded' && slow.length) rest.push(`${slow.length} slow`);
+    if (worst !== 'maint' && maint.length) rest.push(`${maint.length} in maintenance`);
+    sum = `${listNames(named)} ${named.length > 1 ? 'are' : 'is'} ${verb}${rest.length ? `; ${rest.join(', ')}` : ''}. Everything else is working.`;
+  }
+  return `<div class="lead"><p class="org">${esc(data.org)}</p>
+  <section class="overall card s-${worst}" aria-labelledby="overall-title">
     ${icon(worst)}
-    <div class="o-body"><h1 id="overall-title">${head}</h1><p class="o-sum">${parts.join(' ')}</p></div>
-    <p class="o-updated">Updated ${utc('14:55')}</p>
-  </section>`;
+    <div class="o-body"><h1 id="overall-title">${head}</h1><p class="o-sum">${esc(sum)}</p>
+      <p class="o-updated">Updated ${utc('14:55')}</p></div>
+  </section></div>`;
 }
 
 function timeline(updates, time = utc) {
@@ -477,7 +569,7 @@ function timeline(updates, time = utc) {
 function notices(long) {
   const m = MAINT(long);
   return `<div class="notices">
-    <section class="notice" style="--accent: var(--color-status-outage)" aria-labelledby="active-title">
+    <section class="notice card" style="--accent: var(--color-status-outage)" aria-labelledby="active-title">
       <div class="n-head">${icon('outage')}<div>
         <p class="eyebrow">Active incident · ${ACTIVE.stage}</p>
         <h2 id="active-title">${esc(ACTIVE.title)}</h2>
@@ -485,7 +577,7 @@ function notices(long) {
       </div></div>
       ${timeline(ACTIVE.updates(long))}
     </section>
-    <section class="notice" style="--accent: var(--color-status-maint)" aria-labelledby="maint-title">
+    <section class="notice card" style="--accent: var(--color-status-maint)" aria-labelledby="maint-title">
       <div class="n-head">${icon('maint')}<div>
         <p class="eyebrow">Maintenance in progress</p>
         <h2 id="maint-title">${esc(m.title)}</h2>
@@ -517,20 +609,20 @@ function components(data) {
   const groups = data.groups.map((g, gi) => {
     const rows = g.monitors.map((m, mi) => `
       <li class="component">
-        <div class="c-top"><p class="c-name">${esc(m.name)}</p>${statusLabel(m.state)}</div>
+        <div class="c-top"><p class="c-name">${esc(m.name)}</p>${badge(m.state)}</div>
+        <p class="c-uptime"><span class="num">${m.uptime}</span><span class="label">uptime, 90 days</span></p>
         ${bars(m, `${gi}-${mi}`)}
-        <div class="c-foot"><span class="d90">90 days ago</span><span class="d30">30 days ago</span>
-          <span class="c-uptime"><span class="num">${m.uptime}</span> uptime</span><span>Today</span></div>
+        <div class="c-foot"><span class="d90">90 days ago</span><span class="d30">30 days ago</span><span>Today</span></div>
       </li>`).join('');
-    return `<section class="group" aria-labelledby="group-${gi}">
-      <h3 id="group-${gi}">${esc(g.name)}</h3>
-      <ul class="rows">${rows}</ul>
+    return `<section class="card" aria-labelledby="group-${gi}">
+      <div class="group-head"><h3 id="group-${gi}">${esc(g.name)}</h3><span class="meta">${plural(g.monitors.length, 'component', 'components')}</span></div>
+      <ul>${rows}</ul>
     </section>`;
   }).join('');
   return `<section class="section" aria-labelledby="components-title">
     <div class="section-head"><h2 id="components-title">Components</h2>
-      <span class="meta"><span class="d90">Uptime over the last 90 days</span><span class="d30">Last 30 days shown · uptime over 90 days</span></span></div>
-    ${groups}
+      <span class="meta"><span class="d90">Last 90 days</span><span class="d30">Last 30 days shown · uptime over 90 days</span></span></div>
+    <div class="groups">${groups}</div>
     <ul class="legend" aria-label="Legend">${legend}</ul>
     <p class="hint">Point at, tap or move with the arrow keys across the bars to see each day.</p>
   </section>`;
@@ -559,7 +651,7 @@ function xLabel(range, i, n) {
 }
 function chartSvg(vals, range) {
   const body = document.getElementById('chart-body');
-  const W = Math.max(240, body ? body.clientWidth : 800), small = W < 500, H = small ? 140 : 180, L = 44, B = 24, T = 8;
+  const W = Math.max(240, body ? body.clientWidth : 740), small = W < 500, H = small ? 140 : 180, L = 44, B = 24, T = 8;
   const n = vals.length, max = Math.max(500, Math.ceil(Math.max(...vals.filter((v) => v !== null)) / 250) * 250);
   const x = (i) => L + (i * (W - L - 8)) / (n - 1);
   const y = (v) => H - B - (v / max) * (H - B - T);
@@ -594,13 +686,13 @@ function chartBody(data) {
 }
 function chart(data) {
   const ms = allMonitors(data).filter((m) => m.state !== 'nodata');
-  return `<section class="section" aria-labelledby="chart-title">
+  return `<section class="chart-card card" aria-labelledby="chart-title">
     <div class="chart-head"><h2 id="chart-title">Response time</h2>
       <div class="chart-controls">
         <label class="field">Component <select class="select" id="chart-monitor">${ms.map((m, i) => `<option value="${i}"${i === chartMonitor ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>
         <fieldset class="seg"><legend class="visually-hidden">Period</legend>
-          <input type="radio" name="period" id="p-24h" value="24h"${chartRange === '24h' ? ' checked' : ''}><label for="p-24h">24 hours</label>
-          <input type="radio" name="period" id="p-30d" value="30d"${chartRange === '30d' ? ' checked' : ''}><label for="p-30d">30 days</label>
+          <input type="radio" name="period" id="p-24h" value="24h"${chartRange === '24h' ? ' checked' : ''}><label for="p-24h">24h</label>
+          <input type="radio" name="period" id="p-30d" value="30d"${chartRange === '30d' ? ' checked' : ''}><label for="p-30d">30d</label>
         </fieldset>
       </div></div>
     <div id="chart-body" class="section">${chartBody(data)}</div>
@@ -631,35 +723,37 @@ function pastIncidents(long) {
 function footer() {
   return `<footer class="site-footer">
     <div class="f-notes"><p>All times are in UTC.</p><p>Uptime excludes maintenance windows.</p></div>
-    <a href="#api-docs">API and status badge docs</a></footer>`;
+    <a href="#api-docs">Status badge and API docs</a></footer>`;
 }
 
 /* ---------- Loading and error: same layout as the page, no data yet ---------- */
 function loading() {
-  const row = `<li class="component" aria-hidden="true"><div class="c-top"><div class="skeleton sk-line sk-name"></div><div class="skeleton sk-line sk-status"></div></div>
-    <div class="skeleton sk-bars"></div></li>`;
-  return `<section class="overall s-none" aria-labelledby="overall-title" aria-busy="true">
+  const row = `<li class="component" aria-hidden="true"><div class="c-top"><div class="skeleton sk-line sk-name"></div><div class="skeleton sk-status"></div></div>
+    <div class="skeleton sk-line" style="width: 25%"></div><div class="skeleton sk-bars"></div></li>`;
+  return `<div class="lead"><p class="org">${esc(SAMPLE.org)}</p>
+    <section class="overall card s-none" aria-labelledby="overall-title" aria-busy="true">
       <span class="icon skeleton" aria-hidden="true"></span>
       <div class="o-body"><h1 id="overall-title" class="visually-hidden">Loading status</h1>
         <div class="skeleton sk-title" aria-hidden="true"></div><div class="skeleton sk-line" aria-hidden="true"></div></div>
       <p class="visually-hidden" role="status">Loading the status of every component</p>
-    </section>
+    </section></div>
     <section class="section" aria-labelledby="components-title" aria-busy="true">
       <div class="section-head"><h2 id="components-title">Components</h2></div>
-      <div class="group"><div class="skeleton sk-line sk-name" aria-hidden="true"></div><ul class="rows">${row.repeat(3)}</ul></div>
+      <div class="card"><div class="group-head"><div class="skeleton sk-line sk-name" aria-hidden="true"></div></div><ul>${row.repeat(3)}</ul></div>
     </section>
-    <section class="section" aria-labelledby="past-title" aria-busy="true">
-      <div class="section-head"><h2 id="past-title">Past incidents</h2></div>
-      <div class="skeleton sk-chart" aria-hidden="true"></div>
+    <section class="section" aria-labelledby="chart-title" aria-busy="true">
+      <div class="section-head"><h2 id="chart-title">Response time</h2></div>
+      <div class="card skeleton sk-chart" aria-hidden="true"></div>
     </section>`;
 }
 function error() {
-  return `<section class="overall s-none" aria-labelledby="overall-title" role="alert">
+  return `<div class="lead"><p class="org">${esc(SAMPLE.org)}</p>
+  <section class="overall card s-none" aria-labelledby="overall-title" role="alert">
     ${icon('nodata')}
     <div class="o-body"><h1 id="overall-title">Status could not load</h1>
       <p class="o-sum">This page could not reach the status service, so it cannot show current status, uptime or incidents. Try again in a moment.</p></div>
     <button class="btn o-action" type="button" data-retry>Try again</button>
-  </section>`;
+  </section></div>`;
 }
 
 /* ---------- Render ---------- */
@@ -669,22 +763,22 @@ function render(state) {
   hideTip();
   if (state === 'loading' || state === 'error') {
     current = SAMPLE;
-    page.innerHTML = header(SAMPLE.org) + (state === 'loading' ? loading() : error()) + footer();
+    page.innerHTML = (state === 'loading' ? loading() : error()) + footer();
     return;
   }
   if (state === 'empty') {
     current = { org: SAMPLE.org, groups: [] };
-    page.innerHTML = header(SAMPLE.org) + overall(current) +
+    page.innerHTML = overall(current) +
       `<section class="section" aria-labelledby="components-title"><div class="section-head"><h2 id="components-title">Components</h2></div>
-        <div class="empty"><p>Components will appear here after their first check, with their status and 90-day uptime.</p>
+        <div class="empty card"><p>Components will appear here after their first check, with their status and 90-day uptime.</p>
         <a href="#admin-monitors">Manage monitors</a></div></section>` +
       `<section class="section" aria-labelledby="past-title"><div class="section-head"><h2 id="past-title">Past incidents</h2></div>
-        <div class="empty"><p>No incidents in the last 90 days.</p></div></section>` + footer();
+        <div class="empty card"><p>No incidents in the last 90 days.</p></div></section>` + footer();
     return;
   }
   current = state === 'long' ? LONG : state === 'operational' ? OPERATIONAL : SAMPLE;
   const pinned = state === 'operational' ? '' : notices(state === 'long');
-  page.innerHTML = header(current.org) + overall(current) + pinned + components(current) + chart(current) + pastIncidents(state === 'long') + footer();
+  page.innerHTML = overall(current) + pinned + components(current) + chart(current) + pastIncidents(state === 'long') + footer();
   setupBars();
   rerenderChart(); /* the chart measures its width once it is in the page */
 }
@@ -749,22 +843,51 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.bars')) hideTip(); });
 
-/* ---------- Mock controls and chart controls ---------- */
+/* ---------- Theme: follows the system until the visitor picks one, then remembers it ---------- */
 const params = new URLSearchParams(location.search);
-let state = params.get('state') || 'success';
-let theme = params.get('theme');
-function apply() {
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+let theme = params.get('theme') || localStorage.getItem('theme');
+function applyTheme() {
   if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
-  render(state);
-  document.querySelectorAll('[data-set-state]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.setState === state)));
-  document.querySelectorAll('[data-set-theme]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.setTheme === theme)));
+  const effective = theme || (darkQuery.matches ? 'dark' : 'light');
+  document.documentElement.dataset.effective = effective;
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.setAttribute('aria-label', effective === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+}
+darkQuery.addEventListener('change', applyTheme);
+
+/* ---------- Menu drawer (tablet and mobile): Esc closes and returns focus ---------- */
+function setupHeader() {
+  const slot = document.getElementById('header-slot');
+  slot.innerHTML = header();
+  const btn = slot.querySelector('#menu-btn'), drawer = slot.querySelector('#drawer');
+  const setOpen = (open) => { btn.setAttribute('aria-expanded', String(open)); drawer.hidden = !open; btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu'); };
+  btn.addEventListener('click', () => setOpen(drawer.hidden));
+  slot.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !drawer.hidden) { setOpen(false); btn.focus(); } });
+  document.addEventListener('pointerdown', (e) => { if (!slot.contains(e.target)) setOpen(false); });
+  window.matchMedia('(min-width: 1025px)').addEventListener('change', () => setOpen(false));
+  slot.querySelector('#theme-btn').addEventListener('click', () => {
+    theme = document.documentElement.dataset.effective === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', theme);
+    applyTheme(); syncUrl();
+  });
+}
+
+/* ---------- Mock controls and chart controls ---------- */
+let state = params.get('state') || 'success';
+function syncUrl() {
   const q = new URLSearchParams({ state }); if (theme) q.set('theme', theme);
   history.replaceState(null, '', '?' + q);
+}
+function apply() {
+  applyTheme();
+  render(state);
+  document.querySelectorAll('[data-set-state]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.setState === state)));
+  syncUrl();
 }
 document.querySelector('.mock-controls').addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.setState) { state = b.dataset.setState; chartMonitor = 0; }
-  if (b.dataset.setTheme) theme = theme === b.dataset.setTheme ? null : b.dataset.setTheme;
   apply();
 });
 document.getElementById('page').addEventListener('change', (e) => {
@@ -776,6 +899,7 @@ document.getElementById('page').addEventListener('click', (e) => {
 });
 let resizeTimer;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { hideTip(); fixTabStops(); if (!['empty', 'loading', 'error'].includes(state)) rerenderChart(); }, 100); });
+setupHeader();
 apply();
 </script>
 </body>

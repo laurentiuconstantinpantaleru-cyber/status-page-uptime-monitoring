@@ -25,6 +25,7 @@
 - Q-014 · How are monitors grouped on the public status page?
 - Q-015 · Which status wins when several apply, in the overall banner and in a daily bar?
 - Q-016 · Where do the API and status badge docs live?
+- Q-017 · Does the public status page share DS-p26-header or keep its own header variant?
 
 ---
 
@@ -130,3 +131,9 @@
 - **Blocks:** The footer link on DS-p26-public-status; the mock links to a placeholder. The API itself is C-001 (proposed).
 - **Who answers:** user
 - **Confirmed:** 2026-11-26
+
+## Q-017 · Does the public status page share DS-p26-header or keep its own header variant?
+- **Status:** open
+- **Blocks:** Building the header partial (`src/web/views/partials/header.html`) for DS-p26-public-status.
+- **Who answers:** user
+- **Context:** DS-p26-public-status draws a header with Status, Dashboard, API, Docs, a Login pill and a theme toggle, not sticky. DS-p26-header has a Features menu and a "Get started" pill, is sticky and has no theme toggle.
