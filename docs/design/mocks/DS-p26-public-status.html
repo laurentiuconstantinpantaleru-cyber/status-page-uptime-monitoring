@@ -89,16 +89,6 @@ ol, ul { padding: 0; list-style: none; }
 fieldset { border: 0; padding: 0; min-width: 0; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
-/* ---------- Mock controls (not part of the design): a dashed tool strip above the page ---------- */
-.mock-controls { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center;
-  padding: var(--space-2) var(--space-4); border-bottom: 1px dashed var(--color-border-strong);
-  font: var(--text-xs); color: var(--color-text-secondary); background: var(--color-bg-subtle); }
-.mock-controls > span { display: flex; flex-wrap: wrap; gap: var(--space-1); align-items: center; }
-.mock-controls .tag { font: var(--text-metric); font-size: inherit; padding: 0 var(--space-2); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-sm); }
-.mock-controls button { font: var(--text-xs); min-height: var(--space-6); padding: 0 var(--space-2); cursor: pointer;
-  background: var(--color-bg-surface); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); }
-.mock-controls button[aria-pressed="true"] { background: var(--color-text-primary); color: var(--color-bg-base); border-color: var(--color-text-primary); }
-
 /* ---------- Layout: one narrow centered column; the header aligns to it ---------- */
 .col { width: min(100% - 2 * var(--space-12), var(--container-max)); margin: 0 auto; }
 @media (max-width: 1024px) { .col { width: min(100% - 2 * var(--space-8), var(--container-max)); } }
@@ -115,6 +105,7 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 /* ================= Header (DS-p26-header styles; status page variant, not sticky, on the wash) ================= */
 .site-header { border-bottom: 1px solid var(--color-border); position: relative; }
 .bar { display: flex; align-items: center; gap: var(--space-6); min-height: var(--space-16); }
+.brand-group { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .brand { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--color-text-primary);
   text-decoration: none; font: var(--text-lg); border-radius: var(--radius-md); }
 .brand svg { width: var(--space-8); height: var(--space-8); flex: none; color: var(--color-brand); }
@@ -146,7 +137,7 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .drawer-list > li { border-bottom: 1px solid var(--color-border); }
 .drawer-link { display: flex; align-items: center; min-height: var(--space-12); font: var(--text-base); font-weight: 500;
   color: var(--color-text-primary); text-decoration: none; }
-.drawer-actions { display: none; margin-top: var(--space-4); }
+.drawer-actions { display: none; gap: var(--space-2); margin-top: var(--space-4); }
 .drawer-actions .pill { min-height: var(--space-12); width: 100%; }
 @media (max-width: 1024px) {
   .bar { gap: var(--space-4); }
@@ -156,7 +147,7 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 @media (max-width: 640px) {
   .bar { gap: var(--space-2); min-height: var(--space-16); }
   .actions .pill { display: none; }
-  .drawer-actions { display: block; }
+  .drawer-actions { display: grid; }
 }
 @media (min-width: 1025px) { .drawer { display: none; } }
 /* ================= end header ================= */
@@ -309,10 +300,10 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .p-head .meta { grid-column: 2; overflow-wrap: anywhere; color: var(--color-text-secondary); }
 .past > p, .past details { margin-left: var(--space-6); }
 .past > p { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
-.past summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer;
+.past summary, .notice summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer;
   min-height: var(--space-6); display: inline-flex; align-items: center; border-radius: var(--radius-sm); }
-@media (pointer: coarse) { .past summary { min-height: var(--space-12); } }
-.past details .timeline { margin-top: var(--space-4); }
+@media (pointer: coarse) { .past summary, .notice summary { min-height: var(--space-12); } }
+.past details .timeline, .notice details .timeline { margin-top: var(--space-4); }
 .past details .timeline p { font: var(--text-sm); }
 
 /* ---------- Empty, loading, error ---------- */
@@ -333,25 +324,13 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 @media (pointer: coarse) { .btn { min-height: var(--space-12); } }
 
 /* ---------- Footer ---------- */
-.site-footer { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); justify-content: space-between;
+.site-footer:focus { outline: none; }
+.site-footer { scroll-margin-top: var(--space-8); display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); justify-content: space-between;
   padding-top: var(--space-6); border-top: 1px solid var(--color-border); font: var(--text-sm); color: var(--color-text-muted); }
 .site-footer .f-notes { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-6); }
 </style>
 </head>
 <body>
-
-<div class="mock-controls" role="group" aria-label="Mock controls">
-  <span class="tag">MOCK</span>
-  <span>DS-p26-public-status · draft · this strip is not part of the design</span>
-  <span>State:
-    <button type="button" data-set-state="success">Success</button>
-    <button type="button" data-set-state="operational">All operational</button>
-    <button type="button" data-set-state="loading">Loading</button>
-    <button type="button" data-set-state="error">Error</button>
-    <button type="button" data-set-state="empty">Empty</button>
-    <button type="button" data-set-state="long">Long text</button>
-  </span>
-</div>
 
 <div id="header-slot"></div>
 <main class="page col" id="page"></main>
@@ -504,25 +483,31 @@ const badge = (s) => `<span class="badge">${icon(s)}<span>${LABEL[s]}</span></sp
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /* ---------- Header ---------- */
-const LINKS = [['Status', '#status'], ['Dashboard', '#admin'], ['API', '#api'], ['Docs', '#docs']];
-/* Login only: visitor subscriptions are out of scope (D-009); the Docs target is open (Q-016). */
+/* Status scrolls to the top; API goes to the badge and API section in the footer. Dashboard, Docs
+   and Login open placeholders until their screens exist (DS-p26-admin-monitors, Q-016, Q-008).
+   No Subscribe: visitor subscriptions are out of scope (D-009). */
+const SOON = (page) => `coming-soon.html?page=${encodeURIComponent(page)}`;
+const LINKS = [['Status', '#top'], ['Dashboard', SOON('Dashboard')], ['API', '#api-docs'], ['Docs', SOON('Docs')]];
 function header() {
   return `<header class="site-header">
     <div class="bar col">
-      <a class="brand" href="#status" title="${PRODUCT}">${UI.logo}<span>${PRODUCT}</span></a>
+      <div class="brand-group">
+        <a class="brand" href="#top" title="${PRODUCT}">${UI.logo}<span>${PRODUCT}</span></a>
+        <button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme">${UI.moon}${UI.sun}</button>
+      </div>
       <nav class="nav" aria-label="Main">
         ${LINKS.map(([l, h], i) => `<a class="nav-link" href="${h}"${i === 0 ? ' aria-current="page"' : ''}>${l}</a>`).join('')}
       </nav>
       <div class="actions">
-        <button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme">${UI.moon}${UI.sun}</button>
-        <a class="pill" href="#login">Login</a>
+        <a class="pill" href="#api-docs">API docs</a>
+        <a class="pill" href="${SOON('Login')}">Login</a>
         <button class="icon-btn menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="drawer" aria-label="Open menu">${UI.menu}</button>
       </div>
     </div>
     <nav class="drawer" id="drawer" aria-label="Main" hidden>
       <div class="col">
         <ul class="drawer-list">${LINKS.map(([l, h], i) => `<li><a class="drawer-link" href="${h}"${i === 0 ? ' aria-current="page"' : ''}>${l}</a></li>`).join('')}</ul>
-        <div class="drawer-actions"><a class="pill" href="#login">Login</a></div>
+        <div class="drawer-actions"><a class="pill" href="#api-docs">API docs</a><a class="pill" href="${SOON('Login')}">Login</a></div>
       </div>
     </nav>
   </header>`;
@@ -575,7 +560,7 @@ function notices(long) {
         <h2 id="active-title">${esc(ACTIVE.title)}</h2>
         <p class="meta">Affects ${esc(ACTIVE.affects)} · Started ${utc(ACTIVE.started)} · Down for <span class="num">53 min</span></p>
       </div></div>
-      ${timeline(ACTIVE.updates(long))}
+      <details class="updates" open><summary>Updates (${ACTIVE.updates(long).length})</summary>${timeline(ACTIVE.updates(long))}</details>
     </section>
     <section class="notice card" style="--accent: var(--color-status-maint)" aria-labelledby="maint-title">
       <div class="n-head">${icon('maint')}<div>
@@ -721,9 +706,9 @@ function pastIncidents(long) {
 }
 
 function footer() {
-  return `<footer class="site-footer">
+  return `<footer class="site-footer" id="api-docs" tabindex="-1" aria-label="Status badge and API">
     <div class="f-notes"><p>All times are in UTC.</p><p>Uptime excludes maintenance windows.</p></div>
-    <a href="#api-docs">Status badge and API docs</a></footer>`;
+    <a href="${SOON('API docs')}">Status badge and API docs</a></footer>`;
 }
 
 /* ---------- Loading and error: same layout as the page, no data yet ---------- */
@@ -863,6 +848,7 @@ function setupHeader() {
   const btn = slot.querySelector('#menu-btn'), drawer = slot.querySelector('#drawer');
   const setOpen = (open) => { btn.setAttribute('aria-expanded', String(open)); drawer.hidden = !open; btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu'); };
   btn.addEventListener('click', () => setOpen(drawer.hidden));
+  drawer.addEventListener('click', (e) => { if (e.target.closest('a[href^="#"]')) setOpen(false); });
   slot.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !drawer.hidden) { setOpen(false); btn.focus(); } });
   document.addEventListener('pointerdown', (e) => { if (!slot.contains(e.target)) setOpen(false); });
   window.matchMedia('(min-width: 1025px)').addEventListener('change', () => setOpen(false));
@@ -873,7 +859,7 @@ function setupHeader() {
   });
 }
 
-/* ---------- Mock controls and chart controls ---------- */
+/* ---------- Review states by URL only (no controls on the page): ?state=success|operational|loading|error|empty|long, ?theme=light|dark ---------- */
 let state = params.get('state') || 'success';
 function syncUrl() {
   const q = new URLSearchParams({ state }); if (theme) q.set('theme', theme);
@@ -882,14 +868,8 @@ function syncUrl() {
 function apply() {
   applyTheme();
   render(state);
-  document.querySelectorAll('[data-set-state]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.setState === state)));
   syncUrl();
 }
-document.querySelector('.mock-controls').addEventListener('click', (e) => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.setState) { state = b.dataset.setState; chartMonitor = 0; }
-  apply();
-});
 document.getElementById('page').addEventListener('change', (e) => {
   if (e.target.id === 'chart-monitor') { chartMonitor = Number(e.target.value); rerenderChart(); }
   if (e.target.name === 'period') { chartRange = e.target.value; rerenderChart(); }
