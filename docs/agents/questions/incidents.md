@@ -31,3 +31,9 @@
 - **Status:** open
 - **Blocks:** A "stop maintenance" action; today a quick window always runs to its end (D-031).
 - **Who answers:** user
+
+## Q-021 · Who writes incident updates, and does that code bump `status_version`?
+- **Status:** open
+- **Blocks:** Writing rows to `incident_updates`; no code in `src/` does it yet, so an update added straight to the database shows on the status page only after the next version bump or UTC midnight (D-020, D-032).
+- **Who answers:** user
+- **Proposed answer:** The admin panel (after Q-008) writes the update and bumps `status_version` in the same transaction, as the workers do on an incident open or close (src/worker/store.ts) and maintenance does (src/web/maintenance/store.ts).
