@@ -46,7 +46,8 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 | Web Server | `src/web/` (`app.ts`, `server.ts`) | Serves Fastify REST API, SSR status pages, admin views; `GET /health` | MySQL, in-memory cache |
 | In-Memory Cache | `src/web/` _planned_ | Caches rendered status payloads under 100ms | Web Server |
 | Scheduler | `src/worker/` _planned_ | Drift-free execution planning for monitor probes | Check Workers |
-| Check Workers | `src/worker/` _planned_ | Executes HTTP/TLS/keyword probes; performs 2nd worker confirmation | MySQL, External Targets |
+| Check Engine | `src/worker/check.ts` | One check through an injected `HttpClient` and `Clock`: status, keyword, latency threshold, TLS days left, failure cause; default timeout 30 s (D-022) | External Targets (via the client) |
+| Check Workers | `src/worker/` _planned_ | Schedules probes and runs the check engine; performs 2nd worker confirmation | MySQL, External Targets |
 | Incident Engine | `src/shared/` _planned_ | State machine opening/closing incidents and calculating uptime | MySQL, Alert Dispatcher |
 | Alert Dispatcher | `src/worker/` _planned_ | Sends Telegram and email notifications with escalation | Telegram API, SMTP |
 | Roll-up Job | `src/worker/` _planned_ | Aggregates raw check data older than 7 days | MySQL |

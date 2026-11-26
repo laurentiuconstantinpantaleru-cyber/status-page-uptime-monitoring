@@ -10,6 +10,7 @@
 - PATTERN-002 · Multi-worker ping confirmation before state change · candidate
 - PATTERN-003 · Version-polled in-memory cache invalidation on monitor state change · candidate
 - PATTERN-004 · Time columns get their value from the Clock, never a database default · candidate
+- PATTERN-006 · Network calls through an injected client, errors classified by a pure function · candidate
 
 ---
 
@@ -45,3 +46,11 @@
 - **Example:** db/migrations/0001_initial_schema.sql, src/db/migrate.ts (`applied_at`)
 - **Why:** A database default reads the server's clock, which simulated-time tests cannot move (D-004, D-021).
 - **Source:** user · confidence high
+
+## PATTERN-006 · Network calls through an injected client, errors classified by a pure function
+- **Status:** candidate
+- **Use when:** Code calls an outside service (target site, Telegram, SMTP) and its result or failure must be tested.
+- **How:** Accept a small client interface in a `deps` argument next to the `Clock`; the real adapter only performs the call and rethrows the original error. Turn the error into a domain value in a pure function that reads the Node `name` and `code`, so tests throw fake errors with real codes and never open a socket.
+- **Example:** src/worker/check.ts (`HttpClient`, `classifyError`), test/worker/check.test.ts
+- **Why:** Tests stay offline and deterministic (D-004), and the mapping from error to cause is tested instead of hidden in the adapter.
+- **Source:** session 2026-11-26 · confidence medium

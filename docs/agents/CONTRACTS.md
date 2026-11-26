@@ -11,7 +11,7 @@
 ## Index
 - C-001 · Public status page JSON API & badge interface · provided · _proposed_
 - C-002 · Telegram Bot API notification dispatch · external · _proposed_
-- C-003 · Target HTTP/HTTPS Services & TLS probing · external · _proposed_
+- C-003 · Target HTTP/HTTPS Services & TLS probing · external
 
 ---
 
@@ -38,8 +38,9 @@
 - **Evidence:** docs/brief.md:12
 
 ### C-003 · Target HTTP/HTTPS Services & TLS probing
-- **Status:** proposed
+- **Status:** approved
 - **Interface:** Standard HTTP/1.1 and HTTP/2 protocol and TLS socket handshake
 - **We rely on:** HTTP response status code, response body keyword match, latency timing, and x509 certificate expiry date.
 - **Known quirks:** Worker host DNS failures must be isolated from target failures by cross-referencing other probes on the same worker.
-- **Evidence:** docs/brief.md:10, docs/brief.md:24
+- **Evidence:** docs/brief.md:10, docs/brief.md:24, src/worker/check.ts
+- **Confirmed:** 2026-11-26

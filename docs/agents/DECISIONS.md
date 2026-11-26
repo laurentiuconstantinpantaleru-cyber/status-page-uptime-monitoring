@@ -32,6 +32,7 @@
 - D-016 · Default check interval of 5 minutes, range 1–60 minutes
 - D-010 · TLS certificate expiration warnings at 30 days and 7 days reminder
 - D-011 · Raw check retention for 7 days with hourly and daily roll-up compaction
+- D-022 · Default check timeout of 30 seconds
 
 ### [Reporting](decisions/reporting.md)
 - D-019 · Monthly uptime report: schedule, recipients, format, and idempotency

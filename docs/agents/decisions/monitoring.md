@@ -30,3 +30,13 @@
 - **Evidence:** docs/brief.md:21, docs/survey-results.md:11
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26
+
+## D-022 · Default check timeout of 30 seconds
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** A check waits at most 30 000 ms for a response unless the monitor sets its own timeout (`DEFAULT_TIMEOUT_MS` in `src/worker/check.ts`). The `monitors.timeout_ms` column keeps no database default for now; the seeded business monitors keep 10 000 ms.
+- **Why:** Free Render apps sleep and take tens of seconds to start; a shorter default would report a cold start as a timeout.
+- **Rejected:** A column default and seed change in this change (left for a separate migration, D-021).
+- **Evidence:** src/worker/check.ts
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
