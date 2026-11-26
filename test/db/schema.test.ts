@@ -17,6 +17,9 @@ import { mysqlAdminStore } from '../../src/web/admin/store.js';
 import { hashPassword } from '../../src/web/auth/password.js';
 import { createUser, mysqlAuthStore } from '../../src/web/auth/store.js';
 import { recordCheck } from '../../src/worker/worker.js';
+import { hashSecret, newApiKey } from '../../src/web/api/keys.js';
+import type { NewMonitor } from '../../src/web/api/monitor-input.js';
+import { createApiKey, mysqlApiStore } from '../../src/web/api/store.js';
 
 // Integration tests against a real MySQL 8. CI always sets TEST_DATABASE_URL.
 // The database is wiped, so its name must end in `_test`.
@@ -757,6 +760,79 @@ describe.skipIf(!url)('MySQL schema', () => {
       ).rejects.toThrow(/foreign key/i);
 
       expect(await readStatusVersion(conn)).toBe(before);
+    });
+  });
+
+  describe('API store (D-025, D-039)', () => {
+    const NOW = new Date('2026-11-26T14:55:00.000Z');
+    let pool: ReturnType<typeof createPool>;
+    let orgA: number;
+    let orgB: number;
+
+    beforeAll(async () => {
+      pool = createPool(url!);
+      orgA = await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', ['api-a', 'API A', T0, T0]);
+      orgB = await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', ['api-b', 'API B', T0, T0]);
+    });
+
+    afterAll(async () => {
+      await pool?.end();
+    });
+
+    const sample: NewMonitor = {
+      name: 'API created', url: 'https://api-created.example/', intervalMinutes: 10, expectedStatus: 204,
+      timeoutMs: 15_000, keyword: 'ok', checkTls: true, latencyThresholdMs: 900,
+    };
+
+    it('creates a key from the organization slug and finds it by its public id; only the hash is stored', async () => {
+      const key = newApiKey();
+      const keyHash = await hashSecret(key.secret);
+      const id = await createApiKey(pool, new FakeClock(NOW), { organizationSlug: 'api-a', name: 'Grafana', level: 'read', publicId: key.publicId, keyHash });
+
+      expect(await mysqlApiStore(pool, new FakeClock(NOW)).keyByPublicId(key.publicId)).toEqual({
+        id, organizationId: orgA, level: 'read', keyHash, revokedAt: null,
+      });
+      const [row] = await rows<{ created_at: Date }>(conn, 'SELECT * FROM api_keys WHERE id = ?', [id]);
+      expect(JSON.stringify(row)).not.toContain(key.secret);
+      expect(row.created_at.toISOString()).toBe(NOW.toISOString());
+      await expect(
+        createApiKey(pool, new FakeClock(NOW), { organizationSlug: 'no-such-org', name: 'X', level: 'read', publicId: newApiKey().publicId, keyHash }),
+      ).rejects.toThrow(/No organization with the slug "no-such-org"/);
+    });
+
+    it.each(["' OR '1'='1", '%', ''])('finds no key for the public id %j (SQL injection)', async (publicId) => {
+      expect(await mysqlApiStore(pool, new FakeClock(NOW)).keyByPublicId(publicId)).toBeNull();
+    });
+
+    it('creates a monitor with its fields and the clock\'s time, and bumps the status version', async () => {
+      const store = mysqlApiStore(pool, new FakeClock(NOW));
+      const before = await readStatusVersion(conn);
+
+      const id = await store.createMonitor(orgA, sample, NOW);
+
+      const [row] = await rows(conn, 'SELECT * FROM monitors WHERE id = ?', [id]);
+      expect(row).toMatchObject({
+        organization_id: orgA, name: 'API created', url: 'https://api-created.example/', interval_minutes: 10, expected_status: 204,
+        timeout_ms: 15_000, keyword: 'ok', check_tls: 1, latency_threshold_ms: 900,
+      });
+      expect((row.created_at as Date).toISOString()).toBe(NOW.toISOString());
+      expect((row.updated_at as Date).toISOString()).toBe(NOW.toISOString());
+      expect(await readStatusVersion(conn)).toBe(before + 1);
+    });
+
+    it('lists only the organization\'s monitors with their status; the badge reads any monitor\'s status', async () => {
+      const store = mysqlApiStore(pool, new FakeClock(NOW));
+      const own = await store.createMonitor(orgA, { ...sample, name: 'API own' }, NOW);
+      const other = await store.createMonitor(orgB, { ...sample, name: 'API other' }, NOW);
+      await insertId(conn, "INSERT INTO incidents (monitor_id, started_at, cause) VALUES (?, ?, 'timeout')", [other, NOW]);
+
+      const listed = await store.monitors(orgA, NOW);
+      expect(listed.map((m) => m.id)).toContain(own);
+      expect(listed.map((m) => m.id)).not.toContain(other);
+      expect(listed.find((m) => m.id === own)).toEqual({ id: own, name: 'API own', url: 'https://api-created.example/', intervalMinutes: 10, status: 'nodata' });
+      expect(await store.monitorStatus(own, NOW)).toBe('nodata');
+      expect(await store.monitorStatus(other, NOW)).toBe('outage');
+      expect(await store.monitorStatus(99999999, NOW)).toBeNull();
     });
   });
 });

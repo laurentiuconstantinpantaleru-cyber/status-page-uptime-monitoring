@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { can } from '../../src/web/auth/access.js';
 import { HOST, INCIDENT_A, MONITOR_A, USERS, get, harness, post, signIn, type Harness, type Who } from './admin-fake.js';
+import { apiGet, apiHarness, apiPost, bearer, type ApiHarness, type KeyName } from './api-fake.js';
 
 // Every route × every role (D-018, D-036). "ok" is the route's own success: 200 for a page,
 // 303 back to the page for a form. "login" is 303 to /login.
@@ -142,5 +143,45 @@ describe('can (D-018)', () => {
     expect(can(user('member'), 'manage_monitors')).toBe(false);
     expect(can(user('org_admin'), 'manage_monitors')).toBe(true);
     expect(can(user('global_admin'), 'manage_monitors')).toBe(true);
+  });
+});
+
+// Every API route × every kind of key (D-025, D-039). The API knows no roles or sessions.
+type KeyCase = 'none' | KeyName;
+interface ApiRoute {
+  method: 'GET' | 'POST';
+  url: string;
+  body?: unknown;
+  keys: Record<KeyCase, number>;
+}
+
+const API_ROUTES: ApiRoute[] = [
+  { method: 'GET', url: '/api/v1/monitors',
+    keys: { none: 401, read: 200, write: 200, otherWrite: 200, revoked: 401 } },
+  { method: 'POST', url: '/api/v1/monitors', body: { name: 'Matrix', url: 'https://matrix.example/' },
+    keys: { none: 401, read: 403, write: 201, otherWrite: 201, revoked: 401 } },
+  { method: 'GET', url: `/badge/${MONITOR_A}.svg`,
+    keys: { none: 200, read: 200, write: 200, otherWrite: 200, revoked: 200 } },
+];
+
+describe('API access matrix', () => {
+  let a: ApiHarness | undefined;
+  afterEach(async () => {
+    await a?.app.close();
+    a = undefined;
+  });
+
+  const apiCases = API_ROUTES.flatMap((route) =>
+    (Object.entries(route.keys) as [KeyCase, number][]).map(([key, expected]) => [`${route.method} ${route.url}`, key, expected, route] as const));
+
+  it.each(apiCases)('%s with key %s → %i', async (_, key, expected, route) => {
+    a = apiHarness();
+    const authorization = key === 'none' ? undefined : bearer(key);
+    const response = route.method === 'GET'
+      ? await apiGet(a.app, route.url, authorization)
+      : await apiPost(a.app, route.url, route.body, authorization);
+
+    expect(response.statusCode).toBe(expected);
+    if (expected !== 201) expect(a.api.created).toEqual([]);
   });
 });
