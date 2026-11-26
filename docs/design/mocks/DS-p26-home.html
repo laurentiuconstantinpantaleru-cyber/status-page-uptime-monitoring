@@ -263,7 +263,7 @@ const TEXT = {
     ],
   },
 };
-const LINKS = [['Status', '#status'], ['Dashboard', '#admin'], ['API', '#api'], ['Docs', '#docs']];
+const LINKS = [['Status', 'DS-p26-public-status.html'], ['Dashboard', 'DS-p26-admin-monitors.html'], ['API', 'DS-p26-api-docs.html'], ['Docs', 'DS-p26-docs.html']];
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function featGrid(t) {
@@ -280,8 +280,8 @@ function header(t) {
         <button class="nav-link" type="button" id="features-btn" aria-expanded="false" aria-controls="mega">Features ${ICONS.chev}</button>
       </nav>
       <div class="actions">
-        <a class="pill" href="#login">Login</a>
-        <a class="pill pill-primary" href="#login">Get started</a>
+        <a class="pill" href="DS-p26-login.html">Login</a>
+        <a class="pill pill-primary" href="DS-p26-login.html">Get started</a>
         <button class="menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="drawer" aria-label="Open menu">${ICONS.menu}</button>
       </div>
     </div>
@@ -292,7 +292,7 @@ function header(t) {
         <li><button class="drawer-link" type="button" id="sub-btn" aria-expanded="false" aria-controls="sub">Features ${ICONS.chev}</button>
           <div class="sub" id="sub" hidden>${featGrid(t)}</div></li>
       </ul>
-      <div class="drawer-actions"><a class="pill" href="#login">Login</a><a class="pill pill-primary" href="#login">Get started</a></div>
+      <div class="drawer-actions"><a class="pill" href="DS-p26-login.html">Login</a><a class="pill pill-primary" href="DS-p26-login.html">Get started</a></div>
     </nav>
   </header>`;
 }
@@ -356,7 +356,7 @@ function home(c) {
   return `<section class="hero" aria-labelledby="hero-title">
       <h1 id="hero-title">${esc(c.headline)}</h1>
       <p>${esc(c.lead)}</p>
-      <a class="pill pill-hero" href="#status">See the status page</a>
+      <a class="pill pill-hero" href="DS-p26-public-status.html">See the status page</a>
     </section>
     <hr class="divider">
     <section class="features" aria-labelledby="features-title">
