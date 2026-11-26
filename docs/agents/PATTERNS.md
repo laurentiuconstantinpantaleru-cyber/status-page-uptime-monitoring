@@ -12,6 +12,7 @@
 - PATTERN-004 · Time columns get their value from the Clock, never a database default · candidate
 - PATTERN-005 · Mock screenshots through headless Chrome inside fixed-width iframes · candidate
 - PATTERN-006 · Network calls through an injected client, errors classified by a pure function · candidate
+- PATTERN-007 · A CI job that needs secrets is skipped, not failed, while they are missing · candidate
 
 ---
 
@@ -67,3 +68,11 @@
 - **Why:** Tests stay offline and deterministic (D-004), and the mapping from error to cause is tested instead of hidden in the adapter.
 - **Source:** session 2026-11-26 · confidence medium
 - **Confirmed:** 2026-11-26
+
+## PATTERN-007 · A CI job that needs secrets is skipped, not failed, while they are missing
+- **Status:** candidate
+- **Use when:** A GitHub Actions job (deploy, publish) needs secrets that may not be set yet.
+- **How:** Secrets cannot be read in a job's `if`. Add a small job in the same environment that maps each secret to an env var, writes `ready=true|false` to `$GITHUB_OUTPUT` and names the missing ones (never their values) in a `::notice::`. The real job `needs` it and runs only `if: needs.<job>.outputs.ready == 'true'`; a skipped job counts as success.
+- **Example:** .github/workflows/ci.yml (`deploy-config`, `deploy`)
+- **Why:** Pushes stay green before the infrastructure exists, without a failing job that hides real failures.
+- **Source:** session 2026-11-26 · confidence medium
