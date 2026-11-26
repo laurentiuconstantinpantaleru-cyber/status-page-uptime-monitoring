@@ -215,6 +215,12 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .timeline p { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
 
 .no-updates { font: var(--text-sm); color: var(--color-text-muted); }
+/* Acknowledge (D-007, D-044): one row under the incident's heading */
+.ack-row { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; }
+.ack-row form { display: contents; }
+.ack-row .hint { flex: 1 1 200px; }
+.acked { display: flex; gap: var(--space-2); align-items: start; font: var(--text-sm); color: var(--color-text-secondary); }
+.acked .icon { margin-top: var(--space-0-5); }
 .form { padding: var(--space-6) 0 0; border-top: 1px solid var(--color-border); display: grid; gap: var(--space-6); }
 .field { display: grid; gap: var(--space-2); }
 .field label { font: var(--text-sm-strong); color: var(--color-text-primary); }
@@ -346,15 +352,15 @@ textarea.input { min-height: calc(var(--space-16) * 2); padding: var(--space-3);
 })();
 </script>
 <script>
-/* Mock-only data and states: ?state=success|empty|error|posted|long. The real page posts the form; no script. */
+/* Mock-only data and states: ?state=success|empty|error|posted|long|acked. The real page posts the forms; no script. */
 var STATE = new URLSearchParams(location.search).get('state') || 'success';
 var OUT = '<svg class="icon s-outage" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>', OK = '<svg class="icon s-ok" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>', ERR = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>';
 var esc = function (t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
 var OPEN = [
-  { id: 41, title: 'Bookings API timed out', affects: 'Bookings API', started: '14:02 UTC', down: '53 min', updates: [
+  { id: 41, title: 'Bookings API timed out', affects: 'Bookings API', started: '14:02 UTC', down: '53 min', acked: 'Acknowledged by Andrei Admin at 14:12 UTC.', updates: [
     ['Identified', '14:31 UTC', 'The database host ran out of disk space. We are freeing space and restarting the API.'],
     ['Investigating', '14:10 UTC', 'The bookings API does not answer. We are looking into it.']] },
-  { id: 42, title: 'Campus events app returned server errors', affects: 'Campus events app', started: '14:40 UTC', down: '15 min', updates: [] }
+  { id: 42, title: 'Campus events app returned server errors', affects: 'Campus events app', started: '14:40 UTC', down: '15 min', acked: null, updates: [] }
 ];
 var PAST = [
   { id: 37, title: 'Hug The Mug could not be reached', affects: 'Hug The Mug', day: 'Tue 24 Nov 2026', lasted: '12 min', updates: [
@@ -385,6 +391,12 @@ function timeline(u) {
   if (!u.length) return '<p class="no-updates">No updates yet. The status page says "No updates yet." until you post one.</p>';
   return '<ol class="timeline">' + u.map(function (x) { return '<li><div class="u-head"><span class="stage">' + x[0] + '</span><time>' + x[1] + '</time></div><p>' + esc(x[2]) + '</p></li>'; }).join('') + '</ol>';
 }
+function ackRow(inc) {
+  var acked = inc.acked || (STATE === 'acked' ? 'Acknowledged by you at 14:55 UTC.' : null);
+  if (acked) return '<p class="acked" role="' + (STATE === 'acked' && !inc.acked ? 'status' : 'note') + '">' + OK + '<span>' + acked + '</span></p>';
+  return '<div class="ack-row"><form method="post"><button class="pill" type="submit">Acknowledge<span class="visually-hidden"> ' + esc(inc.title) + '</span></button></form>' +
+    '<p class="hint">Tells the others you are on it and stops the escalation to the secondary contacts.</p></div>';
+}
 function openCard(inc, i) {
   var opts = {};
   if (i === 0 && STATE === 'error') opts = { error: 'server', stage: 'Monitoring', body: 'The API answers again; we are watching it.' };
@@ -394,7 +406,7 @@ function openCard(inc, i) {
   return '<section class="notice card" style="--accent: var(--color-status-outage)" aria-labelledby="t-' + inc.id + '">' +
     '<div class="n-head">' + OUT + '<div><p class="eyebrow">Open' + stage + '</p><h3 id="t-' + inc.id + '">' + esc(inc.title) + '</h3>' +
     '<p class="meta">Started <span class="num">' + inc.started + '</span> · down for <span class="num">' + inc.down + '</span></p></div></div>' +
-    timeline(inc.updates) + form(i, opts) + '</section>';
+    ackRow(inc) + timeline(inc.updates) + form(i, opts) + '</section>';
 }
 function pastCard(inc, i) {
   return '<section class="notice card" aria-labelledby="t-' + inc.id + '">' +
@@ -410,7 +422,7 @@ if (STATE === 'empty') {
   open.innerHTML = OPEN.map(openCard).join('');
   past.innerHTML = PAST.map(pastCard).join('');
 }
-document.querySelectorAll('form.form').forEach(function (f) { f.addEventListener('submit', function (e) { e.preventDefault(); }); });
+document.querySelectorAll('form').forEach(function (f) { f.addEventListener('submit', function (e) { e.preventDefault(); }); });
 </script>
 </body>
 </html>

@@ -26,6 +26,12 @@ designs:
     screenshots: [screens/DS-p26-admin-maintenance.light.png, screens/DS-p26-admin-maintenance.dark.png]
     design_ref: mocks/DS-p26-admin-maintenance.html
     status: draft
+  - id: DS-p26-ack
+    kind: screen
+    source: src/web/views/ack.html
+    screenshots: [screens/DS-p26-ack.light.png, screens/DS-p26-ack.dark.png]
+    design_ref: mocks/DS-p26-ack.html
+    status: draft
   - id: DS-p26-admin-reports
     kind: screen
     source: src/web/views/admin/reports.html
