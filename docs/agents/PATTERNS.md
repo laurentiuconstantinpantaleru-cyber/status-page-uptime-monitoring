@@ -61,6 +61,7 @@
 - **Status:** candidate
 - **Use when:** Code calls an outside service (target site, Telegram, SMTP) and its result or failure must be tested.
 - **How:** Accept a small client interface in a `deps` argument next to the `Clock`; the real adapter only performs the call and rethrows the original error. Turn the error into a domain value in a pure function that reads the Node `name` and `code`, so tests throw fake errors with real codes and never open a socket.
-- **Example:** src/worker/check.ts (`HttpClient`, `classifyError`), test/worker/check.test.ts
+- **Example:** src/worker/check.ts (`HttpClient`, `classifyError`), test/worker/check.test.ts; the real adapter src/worker/http-client.ts, tested against a local server in test/worker/http-client.test.ts (the one place tests open a socket)
 - **Why:** Tests stay offline and deterministic (D-004), and the mapping from error to cause is tested instead of hidden in the adapter.
 - **Source:** session 2026-11-26 · confidence medium
+- **Confirmed:** 2026-11-26

@@ -50,3 +50,13 @@
 - **Evidence:** src/web/status/model.ts, test/web/status-model.test.ts
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26
+
+## D-026 · HTTP client behaviour of a check
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** A check sends `GET` with `User-Agent: CampusUptime/0.1` and follows 301/302/303/307/308 up to 5 hops; status code, keyword and certificate come from the last hop, and more hops fail with cause `unknown`. The whole body is read as UTF-8, with no size limit. The timeout (D-022) covers the whole request, redirects and body included.
+- **Why:** `http://` targets such as cafewien.ro redirect to https; some sites refuse requests without a user agent; a keyword may sit anywhere in the page.
+- **Rejected:** Reporting redirects as they come (a 301 would show as down with expected status 200); a 1 MB body cap (user chose the whole body); no user agent.
+- **Evidence:** src/worker/http-client.ts, test/worker/http-client.test.ts
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26

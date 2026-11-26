@@ -38,7 +38,7 @@
 - **Rejected:** Bare "service down" notification without diagnostics.
 - **Evidence:** docs/survey-results.md:13
 - **Source:** user · confidence high
-- **Confirmed:** 2026-11-19
+- **Confirmed:** 2026-11-26
 
 ## D-014 · Human-authored incident timeline updates with standardized lifecycle stages
 - **Status:** approved
