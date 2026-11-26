@@ -122,6 +122,28 @@ describe('CheckWorker', () => {
     expect(env.store.statusVersion).toBe(3); // first check, open, resolve
   });
 
+  it('gets independent results from two workers for the same monitor, each under its own worker id', async () => {
+    const clock = new FakeClock(T0);
+    const store = new MemoryStore();
+    store.monitors = [MONITOR];
+    const seenByFirst = switchableClient();
+    const seenBySecond = switchableClient();
+    seenByFirst.answer = UP;
+    seenBySecond.answer = DOWN;
+    const first = new CheckWorker({ clock, client: seenByFirst, store, workerId: await store.registerWorker('worker-1', T0) });
+    const second = new CheckWorker({ clock, client: seenBySecond, store, workerId: await store.registerWorker('worker-2', T0) });
+    for (const w of [first, second]) await w.refresh();
+
+    await nextSlot({ clock, store, client: seenByFirst, first, second });
+    await confirmationPoll({ clock, store, client: seenByFirst, first, second });
+
+    expect(store.checks.map((c) => ({ monitorId: c.monitorId, workerId: c.workerId, kind: c.kind, outcome: c.result.outcome }))).toEqual([
+      { monitorId: 3, workerId: 2, kind: 'scheduled', outcome: 'down' },
+      { monitorId: 3, workerId: 1, kind: 'confirmation', outcome: 'up' },
+    ]);
+    expect(store.incidents).toHaveLength(0);
+  });
+
   it('keeps checking during maintenance but opens no incident', async () => {
     const env = await setup();
     env.store.maintenance = [{ monitorId: 3, startsAt: T0, endsAt: new Date(T0.getTime() + 60 * MIN) }];
