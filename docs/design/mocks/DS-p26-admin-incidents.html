@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incidents — Campus Uptime (DS-p26-admin-incidents, draft)</title>
+<style>
+/* Design tokens from docs/design/DESIGN.md (the token source in code). Nothing else goes here. */
+:root {
+  --color-bg-base: #f8fafc;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-strong: #64748b;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-brand: #2563eb;
+  --color-on-brand: #ffffff;
+  --color-status-ok: #059669;
+  --color-status-degraded: #d97706;
+  --color-status-outage: #dc2626;
+  --color-status-maint: #7c3aed;
+  --color-status-nodata: #64748b;
+  --shadow-card: 0 1px 3px 0 rgba(15,23,42,0.08), 0 1px 2px -1px rgba(15,23,42,0.08);
+  --wash-mix: 6%;
+  --gradient-brand-soft: linear-gradient(to bottom, color-mix(in srgb, var(--color-brand) var(--wash-mix), var(--color-bg-base)) 0, var(--color-bg-base) 320px);
+  --bg-dots: radial-gradient(circle, var(--color-border) 1px, transparent 1.5px) 0 0 / var(--space-6) var(--space-6);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --text-xs: 400 12px/16px var(--font-sans);
+  --text-sm: 400 13px/20px var(--font-sans);
+  --text-sm-strong: 500 13px/20px var(--font-sans);
+  --text-base: 400 15px/24px var(--font-sans);
+  --text-lg: 600 17px/26px var(--font-sans);
+  --text-2xl: 600 28px/34px var(--font-sans);
+  --text-metric: 500 13px/20px var(--font-mono);
+  --text-metric-lg: 600 20px/28px var(--font-mono);
+
+  --space-0-5: 2px; --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px;
+
+  --radius-sm: 3px; --radius-md: 6px; --radius-lg: 12px; --radius-pill: 9999px;
+  --border-accent: 4px;
+
+  --container-max: 800px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+    --color-border: #23272f; --color-border-strong: #64748b;
+    --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
+    --color-brand: #60a5fa; --color-on-brand: #0f172a;
+    --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
+    --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
+    --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+    --wash-mix: 14%;
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+  --color-border: #23272f; --color-border-strong: #64748b;
+  --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
+  --color-brand: #60a5fa; --color-on-brand: #0f172a;
+  --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
+  --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
+  --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+  --wash-mix: 14%;
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+/* Brand wash at the top, dots over it; no --color-text-muted on the wash (DESIGN.md) */
+body { margin: 0; min-height: 100vh; color: var(--color-text-primary); font: var(--text-base);
+  background: var(--bg-dots), var(--gradient-brand-soft) no-repeat, var(--color-bg-base); }
+.num, time, code { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+a { color: var(--color-brand); text-decoration-color: currentColor; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; border-radius: var(--radius-sm); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+h1, h2, h3, h4, p, ol, ul, dl, dd, fieldset, figure { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+fieldset { border: 0; padding: 0; min-width: 0; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- Layout: one narrow centered column; the header aligns to it ---------- */
+.col { width: min(100% - 2 * var(--space-12), var(--container-max)); margin: 0 auto; }
+@media (max-width: 1024px) { .col { width: min(100% - 2 * var(--space-8), var(--container-max)); } }
+@media (max-width: 640px) { .col { width: calc(100% - 2 * var(--space-4)); } }
+.page { padding: var(--space-12) 0 var(--space-16); display: grid; gap: var(--space-12); }
+@media (max-width: 640px) { .page { padding: var(--space-6) 0 var(--space-12); gap: var(--space-8); } }
+.section { display: grid; gap: var(--space-4); min-width: 0; }
+.section-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); align-items: baseline; justify-content: space-between; }
+.section-head h2 { font: var(--text-lg); }
+.meta { font: var(--text-sm); color: var(--color-text-muted); }
+.card { background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); min-width: 0; }
+
+/* ================= Header (same as DS-p26-public-status) ================= */
+.site-header { border-bottom: 1px solid var(--color-border); position: relative; }
+.bar { display: flex; align-items: center; gap: var(--space-6); min-height: var(--space-16); }
+.brand-group { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.brand { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--color-text-primary);
+  text-decoration: none; font: var(--text-lg); border-radius: var(--radius-md); }
+.brand svg { width: var(--space-8); height: var(--space-8); flex: none; color: var(--color-brand); }
+.brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav { display: flex; align-items: center; gap: var(--space-1); }
+.nav-link { display: inline-flex; align-items: center; min-height: var(--space-8); padding: 0 var(--space-3);
+  border-radius: var(--radius-pill); white-space: nowrap; font: var(--text-sm-strong); color: var(--color-text-secondary); text-decoration: none; }
+.nav-link:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+.nav-link[aria-current="page"] { color: var(--color-text-primary); background: var(--color-bg-subtle); }
+.actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; flex: none; }
+.pill { display: inline-flex; align-items: center; justify-content: center; min-height: var(--space-8); padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer;
+  font: var(--text-sm-strong); color: var(--color-text-primary); text-decoration: none; white-space: nowrap; }
+.pill:hover { background: var(--color-bg-subtle); }
+.icon-btn { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); flex: none; padding: 0;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer; color: var(--color-text-primary); }
+.icon-btn:hover { background: var(--color-bg-subtle); }
+.icon-btn svg { width: var(--space-4); height: var(--space-4); }
+.theme-btn .i-sun, :root[data-effective="dark"] .theme-btn .i-moon { display: none; }
+:root[data-effective="dark"] .theme-btn .i-sun { display: block; }
+.menu { display: none; position: static; }
+.menu > summary { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); list-style: none; cursor: pointer;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); color: var(--color-text-primary); }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu > summary:hover { background: var(--color-bg-subtle); }
+.menu > summary svg { width: var(--space-4); height: var(--space-4); }
+.menu .i-close, .menu[open] .i-open { display: none; }
+.menu[open] .i-close { display: block; }
+@media (pointer: coarse) { .pill, .nav-link { min-height: var(--space-12); } .icon-btn, .menu > summary { width: var(--space-12); height: var(--space-12); } }
+
+.drawer { position: absolute; left: 0; right: 0; top: 100%; z-index: 20; background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border); box-shadow: var(--shadow-card); padding: var(--space-2) 0 var(--space-6); }
+.drawer-list > li { border-bottom: 1px solid var(--color-border); }
+.drawer-link { display: flex; align-items: center; min-height: var(--space-12); font: var(--text-base); font-weight: 500;
+  color: var(--color-text-primary); text-decoration: none; }
+.drawer-actions { display: none; gap: var(--space-2); margin-top: var(--space-4); }
+.drawer-actions .pill { min-height: var(--space-12); width: 100%; }
+@media (max-width: 1024px) {
+  .bar { gap: var(--space-4); }
+  .nav { display: none; }
+  .menu { display: block; }
+}
+@media (max-width: 640px) {
+  .bar { gap: var(--space-2); min-height: var(--space-16); }
+  .actions .pill { display: none; }
+  .drawer-actions { display: grid; }
+}
+/* ================= end header ================= */
+
+/* ---------- Status icons (shape + text, never color alone) ---------- */
+.icon { width: var(--space-4); height: var(--space-4); flex: none; }
+.icon-sm { width: var(--space-3); height: var(--space-3); flex: none; }
+.s-ok { color: var(--color-status-ok); }
+.s-degraded { color: var(--color-status-degraded); }
+.s-outage { color: var(--color-status-outage); }
+.s-maint { color: var(--color-status-maint); }
+.s-nodata { color: var(--color-status-nodata); }
+/* Status badge: pill on the surface, icon in the status color, label in text-primary */
+.badge { display: inline-flex; gap: var(--space-1); align-items: center; min-height: var(--space-6); padding: 0 var(--space-2);
+  border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-bg-surface);
+  font: var(--text-sm-strong); color: var(--color-text-primary); white-space: nowrap; }
+.badge .icon { width: var(--space-3); height: var(--space-3); }
+
+/* ---------- Empty and error (shared)  ---------- */
+.empty { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-6); }
+.empty p { font: var(--text-base); color: var(--color-text-secondary); }
+.btn { font: var(--text-sm-strong); min-height: var(--space-8); padding: 0 var(--space-4); border-radius: var(--radius-pill); cursor: pointer;
+  background: var(--color-bg-surface); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); }
+.btn:hover { background: var(--color-bg-subtle); }
+.btn:active { background: var(--color-border); }
+@media (pointer: coarse) { .btn { min-height: var(--space-12); } }
+
+/* ---------- Footer ---------- */
+.site-footer:focus { outline: none; }
+.site-footer { scroll-margin-top: var(--space-8); display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); justify-content: space-between;
+  padding-top: var(--space-6); border-top: 1px solid var(--color-border); font: var(--text-sm); color: var(--color-text-muted); }
+.site-footer .f-notes { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-6); }
+
+/* ---------- This screen ---------- */
+.head { display: grid; gap: var(--space-1); }
+.head h1 { font: var(--text-2xl); letter-spacing: -0.02em; }
+.org { font: var(--text-sm-strong); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.role-note { font: var(--text-xs); color: var(--color-text-muted); }
+.list { display: grid; gap: var(--space-4); }
+.notice { display: grid; gap: var(--space-6); padding: var(--space-6); }
+@media (max-width: 640px) { .notice { padding: var(--space-4); } }
+.n-head { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: start; }
+.n-head .icon { margin-top: var(--space-1); }
+.n-head > div { display: grid; gap: var(--space-1); min-width: 0; }
+.eyebrow { font: var(--text-sm-strong); color: var(--color-text-secondary); }
+.n-head h2 { font: var(--text-lg); overflow-wrap: anywhere; }
+.n-head .meta, .n-body { overflow-wrap: anywhere; }
+.n-body { font: var(--text-base); color: var(--color-text-secondary); }
+
+/* Timeline: dots on a vertical line; the newest dot carries the incident's status color */
+.timeline { display: grid; gap: var(--space-6); }
+.timeline li { position: relative; padding-left: var(--space-8); display: grid; gap: var(--space-1); min-width: 0; }
+.timeline li::before { content: ""; position: absolute; left: 0; top: var(--space-1); width: var(--space-3); height: var(--space-3);
+  border-radius: var(--radius-pill); background: var(--color-bg-surface); border: 2px solid var(--color-border-strong); }
+.timeline li:first-child::before { background: var(--accent, var(--color-border-strong)); border-color: var(--accent, var(--color-border-strong)); }
+.timeline li::after { content: ""; position: absolute; left: calc(var(--space-3) / 2 - 1px); top: calc(var(--space-4) + var(--space-1));
+  bottom: calc(var(--space-6) * -1 + var(--space-1)); width: 2px; background: var(--color-border); }
+.timeline li:last-child::after { display: none; }
+.u-head { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); align-items: baseline; }
+.stage { font: var(--text-sm-strong); color: var(--color-text-primary); }
+.u-head time { font: var(--text-metric); color: var(--color-text-muted); }
+.timeline p { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+
+.no-updates { font: var(--text-sm); color: var(--color-text-muted); }
+.form { padding: var(--space-6) 0 0; border-top: 1px solid var(--color-border); display: grid; gap: var(--space-6); }
+.field { display: grid; gap: var(--space-2); }
+.field label { font: var(--text-sm-strong); color: var(--color-text-primary); }
+.input-row { display: flex; gap: var(--space-2); align-items: stretch; }
+.input { flex: 1; min-width: 0; min-height: var(--space-12); padding: 0 var(--space-3); font: var(--text-base); color: var(--color-text-primary);
+  background: var(--color-bg-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); }
+.input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 1px; }
+.input[aria-invalid="true"] { border-color: var(--color-status-outage); border-width: 2px; }
+.input:disabled { background: var(--color-bg-subtle); color: var(--color-text-secondary); cursor: not-allowed; }
+.toggle { min-height: var(--space-12); padding: 0 var(--space-3); flex: none; cursor: pointer; font: var(--text-sm-strong); color: var(--color-text-primary);
+  background: var(--color-bg-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); }
+.toggle:hover { background: var(--color-bg-subtle); }
+.toggle:disabled { cursor: not-allowed; color: var(--color-text-secondary); }
+.error { display: flex; gap: var(--space-1); align-items: start; font: var(--text-sm); color: var(--color-text-primary); }
+.error[hidden] { display: none; }
+.error svg { width: var(--space-4); height: var(--space-4); flex: none; margin-top: var(--space-0-5); color: var(--color-status-outage); }
+.hint { font: var(--text-xs); color: var(--color-text-muted); }
+.alert { display: flex; gap: var(--space-3); align-items: start; padding: var(--space-4); border: 1px solid var(--color-border);
+  border-left: var(--border-accent) solid var(--color-status-outage); border-radius: var(--radius-md); background: var(--color-bg-surface); }
+.alert[hidden] { display: none; }
+.alert svg { width: var(--space-4); height: var(--space-4); flex: none; margin-top: var(--space-1); color: var(--color-status-outage); }
+.alert p { font: var(--text-sm); color: var(--color-text-secondary); }
+.alert strong { display: block; font: var(--text-sm-strong); color: var(--color-text-primary); }
+.stages { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.stages legend { font: var(--text-sm-strong); color: var(--color-text-primary); margin-bottom: var(--space-2); }
+.stage-opt { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--space-8); padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); font: var(--text-sm-strong); cursor: pointer; }
+.stage-opt:has(input:checked) { border-color: var(--color-brand); box-shadow: inset 0 0 0 1px var(--color-brand); }
+.stage-opt input { margin: 0; accent-color: var(--color-brand); }
+@media (pointer: coarse) { .stage-opt { min-height: var(--space-12); } }
+textarea.input { min-height: calc(var(--space-16) * 2); padding: var(--space-3); resize: vertical; }
+.f-foot { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; justify-content: space-between; }
+.submit { min-height: var(--space-8); padding: 0 var(--space-4); cursor: pointer; font: var(--text-sm-strong); border-radius: var(--radius-pill);
+  border: 1px solid var(--color-brand); background: var(--color-brand); color: var(--color-on-brand); }
+.submit:hover { box-shadow: 0 0 0 var(--space-1) var(--color-bg-subtle); }
+@media (pointer: coarse) { .submit { min-height: var(--space-12); } }
+.done { display: flex; gap: var(--space-2); align-items: start; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border);
+  border-left: var(--border-accent) solid var(--color-status-ok); border-radius: var(--radius-md); font: var(--text-sm); }
+.done svg { width: var(--space-4); height: var(--space-4); flex: none; margin-top: var(--space-0-5); color: var(--color-status-ok); }
+.past summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer; min-height: var(--space-8); display: inline-flex; align-items: center; }
+@media (pointer: coarse) { .past summary { min-height: var(--space-12); } }
+.past details > .timeline, .past details > .form { margin-top: var(--space-4); }
+.empty { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-6); }
+.empty p { font: var(--text-base); color: var(--color-text-secondary); }
+.section { display: grid; gap: var(--space-4); }
+.section-head h2 { font: var(--text-lg); }
+.meta { font: var(--text-sm); color: var(--color-text-muted); }
+</style>
+<script>
+/* Theme: ?theme= for review, else the saved choice, else the system's; set before the page paints. */
+(function () {
+  var q = new URLSearchParams(location.search).get('theme');
+  var saved = q === 'light' || q === 'dark' ? q : localStorage.getItem('theme');
+  if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+  document.documentElement.dataset.effective = saved === 'light' || saved === 'dark'
+    ? saved : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+})();
+</script>
+</head>
+
+<body>
+<header class="site-header">
+  <div class="bar col">
+    <div class="brand-group">
+      <a class="brand" href="DS-p26-public-status.html" title="Campus Uptime: back to the status page"><svg viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 17h5l3-7 4 12 3-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Campus Uptime</span></a>
+      <button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme"><svg class="i-moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.8A6 6 0 016.2 2.5a6 6 0 107.3 7.3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><svg class="i-sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7L13 13M13 3l-1.3 1.3M4.3 11.7L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    </div>
+    <nav class="nav" aria-label="Main">
+        <a class="nav-link" href="DS-p26-public-status.html">Status</a>
+        <a class="nav-link" href="DS-p26-admin-monitors.html">Dashboard</a>
+        <a class="nav-link" href="DS-p26-admin-incidents.html" aria-current="page">Incidents</a>
+        <a class="nav-link" href="DS-p26-api-docs.html">API</a>
+        <a class="nav-link" href="DS-p26-docs.html">Docs</a>
+    </nav>
+    <div class="actions">
+      <form method="post" action="DS-p26-login.html"><button class="pill" type="submit">Log out</button></form>
+      <details class="menu">
+        <summary aria-label="Menu"><svg class="i-open" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><svg class="i-close" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></summary>
+        <nav class="drawer" aria-label="Main">
+          <div class="col">
+            <ul class="drawer-list">
+            <li><a class="drawer-link" href="DS-p26-public-status.html">Status</a></li>
+            <li><a class="drawer-link" href="DS-p26-admin-monitors.html">Dashboard</a></li>
+            <li><a class="drawer-link" href="DS-p26-admin-incidents.html" aria-current="page">Incidents</a></li>
+            <li><a class="drawer-link" href="DS-p26-api-docs.html">API</a></li>
+            <li><a class="drawer-link" href="DS-p26-docs.html">Docs</a></li>
+            </ul>
+            <div class="drawer-actions"><form method="post" action="DS-p26-login.html"><button class="pill" type="submit">Log out</button></form></div>
+          </div>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+<main class="page col" id="main">
+<div class="head">
+  <p class="org">Campus projects</p><h1>Incidents</h1>
+  <p class="role-note">Members and admins write the updates the status page shows (D-014). Incidents open and resolve on their own (D-006).</p>
+</div>
+<section class="section" aria-labelledby="open-title">
+  <div class="section-head"><h2 id="open-title">Open</h2></div>
+  <div class="list" id="open"></div>
+</section>
+<section class="section past" aria-labelledby="past-title">
+  <div class="section-head"><h2 id="past-title">Resolved in the last 90 days</h2></div>
+  <div class="list" id="past"></div>
+</section>
+  <footer class="site-footer">
+    <div class="f-notes"><p>All times are in UTC.</p></div>
+    <a href="DS-p26-public-status.html">Back to the status page</a>
+  </footer>
+</main>
+<script>
+/* Theme toggle: switches light and dark and remembers the choice (D-024). */
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme-btn');
+  function label() { btn.setAttribute('aria-label', root.dataset.effective === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'); }
+  btn.addEventListener('click', function () {
+    var next = root.dataset.effective === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', next);
+    root.dataset.theme = next; root.dataset.effective = next; label();
+  });
+  label();
+  /* The menu closes with Esc and returns focus to its button. */
+  var menu = document.querySelector('.menu');
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && menu.open) { menu.open = false; menu.querySelector('summary').focus(); }
+  });
+})();
+</script>
+<script>
+/* Mock-only data and states: ?state=success|empty|error|posted|long. The real page posts the form; no script. */
+var STATE = new URLSearchParams(location.search).get('state') || 'success';
+var OUT = '<svg class="icon s-outage" viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>', OK = '<svg class="icon s-ok" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>', ERR = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>';
+var esc = function (t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+var OPEN = [
+  { id: 41, title: 'Bookings API timed out', affects: 'Bookings API', started: '14:02 UTC', down: '53 min', updates: [
+    ['Identified', '14:31 UTC', 'The database host ran out of disk space. We are freeing space and restarting the API.'],
+    ['Investigating', '14:10 UTC', 'The bookings API does not answer. We are looking into it.']] },
+  { id: 42, title: 'Campus events app returned server errors', affects: 'Campus events app', started: '14:40 UTC', down: '15 min', updates: [] }
+];
+var PAST = [
+  { id: 37, title: 'Hug The Mug could not be reached', affects: 'Hug The Mug', day: 'Tue 24 Nov 2026', lasted: '12 min', updates: [
+    ['Resolved', '24 Nov 09:20 UTC', 'The hosting provider fixed a network fault. The site answers again.']] }
+];
+if (STATE === 'long') {
+  OPEN[0].title = 'Proiect de licență — platformă de rezervări pentru laboratoare, săli de curs și echipamente partajate timed out';
+  OPEN[0].updates.unshift(['Monitoring', '14:50 UTC', 'We moved the database to a larger volume and restarted the API. Bookings work again for most rooms; the equipment calendar still loads slowly while the cache warms up. We keep watching the response times and will post again when they are back to normal, or in 30 minutes at the latest.']);
+}
+function form(i, opts) {
+  opts = opts || {};
+  var stages = ['Investigating', 'Identified', 'Monitoring', 'Resolved'].map(function (s) {
+    return '<label class="stage-opt"><input type="radio" name="stage" value="' + s.toLowerCase() + '"' + (opts.stage === s ? ' checked' : '') + '>' + s + '</label>';
+  }).join('');
+  var err = opts.error;
+  return '<form class="form" method="post" novalidate>' +
+    (opts.posted ? '<p class="done" role="status">' + OK.replace('class="icon s-ok"', '') + '<span>Update posted. It shows on the status page within 30 seconds.</span></p>' : '') +
+    (err === 'server' ? '<div class="alert" role="alert">' + ERR + '<p><strong>The update was not saved.</strong>The server did not answer. Your text is still here: try again in a moment.</p></div>' : '') +
+    '<fieldset class="stages"' + (err === 'stage' ? ' aria-describedby="stage-error-' + i + '"' : '') + '><legend>Stage</legend>' + stages + '</fieldset>' +
+    (err === 'stage' ? '<p class="error" id="stage-error-' + i + '">' + ERR + '<span>Choose a stage.</span></p>' : '') +
+    '<div class="field"><label for="body-' + i + '">Update</label>' +
+    '<textarea class="input" id="body-' + i + '" name="body" maxlength="2000" aria-describedby="hint-' + i + (err === 'body' ? ' body-error-' + i : '') + '"' + (err === 'body' ? ' aria-invalid="true"' : '') + '>' + esc(opts.body || '') + '</textarea>' +
+    (err === 'body' ? '<p class="error" id="body-error-' + i + '">' + ERR + '<span>Write the update before posting.</span></p>' : '') +
+    '</div><div class="f-foot"><p class="hint" id="hint-' + i + '">Up to 2000 characters. Shown on the public status page.</p>' +
+    '<button class="submit" type="submit">Post update</button></div></form>';
+}
+function timeline(u) {
+  if (!u.length) return '<p class="no-updates">No updates yet. The status page says "No updates yet." until you post one.</p>';
+  return '<ol class="timeline">' + u.map(function (x) { return '<li><div class="u-head"><span class="stage">' + x[0] + '</span><time>' + x[1] + '</time></div><p>' + esc(x[2]) + '</p></li>'; }).join('') + '</ol>';
+}
+function openCard(inc, i) {
+  var opts = {};
+  if (i === 0 && STATE === 'error') opts = { error: 'server', stage: 'Monitoring', body: 'The API answers again; we are watching it.' };
+  if (i === 1 && STATE === 'error') opts = { error: 'body', stage: 'Investigating' };
+  if (i === 0 && STATE === 'posted') opts = { posted: true };
+  var stage = inc.updates.length ? ' · ' + inc.updates[0][0] : '';
+  return '<section class="notice card" style="--accent: var(--color-status-outage)" aria-labelledby="t-' + inc.id + '">' +
+    '<div class="n-head">' + OUT + '<div><p class="eyebrow">Open' + stage + '</p><h3 id="t-' + inc.id + '">' + esc(inc.title) + '</h3>' +
+    '<p class="meta">Started <span class="num">' + inc.started + '</span> · down for <span class="num">' + inc.down + '</span></p></div></div>' +
+    timeline(inc.updates) + form(i, opts) + '</section>';
+}
+function pastCard(inc, i) {
+  return '<section class="notice card" aria-labelledby="t-' + inc.id + '">' +
+    '<div class="n-head">' + OK + '<div><p class="eyebrow">Resolved · ' + inc.day + '</p><h3 id="t-' + inc.id + '">' + esc(inc.title) + '</h3>' +
+    '<p class="meta">Lasted <span class="num">' + inc.lasted + '</span></p></div></div>' +
+    '<details><summary>Updates and a new update</summary>' + timeline(inc.updates) + form(100 + i) + '</details></section>';
+}
+var open = document.getElementById('open'), past = document.getElementById('past');
+if (STATE === 'empty') {
+  open.innerHTML = '<div class="empty card"><p>No open incidents. When a monitor is confirmed down, its incident appears here so you can tell visitors what is going on.</p><a class="pill" href="DS-p26-admin-monitors.html">Go to monitors</a></div>';
+  past.innerHTML = '<div class="empty card"><p>No incidents resolved in the last 90 days.</p></div>';
+} else {
+  open.innerHTML = OPEN.map(openCard).join('');
+  past.innerHTML = PAST.map(pastCard).join('');
+}
+document.querySelectorAll('form.form').forEach(function (f) { f.addEventListener('submit', function (e) { e.preventDefault(); }); });
+</script>
+</body>
+</html>
