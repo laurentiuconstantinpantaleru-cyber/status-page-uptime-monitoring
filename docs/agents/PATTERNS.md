@@ -85,3 +85,4 @@
 - **Example:** db/migrations/0001_initial_schema.sql (`incidents.open_monitor_id`), db/migrations/0005_worker_faults.sql (`worker_faults.open_worker_id`), test/db/schema.test.ts
 - **Why:** The database itself refuses a second open row (`ER_DUP_ENTRY`), so no application lock or check-then-insert race is needed.
 - **Source:** session 2026-11-26 · confidence medium
+- **Confirmed:** 2026-11-26
