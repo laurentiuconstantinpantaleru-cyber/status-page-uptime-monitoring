@@ -1,10 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Connection, RowDataPacket } from 'mysql2/promise';
-import { connect } from '../../src/db/connection.js';
+import { connect, createPool } from '../../src/db/connection.js';
 import { MIGRATIONS_DIR, migrate } from '../../src/db/migrate.js';
 import { FakeClock } from '../../src/shared/clock.js';
 import { loadStatusData, readStatusVersion } from '../../src/web/status/data.js';
 import { monitorStatus } from '../../src/web/status/model.js';
+import type { CheckResult } from '../../src/worker/check.js';
+import { MySqlStore } from '../../src/worker/store.js';
+import { recordCheck } from '../../src/worker/worker.js';
 
 // Integration tests against a real MySQL 8. CI always sets TEST_DATABASE_URL.
 // The database is wiped, so its name must end in `_test`.
@@ -70,7 +73,12 @@ describe.skipIf(!url)('MySQL schema', () => {
   });
 
   it('applies every migration on an empty database and records it', async () => {
-    expect(firstRun).toEqual(['0001_initial_schema.sql', '0002_seed_local_businesses.sql', '0003_status_version.sql']);
+    expect(firstRun).toEqual([
+      '0001_initial_schema.sql',
+      '0002_seed_local_businesses.sql',
+      '0003_status_version.sql',
+      '0004_check_confirmations.sql',
+    ]);
 
     const applied = await rows<{ version: string; applied_at: Date }>(
       conn,
@@ -273,6 +281,114 @@ describe.skipIf(!url)('MySQL schema', () => {
       const names = (await loadStatusData(conn, NOW)).groups.map((g) => g.name);
 
       expect(names.indexOf('Hug The Mug')).toBeLessThan(names.indexOf('Status Org'));
+    });
+  });
+
+  // Runs last: it bumps the status version that 'status page data' expects to start at 0.
+  describe('worker store (D-027)', () => {
+    const NOW = new Date('2026-11-26T16:00:00.000Z');
+    const DOWN: CheckResult = {
+      outcome: 'down',
+      httpStatus: 503,
+      latencyMs: 120,
+      errorCause: 'http_5xx',
+      slow: false,
+      tlsExpiresAt: null,
+      tlsDaysRemaining: null,
+    };
+    const store = () => new MySqlStore(pool);
+    let pool: ReturnType<typeof createPool>;
+    let monitor: number;
+    let first: number;
+    let second: number;
+    const config = { latencyThresholdMs: null };
+
+    beforeAll(async () => {
+      pool = createPool(url!);
+      const org = await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', [
+        'worker-org', 'Worker Org', T0, T0,
+      ]);
+      monitor = await insertId(
+        conn,
+        `INSERT INTO monitors (organization_id, name, url, timeout_ms, check_tls, created_at, updated_at)
+         VALUES (?, 'Worker site', 'https://example.test/', 10000, 0, ?, ?)`,
+        [org, T0, T0],
+      );
+      first = await store().registerWorker('worker-store-1', NOW);
+      second = await store().registerWorker('worker-store-2', NOW);
+    });
+
+    afterAll(async () => {
+      await pool?.end();
+    });
+
+    it('registers a worker once by name and moves its heartbeat', async () => {
+      const later = new Date(NOW.getTime() + 10_000);
+
+      expect(await store().registerWorker('worker-store-1', NOW)).toBe(first);
+      await store().heartbeat(first, later);
+
+      const workers = await store().listWorkers();
+      expect(workers.find((w) => w.id === first)?.lastSeenAt?.toISOString()).toBe(later.toISOString());
+    });
+
+    it('rejects a second confirmation of the same check', async () => {
+      const checkId = await insertId(
+        conn,
+        "INSERT INTO checks (monitor_id, worker_id, checked_at, kind, outcome) VALUES (?, ?, ?, 'scheduled', 'down')",
+        [monitor, first, NOW],
+      );
+      const confirm = () =>
+        conn.query(
+          "INSERT INTO checks (monitor_id, worker_id, checked_at, kind, outcome, confirms_check_id) VALUES (?, ?, ?, 'confirmation', 'down', ?)",
+          [monitor, second, NOW, checkId],
+        );
+
+      await confirm();
+      await expect(confirm()).rejects.toMatchObject({ code: 'ER_DUP_ENTRY' });
+    });
+
+    it('lists only unconfirmed down checks of the other workers since a time', async () => {
+      const scheduled = (worker: number, at: Date) =>
+        recordCheck(store(), { monitorId: monitor, workerId: worker, checkedAt: at, kind: 'scheduled', confirmsCheckId: null, result: DOWN }, config);
+      await scheduled(first, new Date(NOW.getTime() + 60_000));
+      await scheduled(second, new Date(NOW.getTime() + 60_000));
+      await scheduled(first, new Date(NOW.getTime() - 10 * 60_000));
+
+      const pending = await store().pendingConfirmations(second, NOW);
+
+      expect(pending).toHaveLength(1);
+      expect(pending[0].monitorId).toBe(monitor);
+    });
+
+    it('opens one incident and bumps the status version when two workers confirm at the same time', async () => {
+      await conn.query('DELETE FROM checks WHERE monitor_id = ?', [monitor]);
+      const at = (minutes: number) => new Date(NOW.getTime() + minutes * 60_000);
+      const add = (kind: 'scheduled' | 'confirmation', worker: number, checkedAt: Date, confirmsCheckId: number | null) =>
+        recordCheck(store(), { monitorId: monitor, workerId: worker, checkedAt, kind, confirmsCheckId, result: DOWN }, config);
+      const idOf = async (checkedAt: Date) =>
+        (await rows<{ id: number }>(conn, "SELECT id FROM checks WHERE monitor_id = ? AND kind = 'scheduled' AND checked_at = ?", [monitor, checkedAt]))[0].id;
+
+      await add('scheduled', first, at(10), null);
+      await add('confirmation', second, at(10.1), await idOf(at(10)));
+      await add('scheduled', first, at(15), null);
+      const before = await readStatusVersion(conn);
+
+      const results = await Promise.all([
+        add('confirmation', second, at(15.1), await idOf(at(15))),
+        add('confirmation', second, at(15.1), await idOf(at(15))),
+      ]);
+
+      expect(results.sort()).toEqual(['duplicate', 'recorded']);
+      const open = await rows<{ started_at: Date; cause: string }>(
+        conn,
+        'SELECT started_at, cause FROM incidents WHERE monitor_id = ? AND resolved_at IS NULL',
+        [monitor],
+      );
+      expect(open).toHaveLength(1);
+      expect(open[0].started_at.toISOString()).toBe(at(10).toISOString());
+      expect(open[0].cause).toBe('http_5xx');
+      expect(await readStatusVersion(conn)).toBe(before + 1);
     });
   });
 });
