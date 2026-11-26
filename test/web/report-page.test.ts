@@ -132,6 +132,14 @@ describe('GET /admin/reports (DS-p26-admin-reports)', () => {
     expect(response.body).toContain('The reports could not load.');
   });
 
+  it('one organization: the months have their own h2, so the outline goes h1, h2, h3', async () => {
+    h = harness();
+    const response = await get(h.app, '/admin/reports', await signIn(h.app, 'orgAdmin'));
+
+    expect(response.body).toContain('<section class="section" aria-labelledby="months-title"><h2 id="months-title" class="visually-hidden">Months</h2>');
+    expect(response.body).not.toContain('aria-label="Months"');
+  });
+
   it('header: Reports is current', async () => {
     h = harness();
     const response = await get(h.app, '/admin/reports', await signIn(h.app, 'orgAdmin'));

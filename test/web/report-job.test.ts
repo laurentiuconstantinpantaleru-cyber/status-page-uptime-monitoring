@@ -70,9 +70,10 @@ function fakeMailer(failTimes = 0): Mailer & { sent: Mail[] } {
     async send(mail: Mail) {
       if (fails > 0) {
         fails -= 1;
-        throw new Error('SMTP 421 try again later');
+        throw Object.assign(new Error('SMTP 421 try again later'), { code: 'EENVELOPE', responseCode: 421, command: 'RCPT TO' });
       }
       mailer.sent.push(mail);
+      return { accepted: mail.to.length };
     },
   };
   return mailer;
@@ -114,6 +115,55 @@ describe('runMonthlyReports (D-019, D-041)', () => {
     await runMonthlyReports({ clock, store, mailer: fakeMailer(), log: quiet });
 
     expect(marked).toEqual([[1, '2026-11', 2], [2, '2026-11', 1]]);
+  });
+
+  it('a rejected send stores and logs no email address, only the error\'s code, reply code and command', async () => {
+    const clock = new FakeClock(new Date('2026-12-01T00:00:00.000Z'));
+    const store = fakeStore();
+    const rejected = Object.assign(
+      new Error("Can't send mail - all recipients were rejected: 550 5.1.1 <admin@a.test>: Recipient address rejected"),
+      {
+        code: 'EENVELOPE', responseCode: 550, command: 'RCPT TO',
+        response: '550 5.1.1 <admin@a.test>: Recipient address rejected',
+        rejected: ['admin@a.test', 'second@a.test'],
+        rejectedErrors: [{ recipient: 'admin@a.test' }, { recipient: 'second@a.test' }],
+      },
+    );
+    const mailer: Mailer = { send: async () => { throw rejected; } };
+    const logged: unknown[] = [];
+
+    await runMonthlyReports({ clock, store, mailer, log: (message, error) => logged.push(message, error) });
+
+    expect(store.rows.get('1/2026-11')!.lastError).toBe('EENVELOPE 550 RCPT TO');
+    const everything = JSON.stringify(logged) + JSON.stringify([...store.rows.values()].map((r) => r.lastError));
+    expect(everything).not.toContain('@');
+    expect(logged).toContainEqual({ code: 'EENVELOPE', responseCode: 550, command: 'RCPT TO' });
+  });
+
+  it('an error without SMTP fields is stored as its name', async () => {
+    const clock = new FakeClock(new Date('2026-12-01T00:00:00.000Z'));
+    const store = fakeStore();
+    const mailer: Mailer = { send: async () => { throw new TypeError('connect ECONNREFUSED admin@a.test'); } };
+
+    await runMonthlyReports({ clock, store, mailer, log: quiet });
+
+    expect(store.rows.get('1/2026-11')!.lastError).toBe('TypeError');
+  });
+
+  it('counts only the org admins the mail server accepted', async () => {
+    const clock = new FakeClock(new Date('2026-12-01T00:00:00.000Z'));
+    const store = fakeStore();
+    const marked: number[] = [];
+    const mark = store.markEmailed.bind(store);
+    store.markEmailed = async (orgId, month, now, to) => {
+      marked.push(to);
+      return mark(orgId, month, now, to);
+    };
+    const mailer: Mailer = { send: async () => ({ accepted: 1 }) };
+
+    await runMonthlyReports({ clock, store, mailer, log: quiet });
+
+    expect(marked).toEqual([1, 1]);
   });
 
   it('one millisecond before the 1st, November is not reported yet', async () => {
@@ -182,7 +232,7 @@ describe('runMonthlyReports (D-019, D-041)', () => {
     const logged: string[] = [];
 
     await runMonthlyReports({ clock, store, mailer, log: (msg) => logged.push(msg) });
-    expect(store.rows.get('1/2026-11')).toMatchObject({ emailedAt: null, sendingAt: null, lastError: 'SMTP 421 try again later' });
+    expect(store.rows.get('1/2026-11')).toMatchObject({ emailedAt: null, sendingAt: null, lastError: 'EENVELOPE 421 RCPT TO' });
     expect(store.rows.get('2/2026-11')!.emailedAt).not.toBeNull();
     expect(logged.some((l) => l.includes('Campus projects'))).toBe(true);
 

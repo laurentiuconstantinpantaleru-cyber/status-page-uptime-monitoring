@@ -21,6 +21,7 @@ import { hashSecret, newApiKey } from '../../src/web/api/keys.js';
 import type { NewMonitor } from '../../src/web/api/monitor-input.js';
 import { createApiKey, mysqlApiStore } from '../../src/web/api/store.js';
 import { mysqlReportStore } from '../../src/web/reports/store.js';
+import { loadMaintenance } from '../../src/db/maintenance.js';
 
 // Integration tests against a real MySQL 8. CI always sets TEST_DATABASE_URL.
 // The database is wiped, so its name must end in `_test`.
@@ -906,6 +907,25 @@ describe.skipIf(!url)('MySQL schema', () => {
         }],
       });
       expect(await mysqlReportStore(pool).loadMonth(99999999, 2026, 11, NOW)).toBeNull();
+    });
+
+    it('loadMaintenance reads only the monitors it is given; none given, nothing read (D-041)', async () => {
+      const other = await insertId(
+        conn,
+        `INSERT INTO monitors (organization_id, name, url, timeout_ms, check_tls, created_at, updated_at)
+         VALUES (?, 'Other org monitor', 'https://other.example/', 10000, 1, ?, ?)`,
+        [otherOrg, T0, T0],
+      );
+      await conn.query(
+        "INSERT INTO maintenance_windows (monitor_id, starts_at, ends_at, source, created_at) VALUES (?, ?, ?, 'scheduled', ?)",
+        [other, new Date('2026-11-11T00:00:00.000Z'), new Date('2026-11-11T01:00:00.000Z'), T0],
+      );
+      const { from, to } = { from: new Date('2026-11-01T00:00:00.000Z'), to: new Date('2026-12-01T00:00:00.000Z') };
+
+      expect([...(await loadMaintenance(pool, from, to, [monitor])).keys()]).toEqual([monitor]);
+      expect([...(await loadMaintenance(pool, from, to, [monitor, other])).keys()].sort()).toEqual([monitor, other].sort());
+      expect((await loadMaintenance(pool, from, to, [])).size).toBe(0);
+      expect((await mysqlReportStore(pool).loadMonth(orgId, 2026, 11, NOW))!.monitors.map((m) => m.maintenance.length)).toEqual([1]);
     });
 
     it('lists only the organization\'s org admins as recipients', async () => {
