@@ -7,6 +7,10 @@
 <!-- graffino-agentic:end -->
 
 ## Index
+### [Admin](decisions/admin.md)
+- D-037 · The monitors dashboard and its actions
+- D-038 · Writing incident updates
+
 ### [Api](decisions/api.md)
 - D-025 · API keys: levels, storage, header, rate limit and public badge
 
@@ -22,6 +26,11 @@
 - D-009 · Explicit out-of-scope architectural and functional boundaries
 - D-027 · Scheduling and work split of check workers
 - D-029 · Production on one VPS, deployed from CI after the tests
+
+### [Auth](decisions/auth.md)
+- D-034 · Passwords hashed with bcrypt; accounts created from the command line
+- D-035 · Server-side sessions in MySQL; SameSite=Lax cookie and an Origin check on POST
+- D-036 · What a refused request gets
 
 ### [Incidents](decisions/incidents.md)
 - D-006 · Incident lifecycle thresholds: N=2 confirmed failures to open, M=2 successes to close

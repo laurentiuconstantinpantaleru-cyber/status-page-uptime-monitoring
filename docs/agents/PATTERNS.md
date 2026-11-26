@@ -61,6 +61,7 @@
 - **Example:** docs/design/screens/DS-p26-public-status.light.png
 - **Why:** Headless Chrome will not lay out a window narrower than about 500 px, so a 360 px window screenshot shows the tablet layout cropped; an iframe gets a real 360 px viewport and its media queries.
 - **Source:** session 2026-11-26 · confidence medium
+- **Confirmed:** 2026-11-26
 
 ## PATTERN-006 · Network calls through an injected client, errors classified by a pure function
 - **Status:** candidate

@@ -98,3 +98,4 @@
 - **Rejected:** Leaving incident updates out of the version bump (the cached page would hide a human update for hours).
 - **Evidence:** src/worker/store.ts (`bumpStatusVersion`), src/web/maintenance/store.ts, src/web/status/cache.ts, test/web/status-page.test.ts
 - **Source:** user · confidence high
+- **Confirmed:** 2026-11-26

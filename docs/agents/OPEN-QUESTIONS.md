@@ -10,7 +10,7 @@
 
 ## Index
 ### [Admin](questions/admin.md)
-- Q-008 · How do users sign in to the admin interface? · _investigating_
+- Q-008 · How do users sign in to the admin interface? · _answered_
 - Q-019 · Where and how does the admin panel show worker_fault episodes?
 
 ### [Api](questions/api.md)

@@ -13,7 +13,7 @@ designs:
     source: src/web/views/admin/monitors.html
     screenshots: [screens/DS-p26-admin-monitors.light.png, screens/DS-p26-admin-monitors.dark.png]
     design_ref: mocks/DS-p26-admin-monitors.html
-    status: draft
+    status: approved
   - id: DS-p26-admin-incidents
     kind: screen
     source: src/web/views/admin/incidents.html
