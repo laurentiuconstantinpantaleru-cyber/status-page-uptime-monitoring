@@ -7,48 +7,11 @@
 <style>
 <%~ it.css %>
 </style>
-<script>
-/* Theme (D-024): the visitor's saved choice, else the system's; set before the page paints. */
-(function () {
-  var saved = localStorage.getItem('theme');
-  if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
-  document.documentElement.dataset.effective = saved === 'light' || saved === 'dark'
-    ? saved : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-})();
-</script>
+<%~ include('partials/theme-head.html', it) %>
 </head>
 <body>
 
-<header class="site-header">
-  <div class="bar col">
-    <div class="brand-group">
-      <a class="brand" href="#top" title="<%= it.product %>"><%~ it.icons.logo %><span><%= it.product %></span></a>
-      <button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme"><%~ it.icons.moon %><%~ it.icons.sun %></button>
-    </div>
-    <nav class="nav" aria-label="Main">
-<% it.links.forEach(function (link) { %>
-      <a class="nav-link" href="<%= link.href %>"<% if (link.current) { %> aria-current="page"<% } %>><%= link.label %></a>
-<% }) %>
-    </nav>
-    <div class="actions">
-      <a class="pill" href="#api-docs">API docs</a>
-      <a class="pill" href="/login">Login</a>
-      <details class="menu">
-        <summary aria-label="Menu"><%~ it.icons.menu %></summary>
-        <nav class="drawer" aria-label="Main">
-          <div class="col">
-            <ul class="drawer-list">
-<% it.links.forEach(function (link) { %>
-              <li><a class="drawer-link" href="<%= link.href %>"<% if (link.current) { %> aria-current="page"<% } %>><%= link.label %></a></li>
-<% }) %>
-            </ul>
-            <div class="drawer-actions"><a class="pill" href="#api-docs">API docs</a><a class="pill" href="/login">Login</a></div>
-          </div>
-        </nav>
-      </details>
-    </div>
-  </div>
-</header>
+<%~ include('partials/site-header.html', it) %>
 
 <main class="page col">
   <div class="lead">
@@ -116,27 +79,7 @@
   </footer>
 </main>
 
-<script>
-/* Theme toggle (D-024): switches light and dark and remembers the choice. */
-(function () {
-  var root = document.documentElement, btn = document.getElementById('theme-btn');
-  var dark = window.matchMedia('(prefers-color-scheme: dark)');
-  function label() { btn.setAttribute('aria-label', root.dataset.effective === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'); }
-  btn.addEventListener('click', function () {
-    var next = root.dataset.effective === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('theme', next);
-    root.dataset.theme = next;
-    root.dataset.effective = next;
-    label();
-  });
-  dark.addEventListener('change', function () {
-    if (root.dataset.theme) return;
-    root.dataset.effective = dark.matches ? 'dark' : 'light';
-    label();
-  });
-  label();
-})();
-</script>
+<%~ include('partials/theme-toggle.html', it) %>
 <% if (!it.error && it.groups.length > 0) { %>
 <div class="tip" id="tip" aria-hidden="true" hidden></div>
 <template id="tip-icons"><%~ it.icons.ok %><%~ it.icons.degraded %><%~ it.icons.outage %><%~ it.icons.maint %><%~ it.icons.nodata %></template>

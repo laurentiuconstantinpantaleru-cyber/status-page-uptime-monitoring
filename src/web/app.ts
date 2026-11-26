@@ -3,6 +3,7 @@ import { type Clock, systemClock } from '../shared/clock.js';
 import { StatusCache } from './status/cache.js';
 import type { StatusData } from './status/model.js';
 import { renderErrorPage, renderStatusPage } from './status/render.js';
+import { renderDocsPage } from './docs/render.js';
 
 /** Where the public status page reads from: MySQL in production, a fake in tests. */
 export interface StatusSource {
@@ -21,6 +22,13 @@ export function buildApp(options: FastifyServerOptions = {}, deps: AppDeps = {})
   const clock = deps.clock ?? systemClock;
 
   app.get('/health', async () => ({ status: 'ok' }));
+
+  /* DS-p26-docs: static text, filtered by ?q= on the server. */
+  app.get<{ Querystring: { q?: string | string[] } }>('/docs', async (request, reply) => {
+    const q = request.query.q;
+    reply.type('text/html; charset=utf-8');
+    return renderDocsPage(typeof q === 'string' ? q : '');
+  });
 
   const source = deps.status;
   if (source) {

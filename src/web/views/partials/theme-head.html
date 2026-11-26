@@ -1,0 +1,9 @@
+<script>
+/* Theme (D-024): the visitor's saved choice, else the system's; set before the page paints. */
+(function () {
+  var saved = localStorage.getItem('theme');
+  if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+  document.documentElement.dataset.effective = saved === 'light' || saved === 'dark'
+    ? saved : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+})();
+</script>

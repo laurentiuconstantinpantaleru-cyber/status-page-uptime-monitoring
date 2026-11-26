@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><% if (it.term) { %>“<%= it.term %>” · <% } %>How monitoring works · <%= it.product %></title>
+<style>
+<%~ it.css %>
+</style>
+<%~ include('partials/theme-head.html', it) %>
+</head>
+<body>
+
+<%~ include('partials/site-header.html', it) %>
+
+<main class="page col">
+<div class="docs">
+  <div class="docs-head">
+    <h1>How monitoring works</h1>
+    <p>What <%= it.product %> checks, when it opens and closes an incident, and how the numbers on the status page are calculated.</p>
+  </div>
+
+  <aside class="side" aria-label="Docs navigation">
+    <form class="search" role="search" method="get" action="/docs#results">
+      <label for="q">Search the docs</label>
+      <div class="search-row">
+        <input id="q" name="q" type="search" autocomplete="off" maxlength="<%= it.maxTerm %>" placeholder="For example: TLS, escalation" value="<%= it.term %>" aria-describedby="count">
+        <button class="btn" type="submit">Search</button>
+      </div>
+      <p class="count" id="count"><% if (it.term) { %><%= it.countText %> · <a href="/docs">Clear</a><% } %></p>
+    </form>
+    <nav aria-label="On this page">
+      <ul class="toc">
+<% it.sections.forEach(function (s) { %>
+        <li><a href="#<%= s.id %>"><%= s.title %></a></li>
+<% }) %>
+      </ul>
+    </nav>
+  </aside>
+
+  <div class="content" id="results"<% if (it.term) { %> role="region" aria-label="Search results for <%= it.term %>"<% } %>>
+<% it.sections.forEach(function (s) { %>
+    <section class="doc" id="<%= s.id %>" aria-labelledby="<%= s.id %>-title">
+<%~ s.html %>
+    </section>
+<% }) %>
+<% if (it.sections.length === 0) { %>
+    <div class="none card"><p>No section matches “<%= it.term %>”. Try another word, or <a href="/docs">clear the search</a>.</p></div>
+<% } %>
+  </div>
+</div>
+
+  <footer class="site-footer">
+    <div class="f-notes"><p>All times are in UTC.</p></div>
+    <a href="/status">Back to the status page</a>
+  </footer>
+</main>
+
+<%~ include('partials/theme-toggle.html', it) %>
+</body>
+</html>

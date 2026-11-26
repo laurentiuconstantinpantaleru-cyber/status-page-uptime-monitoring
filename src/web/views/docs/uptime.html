@@ -1,0 +1,9 @@
+<h2 id="uptime-title">How uptime is calculated</h2>
+<p>Uptime comes from incidents, not from counting checks, so a monitor checked every minute and one checked every hour are measured the same way.</p>
+<p class="formula">uptime = available time / (total time − maintenance time)</p>
+<p>Downtime that falls inside a maintenance window is not counted. An incident that crosses midnight or the end of a month counts in each period only for the part inside it.</p>
+<div class="card">
+  <h3>Example: November</h3>
+  <p>An incident runs from 31 October 23:00 to 1 November 02:00 UTC, and maintenance runs on 1 November from 00:00 to 01:00. November has 720 hours. Maintenance takes 1 hour, leaving 719. Of the incident, only 1 November 00:00 to 02:00 is in November, and its first hour is maintenance, so 1 hour counts as down.</p>
+  <p class="formula">(719 − 1) / 719 = 99.86%</p>
+</div>

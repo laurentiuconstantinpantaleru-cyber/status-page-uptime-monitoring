@@ -1,0 +1,12 @@
+<h2 id="incidents-title">Incidents</h2>
+<p>One failed check is not an incident: networks blip. An incident opens only when the failure is real.</p>
+<ol class="steps">
+  <li>A worker's check fails.</li>
+  <li>A second, independent worker checks the same URL straight away and must fail too.</li>
+  <li>After <span class="num">2</span> consecutive confirmed failures the monitor is Down and an incident opens, with its cause.</li>
+  <li>After <span class="num">2</span> consecutive successful checks the incident closes by itself.</li>
+</ol>
+<h3>When the worker is the problem</h3>
+<p>If most of one worker's monitors fail at once while the other worker reaches them fine, the fault is that worker's network (for example its DNS), not the sites. No incident is opened, and admins see a worker fault in the dashboard.</p>
+<h3>Updates</h3>
+<p>People on the team post updates as an incident moves through Investigating, Identified, Monitoring and Resolved. They appear on the status page.</p>

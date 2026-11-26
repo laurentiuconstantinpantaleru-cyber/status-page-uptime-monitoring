@@ -1,0 +1,61 @@
+/* DS-p26-docs, built from docs/design/mocks/DS-p26-docs.html. Tokens only. */
+.docs { display: grid; grid-template-columns: calc(var(--space-16) * 3) minmax(0, 1fr); gap: var(--space-8); align-items: start; }
+.docs-head { grid-column: 1 / -1; display: grid; gap: var(--space-2); }
+.docs-head h1 { font: var(--text-2xl); letter-spacing: -0.02em; }
+.docs-head p { color: var(--color-text-secondary); }
+.side { position: sticky; top: var(--space-6); display: grid; gap: var(--space-4); min-width: 0; }
+.search { display: grid; gap: var(--space-1); }
+.search label { font: var(--text-sm-strong); }
+/* The sidebar is narrow on desktop: the button goes under the field there, beside it below 1025 px. */
+.search-row { display: grid; gap: var(--space-2); min-width: 0; }
+.search .btn { justify-self: start; }
+.search input { flex: 1; min-height: var(--space-8); padding: 0 var(--space-3); font: var(--text-sm); color: var(--color-text-primary); min-width: 0;
+  background: var(--color-bg-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); }
+.search input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 1px; }
+@media (pointer: coarse) { .search input { min-height: var(--space-12); } }
+.count { font: var(--text-xs); color: var(--color-text-muted); min-height: var(--space-4); }
+.toc { display: grid; gap: var(--space-0-5); }
+.toc a { display: block; padding: var(--space-1) var(--space-3); border-radius: var(--radius-md); border-left: 2px solid transparent;
+  font: var(--text-sm); color: var(--color-text-secondary); text-decoration: none; }
+.toc a:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+/* The section opened by its anchor is marked in the sidebar (no script, D-024). */
+.docs:has(#checks:target) .toc a[href="#checks"],
+.docs:has(#incidents:target) .toc a[href="#incidents"],
+.docs:has(#maintenance:target) .toc a[href="#maintenance"],
+.docs:has(#uptime:target) .toc a[href="#uptime"],
+.docs:has(#alerts:target) .toc a[href="#alerts"] { border-left-color: var(--color-brand); color: var(--color-text-primary); font-weight: 500; }
+.toc li[hidden] { display: none; }
+@media (pointer: coarse) { .toc a { min-height: var(--space-12); display: flex; align-items: center; } }
+.content { display: grid; gap: var(--space-12); min-width: 0; }
+.doc { display: grid; gap: var(--space-4); scroll-margin-top: var(--space-8); min-width: 0; }
+.doc[hidden] { display: none; }
+.doc h2 { font: var(--text-lg); }
+.doc h3 { font: var(--text-sm-strong); color: var(--color-text-primary); margin-top: var(--space-2); }
+.doc p, .doc li { color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.doc ul { display: grid; gap: var(--space-2); padding-left: var(--space-4); list-style: disc; }
+.doc .card { padding: var(--space-4) var(--space-6); display: grid; gap: var(--space-2); }
+.doc code, .doc .num { font: var(--text-metric); font-weight: 400; color: var(--color-text-primary); }
+.checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.checks .card strong { font: var(--text-sm-strong); color: var(--color-text-primary); }
+.checks .card p { font: var(--text-sm); }
+.formula { font: var(--text-metric); color: var(--color-text-primary); padding: var(--space-3) var(--space-4); background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow-x: auto; }
+.steps { counter-reset: step; list-style: none !important; padding-left: 0 !important; }
+.steps li { position: relative; padding-left: var(--space-8); }
+.steps li::before { counter-increment: step; content: counter(step); position: absolute; left: 0; top: 0; width: var(--space-6); height: var(--space-6);
+  display: grid; place-items: center; border-radius: var(--radius-pill); border: 1px solid var(--color-border-strong);
+  font: var(--text-xs); font-weight: 600; color: var(--color-text-primary); }
+mark { background: var(--color-bg-subtle); color: var(--color-text-primary); outline: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); }
+.none { padding: var(--space-6); }
+.none[hidden] { display: none; }
+@media (max-width: 1024px) {
+  .docs { grid-template-columns: minmax(0, 1fr); }
+  .search-row { display: flex; }
+  .search .btn { flex: none; }
+  .side { position: static; }
+  .toc { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .toc a { border-left: 0; border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-bg-surface); }
+  .docs:has(#checks:target) .toc a[href="#checks"], .docs:has(#incidents:target) .toc a[href="#incidents"], .docs:has(#maintenance:target) .toc a[href="#maintenance"], .docs:has(#uptime:target) .toc a[href="#uptime"], .docs:has(#alerts:target) .toc a[href="#alerts"] { border-color: var(--color-brand); }
+}
+@media (max-width: 640px) { .checks { grid-template-columns: minmax(0, 1fr); } }
+.content { scroll-margin-top: var(--space-6); }

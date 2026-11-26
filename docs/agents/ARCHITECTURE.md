@@ -45,6 +45,8 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 |---|---|---|---|
 | Web Server | `src/web/` (`app.ts`, `server.ts`) | Serves Fastify REST API, SSR status pages, admin views; `GET /health`; `GET /status` (DS-p26-public-status) when `DATABASE_URL` is set | MySQL, in-memory cache |
 | Public Status Page | `src/web/status/` (`model.ts`, `data.ts`, `render.ts`), `src/web/views/status.html`, `src/web/public/` | Loads monitors, last checks, incidents and maintenance windows; derives each monitor's status and 90 daily bars; renders the Eta template with the tokens inlined | MySQL, In-Memory Cache |
+| Docs Page | `src/web/docs/` (`search.ts`, `render.ts`), `src/web/views/docs.html`, `src/web/views/docs/*.html` | `GET /docs` (DS-p26-docs): how monitoring works, filtered by `?q=` on the server (D-024: no script) | — |
+| Shared page parts | `src/web/page.ts`, `src/web/views/partials/`, `src/web/public/base.css` | Eta, inlined tokens and shared styles, icons, the header and the theme toggle used by `/status` and `/docs` | Web Server |
 | In-Memory Cache | `src/web/status/cache.ts` | Keeps the rendered status page; reads `status_version` at most every 30 s on a request, re-renders on a new version, at UTC midnight or a maintenance boundary; serves the last copy if MySQL fails | Web Server |
 | Scheduler | `src/worker/` _planned_ | Drift-free execution planning for monitor probes | Check Workers |
 | Check Engine | `src/worker/check.ts` | One check through an injected `HttpClient` and `Clock`: status, keyword, latency threshold, TLS days left, failure cause; default timeout 30 s (D-022) | External Targets (via the client) |

@@ -1,0 +1,9 @@
+<h2 id="checks-title">Checks</h2>
+<p>Each monitor points at one URL. A worker checks it every <span class="num">5</span> minutes by default; an admin can pick any interval from <span class="num">1</span> to <span class="num">60</span> minutes. A check waits up to <span class="num">30</span> seconds for an answer, long enough for a sleeping free host to wake up.</p>
+<div class="checks">
+  <div class="card"><strong>HTTP status</strong><p>The answer must have the expected status code, <code>200</code> unless the monitor says otherwise. A <code>5xx</code> or any other code fails the check.</p></div>
+  <div class="card"><strong>Keyword</strong><p>If the monitor has a keyword, the page must contain it exactly, with the same capital letters. A missing keyword fails the check.</p></div>
+  <div class="card"><strong>Response time</strong><p>If the monitor has a threshold, a slower answer marks it Degraded. It still counts as up.</p></div>
+  <div class="card"><strong>TLS certificate expiry</strong><p>For HTTPS monitors the worker reads when the certificate expires and warns 30 days and again 7 days before.</p></div>
+</div>
+<p>A failed check records why: timeout, <code>5xx</code>, unexpected status, missing keyword, DNS, TLS or connection. Raw checks are kept for 7 days, then summed up per hour and per day.</p>

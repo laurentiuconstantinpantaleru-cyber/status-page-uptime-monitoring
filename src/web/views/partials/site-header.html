@@ -1,0 +1,31 @@
+<%/* The page header (DS-p26-public-status): product name, theme toggle, links, Login, menu. */%>
+<header class="site-header">
+  <div class="bar col">
+    <div class="brand-group">
+      <a class="brand" href="<%= it.header.brandHref %>" title="<%= it.product %>"><%~ it.icons.logo %><span><%= it.product %></span></a>
+      <button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme"><%~ it.icons.moon %><%~ it.icons.sun %></button>
+    </div>
+    <nav class="nav" aria-label="Main">
+<% it.header.links.forEach(function (link) { %>
+      <a class="nav-link" href="<%= link.href %>"<% if (link.current) { %> aria-current="page"<% } %>><%= link.label %></a>
+<% }) %>
+    </nav>
+    <div class="actions">
+      <a class="pill" href="<%= it.header.apiDocsHref %>">API docs</a>
+      <a class="pill" href="/login">Login</a>
+      <details class="menu">
+        <summary aria-label="Menu"><%~ it.icons.menu %></summary>
+        <nav class="drawer" aria-label="Main">
+          <div class="col">
+            <ul class="drawer-list">
+<% it.header.links.forEach(function (link) { %>
+              <li><a class="drawer-link" href="<%= link.href %>"<% if (link.current) { %> aria-current="page"<% } %>><%= link.label %></a></li>
+<% }) %>
+            </ul>
+            <div class="drawer-actions"><a class="pill" href="<%= it.header.apiDocsHref %>">API docs</a><a class="pill" href="/login">Login</a></div>
+          </div>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>

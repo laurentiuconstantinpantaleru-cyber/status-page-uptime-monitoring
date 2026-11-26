@@ -55,4 +55,4 @@ designs:
     source: src/web/views/docs.html
     screenshots: [screens/DS-p26-docs.light.png, screens/DS-p26-docs.dark.png]
     design_ref: mocks/DS-p26-docs.html
-    status: draft
+    status: implemented
