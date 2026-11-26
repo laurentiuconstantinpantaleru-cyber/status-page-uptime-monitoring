@@ -1,4 +1,4 @@
-import mysql, { type Connection } from 'mysql2/promise';
+import mysql, { type Connection, type Pool } from 'mysql2/promise';
 
 export interface ConnectOptions {
   /** Only the migration runner needs this: a migration file holds many statements. */
@@ -19,4 +19,13 @@ export async function connect(url: string, options: ConnectOptions = {}): Promis
     throw error;
   }
   return conn;
+}
+
+/** Opens a pool whose every connection runs in UTC (D-020), for the long-running web process. */
+export function createPool(url: string): Pool {
+  const pool = mysql.createPool({ uri: url, timezone: 'Z' });
+  pool.pool.on('connection', (conn) => {
+    conn.query("SET time_zone = '+00:00'");
+  });
+  return pool;
 }

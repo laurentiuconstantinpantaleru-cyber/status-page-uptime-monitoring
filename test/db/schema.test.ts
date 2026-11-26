@@ -3,6 +3,8 @@ import type { Connection, RowDataPacket } from 'mysql2/promise';
 import { connect } from '../../src/db/connection.js';
 import { MIGRATIONS_DIR, migrate } from '../../src/db/migrate.js';
 import { FakeClock } from '../../src/shared/clock.js';
+import { loadStatusData, readStatusVersion } from '../../src/web/status/data.js';
+import { monitorStatus } from '../../src/web/status/model.js';
 
 // Integration tests against a real MySQL 8. CI always sets TEST_DATABASE_URL.
 // The database is wiped, so its name must end in `_test`.
@@ -68,7 +70,7 @@ describe.skipIf(!url)('MySQL schema', () => {
   });
 
   it('applies every migration on an empty database and records it', async () => {
-    expect(firstRun).toEqual(['0001_initial_schema.sql', '0002_seed_local_businesses.sql']);
+    expect(firstRun).toEqual(['0001_initial_schema.sql', '0002_seed_local_businesses.sql', '0003_status_version.sql']);
 
     const applied = await rows<{ version: string; applied_at: Date }>(
       conn,
@@ -205,5 +207,72 @@ describe.skipIf(!url)('MySQL schema', () => {
       [monitorId, new Date('2026-12-01T00:00:00Z'), new Date('2026-11-01T00:00:00Z')],
     );
     expect(overlap.key).toBe('idx_incidents_monitor_started');
+  });
+
+  describe('status page data', () => {
+    const NOW = new Date('2026-11-26T14:55:00.000Z');
+    const MIN = 60_000;
+
+    it('starts the status version at 0 and reads a bump (D-020)', async () => {
+      expect(await readStatusVersion(conn)).toBe(0);
+
+      await conn.query('UPDATE status_version SET version = version + 1 WHERE id = 1');
+
+      expect(await readStatusVersion(conn)).toBe(1);
+    });
+
+    it('loads each monitor of an organization with what its status needs', async () => {
+      const org = await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', [
+        'status-org', 'Status Org', T0, T0,
+      ]);
+      const addMonitor = (name: string, threshold: number | null) =>
+        insertId(
+          conn,
+          `INSERT INTO monitors (organization_id, name, url, timeout_ms, check_tls, latency_threshold_ms, created_at, updated_at)
+           VALUES (?, ?, 'https://example.test/', 10000, 0, ?, ?, ?)`,
+          [org, name, threshold, T0, T0],
+        );
+      const addCheck = (monitor: number, at: Date, latencyMs: number) =>
+        conn.query(
+          "INSERT INTO checks (monitor_id, worker_id, checked_at, kind, outcome, latency_ms) VALUES (?, ?, ?, 'scheduled', 'up', ?)",
+          [monitor, workerId, at, latencyMs],
+        );
+
+      await addMonitor('No checks yet', null);
+      const slow = await addMonitor('Slow site', 100);
+      const down = await addMonitor('Down site', null);
+      const maint = await addMonitor('Site in maintenance', null);
+      await addCheck(slow, new Date(NOW.getTime() - 10 * MIN), 80);
+      await addCheck(slow, new Date(NOW.getTime() - 5 * MIN), 500);
+      await addCheck(down, new Date(NOW.getTime() - 5 * MIN), 90);
+      await addCheck(maint, new Date(NOW.getTime() - 5 * MIN), 90);
+      await conn.query("INSERT INTO incidents (monitor_id, started_at, cause) VALUES (?, ?, 'timeout')", [
+        down, new Date(NOW.getTime() - 50 * MIN),
+      ]);
+      await conn.query("INSERT INTO incidents (monitor_id, started_at, resolved_at, cause) VALUES (?, ?, ?, 'timeout')", [
+        down, new Date('2026-06-01T10:00:00Z'), new Date('2026-06-01T11:00:00Z'),
+      ]);
+      await conn.query(
+        "INSERT INTO maintenance_windows (monitor_id, starts_at, ends_at, source, created_at) VALUES (?, ?, ?, 'quick', ?)",
+        [maint, new Date(NOW.getTime() - 15 * MIN), new Date(NOW.getTime() + 15 * MIN), T0],
+      );
+
+      const data = await loadStatusData(conn, NOW);
+      const group = data.groups.find((g) => g.name === 'Status Org');
+
+      expect(group?.monitors.map((m) => m.name)).toEqual(['No checks yet', 'Slow site', 'Down site', 'Site in maintenance']);
+      expect(group?.monitors.map((m) => monitorStatus(m, NOW))).toEqual(['nodata', 'degraded', 'outage', 'maint']);
+      const [noChecks, slowSite, downSite] = group!.monitors;
+      expect(noChecks).toMatchObject({ firstCheckAt: null, lastCheck: null });
+      expect(slowSite.firstCheckAt?.toISOString()).toBe(new Date(NOW.getTime() - 10 * MIN).toISOString());
+      expect(slowSite.lastCheck?.latencyMs).toBe(500);
+      expect(downSite.incidents).toHaveLength(1);
+    });
+
+    it('lists organizations in the order they were created', async () => {
+      const names = (await loadStatusData(conn, NOW)).groups.map((g) => g.name);
+
+      expect(names.indexOf('Hug The Mug')).toBeLessThan(names.indexOf('Status Org'));
+    });
   });
 });

@@ -7,7 +7,7 @@ designs:
     source: src/web/views/status.html
     screenshots: [screens/DS-p26-public-status.light.png, screens/DS-p26-public-status.dark.png]
     design_ref: mocks/DS-p26-public-status.html
-    status: draft
+    status: implemented
   - id: DS-p26-admin-monitors
     kind: screen
     source: src/web/views/admin/monitors.html
@@ -25,4 +25,16 @@ designs:
     source: src/web/views/admin/maintenance.html
     screenshots: [screens/DS-p26-admin-maintenance.light.png, screens/DS-p26-admin-maintenance.dark.png]
     design_ref: mocks/DS-p26-admin-maintenance.html
+    status: draft
+  - id: DS-p26-header
+    kind: component
+    source: src/web/views/partials/header.html
+    screenshots: [screens/DS-p26-header.light.png, screens/DS-p26-header.dark.png]
+    design_ref: mocks/DS-p26-header.html
+    status: draft
+  - id: DS-p26-home
+    kind: screen
+    source: src/web/views/home.html
+    screenshots: [screens/DS-p26-home.light.png, screens/DS-p26-home.dark.png]
+    design_ref: mocks/DS-p26-home.html
     status: draft

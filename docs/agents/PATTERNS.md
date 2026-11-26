@@ -10,6 +10,7 @@
 - PATTERN-002 · Multi-worker ping confirmation before state change · candidate
 - PATTERN-003 · Version-polled in-memory cache invalidation on monitor state change · candidate
 - PATTERN-004 · Time columns get their value from the Clock, never a database default · candidate
+- PATTERN-005 · Mock screenshots through headless Chrome inside fixed-width iframes · candidate
 - PATTERN-006 · Network calls through an injected client, errors classified by a pure function · candidate
 
 ---
@@ -38,6 +39,7 @@
 - **Example:** docs/brief.md:22, D-020
 - **Why:** Guarantees sub-100ms response time while ensuring visitors see a status change within 30 seconds.
 - **Source:** docs · confidence high
+- **Confirmed:** 2026-11-26
 
 ## PATTERN-004 · Time columns get their value from the Clock, never a database default
 - **Status:** candidate
@@ -46,6 +48,14 @@
 - **Example:** db/migrations/0001_initial_schema.sql, src/db/migrate.ts (`applied_at`)
 - **Why:** A database default reads the server's clock, which simulated-time tests cannot move (D-004, D-021).
 - **Source:** user · confidence high
+
+## PATTERN-005 · Mock screenshots through headless Chrome inside fixed-width iframes
+- **Status:** candidate
+- **Use when:** Saving `docs/design/screens/<DS-id>.<light|dark>.png` for a mock, at the smallest (360 px) and largest supported widths.
+- **How:** Write a throwaway wrapper page (outside the repo) that holds one `<iframe>` per width, e.g. 360 px and 1280 px side by side, each loading `mocks/<DS-id>.html?state=<state>&theme=<light|dark>`. Capture it with `chrome --headless=old --hide-scrollbars --virtual-time-budget=3000 --window-size=<total width>,<height> --screenshot=<file>`. Under WSL, pass Windows paths (`wslpath -w`, `wslpath -m`) to the Windows Chrome binary.
+- **Example:** docs/design/screens/DS-p26-public-status.light.png
+- **Why:** Headless Chrome will not lay out a window narrower than about 500 px, so a 360 px window screenshot shows the tablet layout cropped; an iframe gets a real 360 px viewport and its media queries.
+- **Source:** session 2026-11-26 · confidence medium
 
 ## PATTERN-006 · Network calls through an injected client, errors classified by a pure function
 - **Status:** candidate

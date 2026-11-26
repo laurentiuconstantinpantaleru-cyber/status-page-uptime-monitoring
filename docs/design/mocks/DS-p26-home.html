@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DS-p26-home — mock (draft)</title>
+<style>
+/* ---------- Tokens: copied from docs/design/DESIGN.md, nothing else ---------- */
+:root {
+  --color-bg-base: #f8fafc;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-strong: #64748b;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-brand: #2563eb;
+  --color-on-brand: #ffffff;
+  --shadow-card: 0 1px 3px 0 rgba(15,23,42,0.08), 0 1px 2px -1px rgba(15,23,42,0.08);
+  --bg-dots: radial-gradient(circle, var(--color-border) 1px, transparent 1.5px) 0 0 / var(--space-6) var(--space-6);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --text-xs: 400 12px/16px var(--font-sans);
+  --text-sm: 400 13px/20px var(--font-sans);
+  --text-sm-strong: 500 13px/20px var(--font-sans);
+  --text-base: 400 15px/24px var(--font-sans);
+  --text-lg: 600 17px/26px var(--font-sans);
+  --text-2xl: 600 28px/34px var(--font-sans); --text-2xl-tracking: -0.02em;
+  --text-display: 700 56px/60px var(--font-sans); --text-display-tracking: -0.035em;
+  --hero-mix: 25%;
+  --gradient-hero: linear-gradient(to top, color-mix(in srgb, var(--color-brand) var(--hero-mix), var(--color-bg-surface)) 0%, var(--color-bg-surface) 65%);
+  --color-btn-hero-bg: #ffffff; --color-btn-hero-text: #0f172a; --color-btn-hero-border: #475569;
+
+  --space-0-5: 2px; --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px;
+  --radius-sm: 3px; --radius-md: 6px; --radius-lg: 12px; --radius-xl: 16px; --radius-pill: 9999px;
+  --container-max: 800px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+    --color-border: #23272f; --color-border-strong: #64748b;
+    --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
+    --color-brand: #60a5fa; --color-on-brand: #0f172a;
+    --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+    --hero-mix: 35%; --color-btn-hero-bg: #f8fafc; --color-btn-hero-text: #0a0b0f; --color-btn-hero-border: transparent;
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+  --color-border: #23272f; --color-border-strong: #64748b;
+  --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
+  --color-brand: #60a5fa; --color-on-brand: #0f172a;
+  --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+  --hero-mix: 35%; --color-btn-hero-bg: #f8fafc; --color-btn-hero-text: #0a0b0f; --color-btn-hero-border: transparent;
+}
+@media (max-width: 640px) { :root { --text-display: 700 36px/40px var(--font-sans); } }
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+body { margin: 0; background: var(--color-bg-base); color: var(--color-text-primary); font: var(--text-base); }
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+h1, h2, h3, p, ul { margin: 0; }
+ul { padding: 0; list-style: none; }
+button { font: inherit; color: inherit; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- Mock controls (not part of the design) ---------- */
+.mock-controls { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center;
+  padding: var(--space-2) var(--space-4); border-bottom: 1px dashed var(--color-border-strong);
+  font: var(--text-xs); color: var(--color-text-secondary); background: var(--color-bg-subtle); }
+.mock-controls > span { display: flex; flex-wrap: wrap; gap: var(--space-1); align-items: center; }
+.mock-controls button { font: var(--text-xs); min-height: var(--space-6); padding: 0 var(--space-2); cursor: pointer;
+  background: var(--color-bg-base); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); }
+.mock-controls button[aria-pressed="true"] { background: var(--color-text-primary); color: var(--color-bg-base); border-color: var(--color-text-primary); }
+
+/* ================= DS-p26-header (same block in DS-p26-home.html) ================= */
+.site-header { position: sticky; top: 0; z-index: 20; background: var(--color-bg-base); border-bottom: 1px solid var(--color-border); }
+.bar { display: flex; align-items: center; gap: var(--space-6); min-height: var(--space-16); padding: 0 var(--space-12); }
+.brand { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--color-text-primary);
+  text-decoration: none; font: var(--text-lg); border-radius: var(--radius-md); }
+.brand svg { width: var(--space-8); height: var(--space-8); flex: none; color: var(--color-brand); }
+.brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav { display: flex; align-items: center; gap: var(--space-1); }
+.nav-link { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--space-8); padding: 0 var(--space-3);
+  border: 0; border-radius: var(--radius-pill); background: none; cursor: pointer; white-space: nowrap;
+  font: var(--text-sm-strong); color: var(--color-text-secondary); text-decoration: none; }
+.nav-link:hover, .nav-link[aria-expanded="true"] { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+.chev { width: var(--space-3); height: var(--space-3); transition: transform 150ms ease; }
+[aria-expanded="true"] > .chev { transform: rotate(180deg); }
+.actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; flex: none; }
+.pill { display: inline-flex; align-items: center; justify-content: center; min-height: var(--space-8); padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: transparent; cursor: pointer;
+  font: var(--text-sm-strong); color: var(--color-text-primary); text-decoration: none; white-space: nowrap; }
+.pill:hover { background: var(--color-bg-subtle); }
+.pill-primary { background: var(--color-brand); border-color: var(--color-brand); color: var(--color-on-brand); }
+.pill-primary:hover { background: var(--color-brand); box-shadow: 0 0 0 var(--space-1) var(--color-bg-subtle); }
+.menu-btn { display: none; place-items: center; width: var(--space-12); height: var(--space-12); flex: none; padding: 0;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: transparent; cursor: pointer; }
+.menu-btn svg { width: var(--space-6); height: var(--space-6); }
+.menu-btn .i-close, .menu-btn[aria-expanded="true"] .i-open { display: none; }
+.menu-btn[aria-expanded="true"] .i-close { display: block; }
+@media (pointer: coarse) { .pill, .nav-link { min-height: var(--space-12); } }
+
+/* Features mega-menu (desktop) */
+.mega { position: absolute; left: 0; right: 0; top: 100%; background: var(--color-bg-base);
+  border-bottom: 1px solid var(--color-border); box-shadow: var(--shadow-card); padding: var(--space-6) var(--space-12) var(--space-8); }
+.mega[hidden], .drawer[hidden], .sub[hidden] { display: none; }
+.feat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); max-width: var(--container-max); margin: 0 auto; }
+.feat { display: grid; grid-template-columns: auto 1fr; gap: 0 var(--space-3); align-items: start; padding: var(--space-3);
+  border-radius: var(--radius-lg); color: inherit; text-decoration: none; min-width: 0; }
+.feat:hover { background: var(--color-bg-subtle); }
+.feat-icon { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); grid-row: span 2;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg-surface); color: var(--color-brand); }
+.feat-icon svg { width: var(--space-4); height: var(--space-4); }
+.feat-title { font: var(--text-sm-strong); font-weight: 600; color: var(--color-text-primary); overflow-wrap: anywhere; }
+.feat-desc { font: var(--text-sm); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+
+/* Menu drawer (tablet and mobile) */
+.drawer { position: absolute; left: 0; right: 0; top: 100%; max-height: calc(100dvh - var(--space-16)); overflow-y: auto;
+  background: var(--color-bg-base); border-bottom: 1px solid var(--color-border); box-shadow: var(--shadow-card);
+  padding: var(--space-2) var(--space-8) var(--space-8); }
+.drawer-list > li { border-bottom: 1px solid var(--color-border); }
+.drawer-link { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: var(--space-12);
+  padding: 0; border: 0; background: none; cursor: pointer; font: var(--text-base); font-weight: 500;
+  color: var(--color-text-primary); text-decoration: none; text-align: left; }
+.drawer .sub { padding-bottom: var(--space-3); }
+.drawer .feat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+.drawer-actions { display: none; gap: var(--space-2); margin-top: var(--space-6); }
+.drawer-actions .pill { min-height: var(--space-12); }
+
+@media (max-width: 1024px) {
+  .bar { padding: 0 var(--space-8); gap: var(--space-4); }
+  .nav, .mega { display: none; }
+  .menu-btn { display: grid; }
+}
+@media (max-width: 640px) {
+  .bar { gap: var(--space-3); }
+  .actions .pill { display: none; }
+  .drawer .feat-grid { grid-template-columns: minmax(0, 1fr); }
+  .drawer-actions { display: grid; }
+}
+@media (min-width: 1025px) { .drawer { display: none; } }
+/* ================= end DS-p26-header ================= */
+
+/* ---------- DS-p26-home ---------- */
+body { background: var(--color-bg-base) var(--bg-dots); }
+.home { width: min(100% - 2 * var(--space-12), var(--container-max)); margin: 0 auto; padding: var(--space-12) 0 var(--space-16);
+  display: grid; gap: var(--space-16); }
+@media (max-width: 1024px) { .home { width: min(100% - 2 * var(--space-8), var(--container-max)); } }
+@media (max-width: 640px) { .home { padding: var(--space-8) 0 var(--space-12); gap: var(--space-12); } }
+
+.hero { display: grid; gap: var(--space-6); justify-items: start; padding: var(--space-16) var(--space-12);
+  background: var(--color-bg-surface); background: var(--gradient-hero);
+  border: 1px solid var(--color-border); border-radius: var(--radius-xl); min-width: 0; }
+@media (max-width: 640px) { .hero { padding: var(--space-12) var(--space-6); gap: var(--space-4); } }
+.hero h1 { font: var(--text-display); letter-spacing: var(--text-display-tracking); color: var(--color-text-primary); overflow-wrap: anywhere; max-width: 18ch; }
+.hero p { font: var(--text-base); color: var(--color-text-secondary); max-width: 52ch; overflow-wrap: anywhere; }
+.pill-hero { min-height: var(--space-12); padding: 0 var(--space-6); margin-top: var(--space-2); font: var(--text-base); font-weight: 600;
+  background: var(--color-btn-hero-bg); color: var(--color-btn-hero-text); border-color: var(--color-btn-hero-border); }
+.pill-hero:hover { background: var(--color-btn-hero-bg); text-decoration: underline; text-underline-offset: 3px; }
+
+.divider { height: 0; border: 0; border-top: 1px solid var(--color-border); margin: 0; }
+
+.features { display: grid; gap: var(--space-8); }
+.features h2 { font: var(--text-2xl); letter-spacing: var(--text-2xl-tracking); }
+/* Cells separated by 1px lines (the grid gap shows the border color); a small square marks each corner. */
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--color-border);
+  border: 1px solid var(--color-border); }
+@media (max-width: 1024px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+.card { position: relative; display: grid; gap: var(--space-3); align-content: start; padding: var(--space-6);
+  background: var(--color-bg-base); min-width: 0; }
+.corner { position: absolute; z-index: 1; width: var(--space-2); height: var(--space-2); background: var(--color-bg-base);
+  border: 1px solid var(--color-border-strong); pointer-events: none; }
+.corner.tl { top: calc(var(--space-1) * -1 - 1px); left: calc(var(--space-1) * -1 - 1px); }
+.corner.tr { top: calc(var(--space-1) * -1 - 1px); right: calc(var(--space-1) * -1 - 1px); }
+.corner.bl { bottom: calc(var(--space-1) * -1 - 1px); left: calc(var(--space-1) * -1 - 1px); }
+.corner.br { bottom: calc(var(--space-1) * -1 - 1px); right: calc(var(--space-1) * -1 - 1px); }
+.card .feat-icon { width: var(--space-12); height: var(--space-12); border-radius: var(--radius-lg); }
+.card .feat-icon svg { width: var(--space-6); height: var(--space-6); }
+.card h3 { font: var(--text-lg); overflow-wrap: anywhere; }
+.card p { font: var(--text-sm); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.card a { justify-self: start; display: inline-block; min-height: var(--space-6); padding-top: var(--space-0-5);
+  font: var(--text-sm-strong); color: var(--color-text-primary); text-decoration: underline;
+  text-decoration-color: var(--color-border-strong); text-underline-offset: 3px; border-radius: var(--radius-sm); overflow-wrap: anywhere; }
+.card a:hover { text-decoration-color: currentColor; }
+@media (pointer: coarse) { .card a { min-height: var(--space-12); } }
+
+/* Loading: skeletons keep the final layout */
+.skeleton { background: var(--color-bg-subtle); border-radius: var(--radius-sm); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.5; } }
+.sk-h1 { height: var(--space-16); width: 80%; } .sk-p { height: var(--space-4); width: 60%; }
+.sk-btn { height: var(--space-12); width: calc(var(--space-16) * 3); border-radius: var(--radius-pill); }
+.sk-icon { width: var(--space-12); height: var(--space-12); border-radius: var(--radius-lg); }
+.sk-line { height: var(--space-4); } .sk-short { width: 50%; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="mock-controls" role="group" aria-label="Mock controls">
+  <span>Mock DS-p26-home · draft · sample text · these controls are not part of the design</span>
+  <span>State:
+    <button type="button" data-set-state="success">Success</button>
+    <button type="button" data-set-state="loading">Loading</button>
+  </span>
+  <span>Text:
+    <button type="button" data-set-text="normal">Normal</button>
+    <button type="button" data-set-text="long">Long text</button>
+  </span>
+  <span>Theme:
+    <button type="button" data-set-theme="light">Light</button>
+    <button type="button" data-set-theme="dark">Dark</button>
+  </span>
+</div>
+
+<div id="header-slot"></div>
+<main class="home" id="home"></main>
+
+<script>
+/* Mock-only script. In the product the page is server-rendered (D-002); the only
+   client-side code is the header's Features menu and drawer (DS-p26-header). */
+const ICONS = {
+  logo: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 17h5l3-7 4 12 3-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  monitoring: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8.5h3l2-5 3 9 2-4h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  incidents: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 15V2M3 2.5h9l-2 3 2 3H3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  maintenance: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 4.5V8l2.5 1.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  alerts: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 11.5V7a4 4 0 018 0v4.5l1.2 1.2H2.8zM6.5 14.2a1.6 1.6 0 003 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  status: '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M1.5 5.5h13" stroke="currentColor" stroke-width="1.6"/><circle cx="5" cy="9.5" r="1.4" fill="currentColor"/><path d="M8 9.5h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  reports: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 14.5h11M4.5 12V8M8 12V4M11.5 12V6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  chev: '<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  menu: '<svg class="i-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><svg class="i-close" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+};
+
+/* ---------- Sample text (the product name is a placeholder) ---------- */
+const TEXT = {
+  normal: {
+    name: 'Campus Uptime',
+    features: [
+      ['monitoring', 'Monitoring', 'HTTP, TLS, keyword and latency checks'],
+      ['incidents', 'Incidents', 'Opened only after a second worker confirms'],
+      ['maintenance', 'Maintenance windows', 'Planned work that does not count as downtime'],
+      ['alerts', 'Alerts', 'Email and Telegram, with escalation'],
+      ['status', 'Public status page', 'Live status your visitors can check'],
+      ['reports', 'Reports', 'Monthly uptime report by email'],
+    ],
+  },
+  long: {
+    name: 'Campus Uptime for student projects and the local businesses around the faculty',
+    features: [
+      ['monitoring', 'Monitoring', 'HTTP status, TLS certificate expiry, an expected keyword and response time, every 1 to 60 minutes'],
+      ['incidents', 'Incidents with human-written updates', 'Opened only after a second, independent worker confirms the failure'],
+      ['maintenance', 'Maintenance windows', 'Scheduled or quick (15, 30 or 60 minutes); alerts pause and uptime is not affected'],
+      ['alerts', 'Alerts', 'Email and Telegram, escalated to a second contact after 15 minutes without acknowledgment'],
+      ['status', 'Public status page', 'Live status, 90 days of uptime and incident history your visitors can check'],
+      ['reports', 'Reports', 'A monthly PDF uptime report for organization admins'],
+    ],
+  },
+};
+const LINKS = [['Status', '#status'], ['Dashboard', '#admin'], ['API', '#api'], ['Docs', '#docs']];
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function featGrid(t) {
+  return `<ul class="feat-grid">${t.features.map(([i, title, desc]) =>
+    `<li><a class="feat" href="#features-${i}"><span class="feat-icon">${ICONS[i]}</span><span class="feat-title">${esc(title)}</span><span class="feat-desc">${esc(desc)}</span></a></li>`).join('')}</ul>`;
+}
+/* Get started goes to Login: there is no sign-up (D-018, Q-008). */
+function header(t) {
+  return `<header class="site-header" id="site-header">
+    <div class="bar">
+      <a class="brand" href="#home" title="${esc(t.name)}">${ICONS.logo}<span>${esc(t.name)}</span></a>
+      <nav class="nav" aria-label="Main">
+        ${LINKS.map(([l, h]) => `<a class="nav-link" href="${h}">${l}</a>`).join('')}
+        <button class="nav-link" type="button" id="features-btn" aria-expanded="false" aria-controls="mega">Features ${ICONS.chev}</button>
+      </nav>
+      <div class="actions">
+        <a class="pill" href="#login">Login</a>
+        <a class="pill pill-primary" href="#login">Get started</a>
+        <button class="menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="drawer" aria-label="Open menu">${ICONS.menu}</button>
+      </div>
+    </div>
+    <div class="mega" id="mega" hidden>${featGrid(t)}</div>
+    <nav class="drawer" id="drawer" aria-label="Main" hidden>
+      <ul class="drawer-list">
+        ${LINKS.map(([l, h]) => `<li><a class="drawer-link" href="${h}">${l}</a></li>`).join('')}
+        <li><button class="drawer-link" type="button" id="sub-btn" aria-expanded="false" aria-controls="sub">Features ${ICONS.chev}</button>
+          <div class="sub" id="sub" hidden>${featGrid(t)}</div></li>
+      </ul>
+      <div class="drawer-actions"><a class="pill" href="#login">Login</a><a class="pill pill-primary" href="#login">Get started</a></div>
+    </nav>
+  </header>`;
+}
+
+/* ---------- Behaviour: disclosure buttons; Esc closes and returns focus ---------- */
+function setOpen(btn, panel, open) {
+  btn.setAttribute('aria-expanded', String(open));
+  panel.hidden = !open;
+  if (btn.id === 'menu-btn') btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+}
+function setupHeader(root) {
+  const pairs = [['features-btn', 'mega'], ['menu-btn', 'drawer'], ['sub-btn', 'sub']]
+    .map(([b, p]) => [root.querySelector('#' + b), root.querySelector('#' + p)]);
+  const [feat, menu] = pairs;
+  pairs.forEach(([b, p]) => b.addEventListener('click', () => setOpen(b, p, b.getAttribute('aria-expanded') !== 'true')));
+  root.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    for (const [b, p] of [pairs[2], feat, menu]) {
+      if (!p.hidden && b.offsetParent !== null) { setOpen(b, p, false); b.focus(); return; }
+    }
+  });
+  /* the mega-menu closes when focus or a click leaves it */
+  root.addEventListener('focusout', (e) => {
+    if (!feat[1].hidden && !feat[1].contains(e.relatedTarget) && e.relatedTarget !== feat[0] && e.relatedTarget) setOpen(...feat, false);
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (!root.contains(e.target)) { setOpen(...feat, false); setOpen(...menu, false); }
+  });
+  window.matchMedia('(min-width: 1025px)').addEventListener('change', () => { setOpen(...feat, false); setOpen(...menu, false); });
+  return pairs;
+}
+
+/* ---------- DS-p26-home content (sample text) ---------- */
+const HOME = {
+  normal: {
+    headline: 'Know your site is down before your visitors do',
+    lead: 'Campus Uptime checks student projects and local business sites every few minutes, confirms each failure from a second worker, and keeps a public status page up to date.',
+    title: 'What it does',
+    cards: [
+      ['monitoring', 'Monitoring', 'Each monitor is checked every 5 minutes by default, or every 1 to 60: status code, response time, an expected keyword and the TLS certificate.', 'How checks work'],
+      ['incidents', 'Incidents', 'Two failures confirmed by a second worker open an incident; two successful checks close it. Updates go from Investigating to Resolved.', 'How incidents open and close'],
+      ['maintenance', 'Maintenance windows', 'Schedule a window or start a quick one for 15, 30 or 60 minutes. Alerts pause and the time does not count against uptime.', 'Plan maintenance'],
+      ['alerts', 'Alerts', 'Email or Telegram with the HTTP code, the cause and the time since the last good check. Not acknowledged in 15 minutes? A second contact gets it.', 'Set up alerts'],
+      ['status', 'Public status page', 'One page per organization: each component\'s status, 90 days of uptime, incident updates and response times, served in under 100 ms.', 'About the status page'],
+      ['reports', 'Reports', 'On the 1st of each month, organization admins get a PDF uptime report by email, and can download it at any time.', 'About reports'],
+    ],
+  },
+  long: {
+    headline: 'Know your student project or local business website is down long before your visitors, customers or teachers notice it',
+    lead: 'Campus Uptime checks student projects and local business sites every few minutes from more than one worker, confirms each failure before it opens an incident, sends an alert by email or Telegram, escalates it when nobody answers, and keeps a public status page with 90 days of uptime, incident updates and response times up to date for everyone who depends on the site, including https://bookings.student-project-with-a-very-long-domain-name.example/availability.',
+    title: 'What it does for the people who run the sites and the people who use them',
+    cards: null,
+  },
+};
+HOME.long.cards = HOME.normal.cards.map(([i, t, d, l], n) => n === 1
+  ? [i, 'Incidents with human-written updates that go from Investigating to Identified, Monitoring and Resolved', d + ' Every update has its time in UTC and is kept on the status page after the incident closes.', 'How incidents open, update and close']
+  : n === 4 ? [i, t, d + ' The page drops its cache within 30 seconds of a status change.', 'About the public status page and its cache'] : [i, t, d, l]);
+
+const corners = '<span class="corner tl" aria-hidden="true"></span><span class="corner tr" aria-hidden="true"></span><span class="corner bl" aria-hidden="true"></span><span class="corner br" aria-hidden="true"></span>';
+function home(c) {
+  return `<section class="hero" aria-labelledby="hero-title">
+      <h1 id="hero-title">${esc(c.headline)}</h1>
+      <p>${esc(c.lead)}</p>
+      <a class="pill pill-hero" href="#status">See the status page</a>
+    </section>
+    <hr class="divider">
+    <section class="features" aria-labelledby="features-title">
+      <h2 id="features-title">${esc(c.title)}</h2>
+      <ul class="cards">${c.cards.map(([i, t, d, l]) => `<li class="card" id="features-${i}">${corners}
+        <span class="feat-icon" aria-hidden="true">${ICONS[i]}</span>
+        <h3>${esc(t)}</h3><p>${esc(d)}</p>
+        <a href="#docs-${i}">${esc(l)}&nbsp;<span aria-hidden="true">→</span></a></li>`).join('')}</ul>
+    </section>`;
+}
+function loadingHome() {
+  const card = `<li class="card" aria-hidden="true">${corners}<span class="skeleton sk-icon"></span><span class="skeleton sk-line sk-short"></span><span class="skeleton sk-line"></span><span class="skeleton sk-line"></span></li>`;
+  return `<section class="hero" aria-busy="true" aria-labelledby="hero-title"><h1 id="hero-title" class="visually-hidden">Loading</h1>
+      <span class="skeleton sk-h1" aria-hidden="true"></span><span class="skeleton sk-p" aria-hidden="true"></span><span class="skeleton sk-btn" aria-hidden="true"></span>
+      <p class="visually-hidden" role="status">Loading the page</p></section>
+    <hr class="divider">
+    <section class="features" aria-busy="true"><span class="skeleton sk-line sk-short" aria-hidden="true"></span><ul class="cards">${card.repeat(6)}</ul></section>`;
+}
+
+/* ---------- Mock controls ---------- */
+const params = new URLSearchParams(location.search);
+let state = params.get('state') || 'success', text = params.get('text') || 'normal', theme = params.get('theme');
+function apply() {
+  if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
+  const slot = document.getElementById('header-slot');
+  slot.innerHTML = header(TEXT[text]);
+  setupHeader(slot.firstElementChild);
+  document.getElementById('home').innerHTML = state === 'loading' ? loadingHome() : home(HOME[text]);
+  document.querySelectorAll('[data-set-state]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.setState === state)));
+  document.querySelectorAll('[data-set-text]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.setText === text)));
+  document.querySelectorAll('[data-set-theme]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.setTheme === theme)));
+  const q = new URLSearchParams({ state, text }); if (theme) q.set('theme', theme);
+  history.replaceState(null, '', '?' + q);
+}
+document.querySelector('.mock-controls').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.setState) state = b.dataset.setState;
+  if (b.dataset.setText) text = b.dataset.setText;
+  if (b.dataset.setTheme) theme = theme === b.dataset.setTheme ? null : b.dataset.setTheme;
+  apply();
+});
+apply();
+</script>
+</body>
+</html>

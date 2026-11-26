@@ -12,7 +12,7 @@
 
 ### [Architecture](decisions/architecture.md)
 - D-001 · Node.js + TypeScript with Fastify for web API, SSR status page, and workers
-- D-002 · Server-rendered frontend with minimal vanilla JS for charts
+- D-024 · Server-rendered frontend with minimal vanilla JS for charts and the theme toggle
 - D-020 · MySQL 8 with versioned migrations and in-memory cache for status page
 - D-021 · Plain SQL migrations applied forward-only by an own runner
 - D-004 · Vitest with injectable clock for simulated-time tests
@@ -33,6 +33,7 @@
 - D-010 · TLS certificate expiration warnings at 30 days and 7 days reminder
 - D-011 · Raw check retention for 7 days with hourly and daily roll-up compaction
 - D-022 · Default check timeout of 30 seconds
+- D-023 · Public status of a monitor and of each day
 
 ### [Reporting](decisions/reporting.md)
 - D-019 · Monthly uptime report: schedule, recipients, format, and idempotency

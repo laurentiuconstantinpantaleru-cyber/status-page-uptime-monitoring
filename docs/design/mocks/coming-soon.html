@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coming soon — mock placeholder</title>
+<style>
+/* Mock-only placeholder for links whose screens are not drawn yet. Tokens from docs/design/DESIGN.md. */
+:root {
+  --color-bg-base: #f8fafc; --color-bg-surface: #ffffff; --color-border: #e2e8f0;
+  --color-text-primary: #0f172a; --color-text-secondary: #475569; --color-brand: #2563eb;
+  --shadow-card: 0 1px 3px 0 rgba(15,23,42,0.08), 0 1px 2px -1px rgba(15,23,42,0.08);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --text-sm-strong: 500 13px/20px var(--font-sans);
+  --text-base: 400 15px/24px var(--font-sans);
+  --text-2xl: 600 28px/34px var(--font-sans);
+  --space-2: 8px; --space-4: 16px; --space-8: 32px; --space-16: 64px;
+  --radius-sm: 3px; --radius-lg: 12px;
+  --container-max: 800px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-border: #23272f;
+    --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-brand: #60a5fa;
+    --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-border: #23272f;
+  --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-brand: #60a5fa;
+  --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+body { margin: 0; background: var(--color-bg-base); color: var(--color-text-primary); font: var(--text-base); }
+main { width: min(100% - 2 * var(--space-8), var(--container-max)); margin: var(--space-16) auto; padding: var(--space-8);
+  background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-card);
+  display: grid; gap: var(--space-4); box-sizing: border-box; }
+.tag { font: var(--text-sm-strong); color: var(--color-text-secondary); }
+h1 { margin: 0; font: var(--text-2xl); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+p { margin: 0; color: var(--color-text-secondary); }
+a { color: var(--color-brand); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; border-radius: var(--radius-sm); }
+</style>
+</head>
+<body>
+<main>
+  <p class="tag">Coming soon</p>
+  <h1 id="title">This page</h1>
+  <p>This screen is not designed yet. It will appear here once its mock is drawn and confirmed.</p>
+  <a href="DS-p26-public-status.html">Back to the status page</a>
+</main>
+<script>
+/* Mock-only: names the page from ?page= and keeps the theme the status mock saved. */
+const page = new URLSearchParams(location.search).get('page');
+if (page) { document.getElementById('title').textContent = `${page} — coming soon`; document.title = `${page} — coming soon`; }
+const theme = localStorage.getItem('theme');
+if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+</script>
+</body>
+</html>

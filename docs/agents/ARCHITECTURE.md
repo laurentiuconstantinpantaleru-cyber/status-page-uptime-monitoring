@@ -43,8 +43,9 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 
 | Part | Path | Responsibility | Talks to |
 |---|---|---|---|
-| Web Server | `src/web/` (`app.ts`, `server.ts`) | Serves Fastify REST API, SSR status pages, admin views; `GET /health` | MySQL, in-memory cache |
-| In-Memory Cache | `src/web/` _planned_ | Caches rendered status payloads under 100ms | Web Server |
+| Web Server | `src/web/` (`app.ts`, `server.ts`) | Serves Fastify REST API, SSR status pages, admin views; `GET /health`; `GET /status` (DS-p26-public-status) when `DATABASE_URL` is set | MySQL, in-memory cache |
+| Public Status Page | `src/web/status/` (`model.ts`, `data.ts`, `render.ts`), `src/web/views/status.html`, `src/web/public/` | Loads monitors, last checks, incidents and maintenance windows; derives each monitor's status and 90 daily bars; renders the Eta template with the tokens inlined | MySQL, In-Memory Cache |
+| In-Memory Cache | `src/web/status/cache.ts` | Keeps the rendered status page; reads `status_version` at most every 30 s on a request, re-renders on a new version, at UTC midnight or a maintenance boundary; serves the last copy if MySQL fails | Web Server |
 | Scheduler | `src/worker/` _planned_ | Drift-free execution planning for monitor probes | Check Workers |
 | Check Engine | `src/worker/check.ts` | One check through an injected `HttpClient` and `Clock`: status, keyword, latency threshold, TLS days left, failure cause; default timeout 30 s (D-022) | External Targets (via the client) |
 | Check Workers | `src/worker/` _planned_ | Schedules probes and runs the check engine; performs 2nd worker confirmation | MySQL, External Targets |
@@ -73,6 +74,7 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 | Maintenance Windows | MySQL `maintenance_windows` | Web / Admin | Scheduled and quick windows per monitor (D-012), excluded from uptime |
 | Alert contacts | MySQL `alert_contacts` | Web / Admin | Email/Telegram, primary or secondary (D-007), per organization |
 | API keys | MySQL `api_keys` | Web / Admin | `read`/`write`, public id + bcrypt hash of the secret (D-017) |
+| Status version | MySQL `status_version` (one row) | Check Workers (writers, _planned_); Web Server reads | Bumped on every monitor state change; polled every 30 s (D-020, Q-007) |
 | Migrations | MySQL `schema_migrations` | `npm run db:migrate` | Applied migration files (D-021) |
 | Aggregated Metrics | MySQL `rollup_hourly`, `rollup_daily` _planned_ | Roll-up Job | 90-day uptime and latency history |
 

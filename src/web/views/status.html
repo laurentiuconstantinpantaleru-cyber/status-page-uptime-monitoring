@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= it.headline %> · <%= it.product %> status</title>
+<style>
+<%~ it.css %>
+</style>
+<script>
+/* Theme (D-024): the visitor's saved choice, else the system's; set before the page paints. */
+(function () {
+  var saved = localStorage.getItem('theme');
+  if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved;
+  document.documentElement.dataset.effective = saved === 'light' || saved === 'dark'
+    ? saved : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+})();
+</script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="bar col">
+    <div class="brand-group">
+      <a class="brand" href="#top" title="<%= it.product %>"><%~ it.icons.logo %><span><%= it.product %></span></a>
+      <button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme"><%~ it.icons.moon %><%~ it.icons.sun %></button>
+    </div>
+    <nav class="nav" aria-label="Main">
+<% it.links.forEach(function (link) { %>
+      <a class="nav-link" href="<%= link.href %>"<% if (link.current) { %> aria-current="page"<% } %>><%= link.label %></a>
+<% }) %>
+    </nav>
+    <div class="actions">
+      <a class="pill" href="#api-docs">API docs</a>
+      <a class="pill" href="/login">Login</a>
+      <details class="menu">
+        <summary aria-label="Menu"><%~ it.icons.menu %></summary>
+        <nav class="drawer" aria-label="Main">
+          <div class="col">
+            <ul class="drawer-list">
+<% it.links.forEach(function (link) { %>
+              <li><a class="drawer-link" href="<%= link.href %>"<% if (link.current) { %> aria-current="page"<% } %>><%= link.label %></a></li>
+<% }) %>
+            </ul>
+            <div class="drawer-actions"><a class="pill" href="#api-docs">API docs</a><a class="pill" href="/login">Login</a></div>
+          </div>
+        </nav>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main class="page col">
+  <div class="lead">
+<% if (it.org) { %>
+    <p class="org"><%= it.org %></p>
+<% } %>
+    <section class="overall card s-<%= it.worst %>" aria-labelledby="overall-title"<% if (it.error) { %> role="alert"<% } %>>
+      <%~ it.icons[it.worst] %>
+      <div class="o-body"><h1 id="overall-title"><%= it.headline %></h1><p class="o-sum"><%= it.summary %></p>
+<% if (!it.error) { %>
+        <p class="o-updated">Updated <time datetime="<%= it.updatedIso %>"><%= it.updatedHhmm %> UTC</time></p>
+<% } %>
+      </div>
+<% if (it.error) { %>
+      <a class="btn o-action" href="/status">Try again</a>
+<% } %>
+    </section>
+  </div>
+
+<% if (!it.error) { %>
+  <section class="section" aria-labelledby="components-title">
+    <div class="section-head"><h2 id="components-title">Components</h2>
+<% if (it.groups.length > 0) { %>
+      <span class="meta"><span class="d90">Last 90 days</span><span class="d30">Last 30 days shown · uptime over 90 days</span></span>
+<% } %>
+    </div>
+<% if (it.groups.length === 0) { %>
+    <div class="empty card"><p>Components will appear here after their first check, with their status and 90-day uptime.</p>
+      <a href="/admin">Manage monitors</a></div>
+<% } else { %>
+    <div class="groups">
+<% it.groups.forEach(function (group, gi) { %>
+      <section class="card" aria-labelledby="group-<%= gi %>">
+        <div class="group-head"><h3 id="group-<%= gi %>"><%= group.name %></h3><span class="meta"><%= group.count %></span></div>
+        <ul>
+<% group.monitors.forEach(function (m) { %>
+          <li class="component">
+            <div class="c-top"><p class="c-name"><%= m.name %></p><span class="badge"><%~ it.icons[m.status] %><span><%= m.label %></span></span></div>
+            <p class="c-uptime"><span class="num">—</span><span class="label">uptime, 90 days</span></p>
+            <ol class="bars" aria-label="<%= m.name %>, daily status, oldest first">
+<% m.days.forEach(function (d) { %>
+              <li class="d-<%= d.status %><% if (d.older) { %> older<% } %>" tabindex="<%= d.tabindex %>" data-date="<%= d.date %>" data-s="<%= d.status %>" data-label="<%= d.label %>" data-detail="<%= d.detail %>"><span class="visually-hidden"><%= d.date %>: <%= d.label %>. <%= d.detail %></span></li>
+<% }) %>
+            </ol>
+            <div class="c-foot"><span class="d90">90 days ago</span><span class="d30">30 days ago</span><span>Today</span></div>
+          </li>
+<% }) %>
+        </ul>
+      </section>
+<% }) %>
+    </div>
+    <ul class="legend" aria-label="Legend">
+<% it.legend.forEach(function (l) { %>
+      <li><%~ it.smallIcons[l.status] %><%= l.label %></li>
+<% }) %>
+    </ul>
+    <p class="hint">Point at, tap or move with the arrow keys across the bars to see each day.</p>
+<% } %>
+  </section>
+<% } %>
+
+  <footer class="site-footer" id="api-docs" tabindex="-1" aria-label="Status badge and API">
+    <div class="f-notes"><p>All times are in UTC.</p><p>Uptime excludes maintenance windows.</p></div>
+    <a href="/docs">Status badge and API docs</a>
+  </footer>
+</main>
+
+<script>
+/* Theme toggle (D-024): switches light and dark and remembers the choice. */
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme-btn');
+  var dark = window.matchMedia('(prefers-color-scheme: dark)');
+  function label() { btn.setAttribute('aria-label', root.dataset.effective === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'); }
+  btn.addEventListener('click', function () {
+    var next = root.dataset.effective === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', next);
+    root.dataset.theme = next;
+    root.dataset.effective = next;
+    label();
+  });
+  dark.addEventListener('change', function () {
+    if (root.dataset.theme) return;
+    root.dataset.effective = dark.matches ? 'dark' : 'light';
+    label();
+  });
+  label();
+})();
+</script>
+<% if (!it.error && it.groups.length > 0) { %>
+<div class="tip" id="tip" aria-hidden="true" hidden></div>
+<template id="tip-icons"><%~ it.icons.ok %><%~ it.icons.degraded %><%~ it.icons.outage %><%~ it.icons.maint %><%~ it.icons.nodata %></template>
+<script>
+/* Daily bars (D-024): a tooltip per day, one tab stop per row, arrow keys move between days. */
+(function () {
+  var tip = document.getElementById('tip');
+  var icons = document.getElementById('tip-icons').content;
+  function hide() {
+    tip.hidden = true;
+    document.querySelectorAll('.bars li.is-active').forEach(function (el) { el.classList.remove('is-active'); });
+  }
+  function show(li) {
+    hide();
+    li.classList.add('is-active');
+    var icon = icons.querySelector('.s-' + li.dataset.s).cloneNode(true);
+    tip.replaceChildren();
+    [['t-date', li.dataset.date], ['t-status', li.dataset.label], ['t-detail', li.dataset.detail]].forEach(function (part) {
+      var span = document.createElement('span');
+      span.className = part[0];
+      if (part[0] === 't-status') span.appendChild(icon);
+      span.appendChild(document.createTextNode(part[1]));
+      tip.appendChild(span);
+    });
+    tip.hidden = false;
+    var r = li.getBoundingClientRect(), t = tip.getBoundingClientRect(), pad = 8;
+    var left = Math.max(pad, Math.min(window.innerWidth - t.width - pad, r.left + r.width / 2 - t.width / 2));
+    var top = r.top - t.height - pad;
+    if (top < pad) top = r.bottom + pad;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+  function visible(ol) { return Array.prototype.filter.call(ol.children, function (li) { return li.offsetParent !== null; }); }
+  function nearest(ol, x) {
+    var best = null, dist = Infinity;
+    visible(ol).forEach(function (li) { var r = li.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - x); if (d < dist) { dist = d; best = li; } });
+    return best;
+  }
+  function fixTabStops() {
+    document.querySelectorAll('.bars').forEach(function (ol) {
+      var stop = ol.querySelector('li[tabindex="0"]');
+      if (stop && stop.offsetParent === null) { stop.tabIndex = -1; ol.lastElementChild.tabIndex = 0; }
+    });
+  }
+  document.querySelectorAll('.bars').forEach(function (ol) {
+    ol.addEventListener('pointermove', function (e) { var li = nearest(ol, e.clientX); if (li) show(li); });
+    ol.addEventListener('pointerdown', function (e) { var li = nearest(ol, e.clientX); if (li) show(li); });
+    ol.addEventListener('pointerleave', function (e) { if (e.pointerType === 'mouse') hide(); });
+    ol.addEventListener('focusin', function (e) { show(e.target); });
+    ol.addEventListener('focusout', hide);
+    ol.addEventListener('keydown', function (e) {
+      var items = visible(ol), at = items.indexOf(document.activeElement);
+      if (e.key === 'Escape') { hide(); return; }
+      var next = { ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: items.length - 1 }[e.key];
+      if (next === undefined || at < 0) return;
+      e.preventDefault();
+      var target = items[Math.max(0, Math.min(items.length - 1, next))];
+      items[at].tabIndex = -1; target.tabIndex = 0; target.focus();
+    });
+  });
+  document.addEventListener('pointerdown', function (e) { if (!e.target.closest('.bars')) hide(); });
+  window.addEventListener('scroll', function () {
+    var f = document.activeElement;
+    if (f && f.closest && f.closest('.bars')) show(f); else hide();
+  }, { passive: true });
+  window.addEventListener('resize', function () { hide(); fixTabStops(); });
+  fixTabStops();
+})();
+</script>
+<% } %>
+</body>
+</html>

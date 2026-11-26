@@ -40,3 +40,13 @@
 - **Evidence:** src/worker/check.ts
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26
+
+## D-023 · Public status of a monitor and of each day
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** A monitor is Down while it has an open incident; else Maintenance inside a maintenance window; else No data yet when it has no checks; else Degraded when its last check's latency is above `latency_threshold_ms`; else Operational. A failed check without an open incident does not change it (D-006). A daily bar is Down when an incident overlaps the UTC day, else Maintenance when a window does, else Operational, and No data before the monitor's history starts (its first kept check, or its creation once older checks are removed, D-011).
+- **Why:** The schema has no status column; these rules derive the status from rows that exist, without inventing data.
+- **Rejected:** Counting an unconfirmed failed check as Down (false alarms, D-005).
+- **Evidence:** src/web/status/model.ts, test/web/status-model.test.ts
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26

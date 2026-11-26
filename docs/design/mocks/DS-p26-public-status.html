@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DS-p26-public-status — mock (draft)</title>
+<style>
+/* ---------- Tokens: copied from docs/design/DESIGN.md, nothing else ---------- */
+:root {
+  --color-bg-base: #f8fafc;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f5f9;
+  --color-border: #e2e8f0;
+  --color-border-strong: #64748b;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-brand: #2563eb;
+  --color-on-brand: #ffffff;
+  --color-status-ok: #059669;
+  --color-status-degraded: #d97706;
+  --color-status-outage: #dc2626;
+  --color-status-maint: #7c3aed;
+  --color-status-nodata: #64748b;
+  --shadow-card: 0 1px 3px 0 rgba(15,23,42,0.08), 0 1px 2px -1px rgba(15,23,42,0.08);
+  --wash-mix: 6%;
+  --gradient-brand-soft: linear-gradient(to bottom, color-mix(in srgb, var(--color-brand) var(--wash-mix), var(--color-bg-base)) 0, var(--color-bg-base) 320px);
+  --bg-dots: radial-gradient(circle, var(--color-border) 1px, transparent 1.5px) 0 0 / var(--space-6) var(--space-6);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --text-xs: 400 12px/16px var(--font-sans);
+  --text-sm: 400 13px/20px var(--font-sans);
+  --text-sm-strong: 500 13px/20px var(--font-sans);
+  --text-base: 400 15px/24px var(--font-sans);
+  --text-lg: 600 17px/26px var(--font-sans);
+  --text-2xl: 600 28px/34px var(--font-sans);
+  --text-metric: 500 13px/20px var(--font-mono);
+  --text-metric-lg: 600 20px/28px var(--font-mono);
+
+  --space-0-5: 2px; --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px;
+
+  --radius-sm: 3px; --radius-md: 6px; --radius-lg: 12px; --radius-pill: 9999px;
+  --border-accent: 4px;
+
+  --container-max: 800px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+    --color-border: #23272f; --color-border-strong: #64748b;
+    --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
+    --color-brand: #60a5fa; --color-on-brand: #0f172a;
+    --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
+    --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
+    --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+    --wash-mix: 14%;
+  }
+}
+:root[data-theme="dark"] {
+  --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+  --color-border: #23272f; --color-border-strong: #64748b;
+  --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
+  --color-brand: #60a5fa; --color-on-brand: #0f172a;
+  --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
+  --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
+  --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.5);
+  --wash-mix: 14%;
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+/* Brand wash at the top, dots over it; no --color-text-muted on the wash (DESIGN.md) */
+body { margin: 0; min-height: 100vh; color: var(--color-text-primary); font: var(--text-base);
+  background: var(--bg-dots), var(--gradient-brand-soft) no-repeat, var(--color-bg-base); }
+.num, time, code { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+a { color: var(--color-brand); text-decoration-color: currentColor; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; border-radius: var(--radius-sm); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+h1, h2, h3, h4, p, ol, ul, dl, dd, fieldset, figure { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+fieldset { border: 0; padding: 0; min-width: 0; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- Layout: one narrow centered column; the header aligns to it ---------- */
+.col { width: min(100% - 2 * var(--space-12), var(--container-max)); margin: 0 auto; }
+@media (max-width: 1024px) { .col { width: min(100% - 2 * var(--space-8), var(--container-max)); } }
+@media (max-width: 640px) { .col { width: calc(100% - 2 * var(--space-4)); } }
+.page { padding: var(--space-12) 0 var(--space-16); display: grid; gap: var(--space-12); }
+@media (max-width: 640px) { .page { padding: var(--space-6) 0 var(--space-12); gap: var(--space-8); } }
+.section { display: grid; gap: var(--space-4); min-width: 0; }
+.section-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); align-items: baseline; justify-content: space-between; }
+.section-head h2 { font: var(--text-lg); }
+.meta { font: var(--text-sm); color: var(--color-text-muted); }
+.card { background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card); min-width: 0; }
+
+/* ================= Header (DS-p26-header styles; status page variant, not sticky, on the wash) ================= */
+.site-header { border-bottom: 1px solid var(--color-border); position: relative; }
+.bar { display: flex; align-items: center; gap: var(--space-6); min-height: var(--space-16); }
+.brand-group { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.brand { display: flex; align-items: center; gap: var(--space-2); min-width: 0; color: var(--color-text-primary);
+  text-decoration: none; font: var(--text-lg); border-radius: var(--radius-md); }
+.brand svg { width: var(--space-8); height: var(--space-8); flex: none; color: var(--color-brand); }
+.brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav { display: flex; align-items: center; gap: var(--space-1); }
+.nav-link { display: inline-flex; align-items: center; min-height: var(--space-8); padding: 0 var(--space-3);
+  border-radius: var(--radius-pill); white-space: nowrap; font: var(--text-sm-strong); color: var(--color-text-secondary); text-decoration: none; }
+.nav-link:hover { background: var(--color-bg-subtle); color: var(--color-text-primary); }
+.nav-link[aria-current="page"] { color: var(--color-text-primary); background: var(--color-bg-subtle); }
+.actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; flex: none; }
+.pill { display: inline-flex; align-items: center; justify-content: center; min-height: var(--space-8); padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer;
+  font: var(--text-sm-strong); color: var(--color-text-primary); text-decoration: none; white-space: nowrap; }
+.pill:hover { background: var(--color-bg-subtle); }
+.icon-btn { display: grid; place-items: center; width: var(--space-8); height: var(--space-8); flex: none; padding: 0;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); background: var(--color-bg-surface); cursor: pointer; color: var(--color-text-primary); }
+.icon-btn:hover { background: var(--color-bg-subtle); }
+.icon-btn svg { width: var(--space-4); height: var(--space-4); }
+.theme-btn .i-sun, :root[data-effective="dark"] .theme-btn .i-moon { display: none; }
+:root[data-effective="dark"] .theme-btn .i-sun { display: block; }
+.menu-btn { display: none; }
+.menu-btn .i-close, .menu-btn[aria-expanded="true"] .i-open { display: none; }
+.menu-btn[aria-expanded="true"] .i-close { display: block; }
+@media (pointer: coarse) { .pill, .nav-link { min-height: var(--space-12); } .icon-btn { width: var(--space-12); height: var(--space-12); } }
+
+.drawer { position: absolute; left: 0; right: 0; top: 100%; z-index: 20; background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border); box-shadow: var(--shadow-card); padding: var(--space-2) 0 var(--space-6); }
+.drawer[hidden] { display: none; }
+.drawer-list > li { border-bottom: 1px solid var(--color-border); }
+.drawer-link { display: flex; align-items: center; min-height: var(--space-12); font: var(--text-base); font-weight: 500;
+  color: var(--color-text-primary); text-decoration: none; }
+.drawer-actions { display: none; gap: var(--space-2); margin-top: var(--space-4); }
+.drawer-actions .pill { min-height: var(--space-12); width: 100%; }
+@media (max-width: 1024px) {
+  .bar { gap: var(--space-4); }
+  .nav { display: none; }
+  .menu-btn { display: grid; }
+}
+@media (max-width: 640px) {
+  .bar { gap: var(--space-2); min-height: var(--space-16); }
+  .actions .pill { display: none; }
+  .drawer-actions { display: grid; }
+}
+@media (min-width: 1025px) { .drawer { display: none; } }
+/* ================= end header ================= */
+
+/* ---------- Status icons (shape + text, never color alone) ---------- */
+.icon { width: var(--space-4); height: var(--space-4); flex: none; }
+.icon-sm { width: var(--space-3); height: var(--space-3); flex: none; }
+.s-ok { color: var(--color-status-ok); }
+.s-degraded { color: var(--color-status-degraded); }
+.s-outage { color: var(--color-status-outage); }
+.s-maint { color: var(--color-status-maint); }
+.s-nodata { color: var(--color-status-nodata); }
+/* Status badge: pill on the surface, icon in the status color, label in text-primary */
+.badge { display: inline-flex; gap: var(--space-1); align-items: center; min-height: var(--space-6); padding: 0 var(--space-2);
+  border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-bg-surface);
+  font: var(--text-sm-strong); color: var(--color-text-primary); white-space: nowrap; }
+.badge .icon { width: var(--space-3); height: var(--space-3); }
+
+/* ---------- Overall status banner: the loudest element ---------- */
+.lead { display: grid; gap: var(--space-2); min-width: 0; }
+.org { font: var(--text-sm-strong); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.overall { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-6); align-items: center;
+  padding: var(--space-8); border-left: var(--border-accent) solid currentColor; }
+.overall.s-none { border-left-color: var(--color-border-strong); }
+.overall > .icon { width: var(--space-12); height: var(--space-12); }
+.overall .o-body { display: grid; gap: var(--space-1); min-width: 0; }
+.overall h1 { font: var(--text-2xl); letter-spacing: -0.02em; color: var(--color-text-primary); overflow-wrap: anywhere; }
+.overall .o-sum { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.overall .o-updated { font: var(--text-sm); color: var(--color-text-muted); }
+.overall .o-updated time { font: var(--text-metric); }
+.overall .o-action { grid-column: 2; justify-self: start; margin-top: var(--space-2); }
+@media (max-width: 640px) {
+  .overall { padding: var(--space-6) var(--space-4); gap: var(--space-2) var(--space-4); align-items: start; }
+  .overall > .icon { width: var(--space-8); height: var(--space-8); }
+}
+
+/* ---------- Notices: active incident, maintenance ---------- */
+.notices { display: grid; gap: var(--space-4); }
+.notice { display: grid; gap: var(--space-6); padding: var(--space-6); }
+@media (max-width: 640px) { .notice { padding: var(--space-4); } }
+.n-head { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: start; }
+.n-head .icon { margin-top: var(--space-1); }
+.n-head > div { display: grid; gap: var(--space-1); min-width: 0; }
+.eyebrow { font: var(--text-sm-strong); color: var(--color-text-secondary); }
+.n-head h2 { font: var(--text-lg); overflow-wrap: anywhere; }
+.n-head .meta, .n-body { overflow-wrap: anywhere; }
+.n-body { font: var(--text-base); color: var(--color-text-secondary); }
+
+/* Timeline: dots on a vertical line; the newest dot carries the incident's status color */
+.timeline { display: grid; gap: var(--space-6); }
+.timeline li { position: relative; padding-left: var(--space-8); display: grid; gap: var(--space-1); min-width: 0; }
+.timeline li::before { content: ""; position: absolute; left: 0; top: var(--space-1); width: var(--space-3); height: var(--space-3);
+  border-radius: var(--radius-pill); background: var(--color-bg-surface); border: 2px solid var(--color-border-strong); }
+.timeline li:first-child::before { background: var(--accent, var(--color-border-strong)); border-color: var(--accent, var(--color-border-strong)); }
+.timeline li::after { content: ""; position: absolute; left: calc(var(--space-3) / 2 - 1px); top: calc(var(--space-4) + var(--space-1));
+  bottom: calc(var(--space-6) * -1 + var(--space-1)); width: 2px; background: var(--color-border); }
+.timeline li:last-child::after { display: none; }
+.u-head { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); align-items: baseline; }
+.stage { font: var(--text-sm-strong); color: var(--color-text-primary); }
+.u-head time { font: var(--text-metric); color: var(--color-text-muted); }
+.timeline p { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+
+/* ---------- Components: one card per group ---------- */
+.groups { display: grid; gap: var(--space-4); }
+.group-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); justify-content: space-between; align-items: baseline;
+  padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--color-border); }
+.group-head h3 { font: var(--text-sm-strong); font-weight: 600; color: var(--color-text-primary); overflow-wrap: anywhere; min-width: 0; }
+.component { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-6) var(--space-6); border-top: 1px solid var(--color-border); min-width: 0; }
+.component:first-child { border-top: 0; }
+@media (max-width: 640px) { .group-head, .component { padding-left: var(--space-4); padding-right: var(--space-4); } }
+.c-top { display: flex; gap: var(--space-2) var(--space-4); align-items: start; justify-content: space-between; }
+.c-name { font: var(--text-base); font-weight: 500; overflow-wrap: anywhere; min-width: 0; padding-top: var(--space-0-5); }
+.c-uptime { display: flex; gap: var(--space-2); align-items: baseline; }
+.c-uptime .num { font: var(--text-metric-lg); }
+.c-uptime .label { font: var(--text-xs); color: var(--color-text-muted); }
+.c-foot { display: flex; gap: var(--space-2); justify-content: space-between; font: var(--text-xs); color: var(--color-text-muted); }
+
+.bars { display: flex; gap: var(--space-0-5); height: var(--space-8); touch-action: pan-y; }
+.bars li { flex: 1 1 0; min-width: 0; border-radius: var(--radius-sm); background: var(--color-status-ok); }
+.bars li.d-degraded { background: var(--color-status-degraded); }
+.bars li.d-outage { background: var(--color-status-outage); }
+.bars li.d-maint { background: var(--color-status-maint); }
+.bars li.d-nodata { background: var(--color-bg-subtle); box-shadow: inset 0 0 0 1px var(--color-status-nodata); }
+.bars li.is-active { outline: 2px solid var(--color-text-primary); outline-offset: 1px; }
+.bars li:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+.d30 { display: none; }
+/* DESIGN.md breakpoints: mobile shows the last 30 days, no horizontal scroll */
+@media (max-width: 640px) {
+  .bars li.older { display: none; }
+  .d90 { display: none; }
+  .d30 { display: inline; }
+}
+
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font: var(--text-xs); color: var(--color-text-secondary); }
+.legend li { display: flex; gap: var(--space-1); align-items: center; }
+.hint { font: var(--text-xs); color: var(--color-text-muted); }
+
+.tip { position: fixed; z-index: 30; max-width: calc(var(--space-16) * 4); display: grid; gap: var(--space-1);
+  padding: var(--space-2) var(--space-3); background: var(--color-bg-surface); color: var(--color-text-primary);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-card);
+  font: var(--text-sm); pointer-events: none; }
+.tip[hidden] { display: none; }
+.tip .t-date { font: var(--text-metric); color: var(--color-text-muted); }
+.tip .t-status { display: flex; gap: var(--space-2); align-items: center; font: var(--text-sm-strong); }
+.tip .t-detail { color: var(--color-text-secondary); }
+
+/* ---------- Response time chart (neutral line; only the "no data" gap carries a status color) ---------- */
+.chart-card { padding: var(--space-6); display: grid; gap: var(--space-6); }
+@media (max-width: 640px) { .chart-card { padding: var(--space-4); } }
+.chart-head { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); align-items: center; justify-content: space-between; }
+.chart-head h2 { font: var(--text-lg); }
+.chart-controls { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; min-width: 0; }
+.field { display: flex; gap: var(--space-2); align-items: center; font: var(--text-sm); color: var(--color-text-secondary); min-width: 0; }
+.select { font: var(--text-sm); color: var(--color-text-primary); background: var(--color-bg-surface); min-height: var(--space-8); max-width: 100%; min-width: 0;
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); padding: 0 var(--space-2); }
+.seg { display: inline-flex; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); overflow: hidden; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { font: var(--text-sm-strong); padding: 0 var(--space-3); min-height: var(--space-8); display: grid; place-items: center;
+  cursor: pointer; color: var(--color-text-secondary); background: var(--color-bg-surface); }
+.seg label:hover { background: var(--color-bg-subtle); }
+.seg input:checked + label { background: var(--color-text-primary); color: var(--color-bg-surface); }
+.seg input:focus-visible + label { outline: 2px solid var(--color-brand); outline-offset: -4px; }
+@media (max-width: 640px) {
+  .chart-controls, .field { width: 100%; }
+  .select { flex: 1; }
+  .seg { width: 100%; } .seg label { flex: 1; }
+}
+@media (pointer: coarse) { .select, .seg label { min-height: var(--space-12); } }
+.stats { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-8); }
+.stat dt { font: var(--text-xs); color: var(--color-text-muted); }
+.stat dd { font: var(--text-metric-lg); }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .grid { stroke: var(--color-border); stroke-width: 1; }
+.chart .axis { fill: var(--color-text-muted); font: var(--text-xs); font-family: var(--font-mono); }
+.chart .line { fill: none; stroke: var(--color-text-secondary); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .gap { fill: var(--color-status-outage); opacity: 0.12; }
+.chart .peak { fill: var(--color-bg-surface); stroke: var(--color-text-primary); stroke-width: 2; }
+.chart-note { font: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-2); }
+
+/* ---------- Past incidents, grouped by day (quiet: no cards) ---------- */
+.days { display: grid; gap: var(--space-8); }
+.day { display: grid; gap: var(--space-4); }
+.day h3 { font: var(--text-sm-strong); color: var(--color-text-secondary); padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
+.day h3 time { font: var(--text-metric); }
+.day-list { display: grid; gap: var(--space-6); }
+.past { display: grid; gap: var(--space-2); min-width: 0; }
+.p-head { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-2); align-items: start; }
+.p-head > .icon { margin-top: calc(var(--space-1) + 1px); }
+.p-head h4 { font: var(--text-lg); overflow-wrap: anywhere; }
+.p-head .meta { grid-column: 2; overflow-wrap: anywhere; color: var(--color-text-secondary); }
+.past > p, .past details { margin-left: var(--space-6); }
+.past > p { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.past summary, .notice summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer;
+  min-height: var(--space-6); display: inline-flex; align-items: center; border-radius: var(--radius-sm); }
+@media (pointer: coarse) { .past summary, .notice summary { min-height: var(--space-12); } }
+.past details .timeline, .notice details .timeline { margin-top: var(--space-4); }
+.past details .timeline p { font: var(--text-sm); }
+
+/* ---------- Empty, loading, error ---------- */
+.empty { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-6); }
+.empty p { font: var(--text-base); color: var(--color-text-secondary); }
+.skeleton { background: var(--color-bg-subtle); border-radius: var(--radius-sm); animation: pulse 1.6s ease-in-out infinite; }
+.sk-line { height: var(--space-4); }
+.sk-title { height: var(--space-8); width: 60%; }
+.sk-name { width: 40%; }
+.sk-status { width: calc(var(--space-16) + var(--space-8)); height: var(--space-6); border-radius: var(--radius-pill); }
+.sk-bars { height: var(--space-8); }
+.sk-chart { height: calc(var(--space-16) * 3); }
+@keyframes pulse { 50% { opacity: 0.5; } }
+.btn { font: var(--text-sm-strong); min-height: var(--space-8); padding: 0 var(--space-4); border-radius: var(--radius-pill); cursor: pointer;
+  background: var(--color-bg-surface); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); }
+.btn:hover { background: var(--color-bg-subtle); }
+.btn:active { background: var(--color-border); }
+@media (pointer: coarse) { .btn { min-height: var(--space-12); } }
+
+/* ---------- Footer ---------- */
+.site-footer:focus { outline: none; }
+.site-footer { scroll-margin-top: var(--space-8); display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-6); justify-content: space-between;
+  padding-top: var(--space-6); border-top: 1px solid var(--color-border); font: var(--text-sm); color: var(--color-text-muted); }
+.site-footer .f-notes { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-6); }
+</style>
+</head>
+<body>
+
+<div id="header-slot"></div>
+<main class="page col" id="page"></main>
+<div class="tip" id="tip" aria-hidden="true" hidden></div>
+
+<template id="icons">
+  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="ok"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M4.5 8.2l2.3 2.3 4.7-4.8" fill="none" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="degraded"><path d="M8 1.2l7 13H1z" fill="currentColor"/><path d="M8 6v3.6M8 11.6v.1" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>
+  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="outage"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>
+  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="maint"><circle cx="8" cy="8" r="7" fill="currentColor"/><path d="M8 4.2v4l2.6 1.6" fill="none" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <svg class="icon" viewBox="0 0 16 16" aria-hidden="true" data-icon="nodata"><circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.4 2"/></svg>
+</template>
+
+<script>
+/* Mock-only script: builds every state from sample data so all states share one markup.
+   In the product the page is server-rendered (D-002); only the bar tooltips, the
+   response time chart, the menu and the theme toggle need client-side JavaScript. */
+const NOW = Date.UTC(2026, 10, 26, 14, 55);
+const DAY = 864e5;
+const LABEL = { ok: 'Operational', degraded: 'Degraded', outage: 'Down', maint: 'Maintenance', nodata: 'No data yet' };
+const DAY_LABEL = { ok: 'Operational', degraded: 'Degraded', outage: 'Down', maint: 'Maintenance', nodata: 'No data' };
+const SEVERITY = ['outage', 'degraded', 'maint', 'ok']; /* worst first; "no data" counts only when nothing else exists (Q-015) */
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const tpl = document.getElementById('icons').content;
+const icon = (s, extra = '') => {
+  const el = tpl.querySelector(`[data-icon="${s}"]`).cloneNode(true);
+  el.classList.add(`s-${s}`);
+  if (extra) el.classList.add(extra);
+  return el.outerHTML;
+};
+const UI = {
+  logo: '<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6 17h5l3-7 4 12 3-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  moon: '<svg class="i-moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 9.8A6 6 0 016.2 2.5a6 6 0 107.3 7.3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  sun: '<svg class="i-sun" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3 3l1.3 1.3M11.7 11.7L13 13M13 3l-1.3 1.3M4.3 11.7L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  menu: '<svg class="i-open" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><svg class="i-close" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+};
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const dateOf = (daysAgo) => new Date(NOW - daysAgo * DAY);
+const isoDay = (d) => d.toISOString().slice(0, 10);
+const longDay = (d) => `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+const shortDay = (d) => `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+const utc = (hhmm) => `<time datetime="2026-11-26T${hhmm}Z">${hhmm} UTC</time>`;
+
+/* ---------- Sample data (names are placeholders) ---------- */
+/* days: { daysAgo: [status, detail, uptime that day] }; since: days of history before "no data" */
+const PRODUCT = 'Campus Uptime';
+const SAMPLE = {
+  org: 'Campus projects',
+  groups: [
+    { name: 'Local businesses', monitors: [
+      { name: 'Corner bakery website', state: 'ok', uptime: '99.97%', days: { 8: ['outage', 'Down for 38 min', '97.36%'] } },
+      { name: 'Bistro table bookings', state: 'maint', uptime: '100.00%', days: { 0: ['maint', 'Maintenance since 14:30 UTC', '100.00%'], 15: ['maint', 'Maintenance for 1 h', '100.00%'] } },
+      { name: 'Bike repair shop website', state: 'ok', uptime: '100.00%', days: {} },
+    ] },
+    { name: 'Student projects', monitors: [
+      { name: 'Thesis room booking', state: 'ok', uptime: '99.94%', days: { 33: ['outage', 'Down for 1 h 12 min', '95.00%'] } },
+      { name: 'Bookings API', state: 'outage', uptime: '99.81%', days: { 0: ['outage', 'Down since 14:02 UTC', '96.32%'], 8: ['outage', 'Down for 12 min', '99.17%'] } },
+      { name: 'Campus events app', state: 'degraded', uptime: '99.99%', days: { 0: ['degraded', 'Slow responses since 13:40 UTC', '100.00%'], 2: ['degraded', 'Slow responses for 25 min', '100.00%'] } },
+      { name: 'Study group finder', state: 'ok', uptime: '100.00%', days: { 47: ['degraded', 'Slow responses for 10 min', '100.00%'] } },
+      { name: 'Library seat map', state: 'nodata', uptime: '—', since: 0, days: {} },
+    ] },
+  ],
+};
+
+const OPERATIONAL = {
+  org: SAMPLE.org,
+  groups: SAMPLE.groups.map((g) => ({ ...g, monitors: g.monitors.map((m) => {
+    const days = { ...m.days }; delete days[0];
+    return { ...m, state: 'ok', days, since: m.since === 0 ? 4 : m.since, uptime: m.uptime === '—' ? '100.00%' : m.uptime };
+  }) })),
+};
+
+const LONG = {
+  org: 'Facultatea de Inginerie — Laboratorul de Sisteme Distribuite și Aplicații Web pentru Studenți și Parteneri Locali',
+  groups: [
+    { name: 'Local businesses and partner organizations from the neighbourhood around the faculty', monitors: [
+      { name: 'Online ordering for the bakery on the corner, including the weekend pre-order form and the gift card balance page', state: 'maint', uptime: '99.99%', days: { 0: ['maint', 'Maintenance since 14:30 UTC, planned to end at 02:00 UTC tomorrow', '100.00%'] } },
+      { name: 'Bistro', state: 'ok', uptime: '100.00%', days: {} },
+    ] },
+    { name: 'Student projects', monitors: [
+      { name: 'Proiect de licență — platformă de rezervări pentru laboratoare, săli de curs și echipamente partajate', state: 'ok', uptime: '99.99%', days: { 70: ['outage', 'Down for 9 min', '99.38%'] } },
+      { name: 'Bookings API', state: 'outage', uptime: '98.95%', days: { 0: ['outage', 'Down since 14:02 UTC', '96.32%'], 1: ['outage', 'Down for 3 h 40 min', '84.72%'], 4: ['degraded', 'Slow responses for 2 h 5 min', '100.00%'] } },
+      ...['Website', 'Blog', 'Shop', 'Admin', 'Images', 'Search', 'Payments callback', 'Webhooks',
+        'Background export job that builds the monthly uptime report for every organization', 'Mail relay']
+        .map((name, i) => ({ name, state: i === 3 ? 'degraded' : 'ok', uptime: `99.9${i}%`,
+          days: { [(i * 7) % 30 + 1]: ['degraded', 'Slow responses for 15 min', '100.00%'], ...(i === 3 ? { 0: ['degraded', 'Slow responses since 13:40 UTC', '100.00%'] } : {}) } })),
+    ] },
+  ],
+};
+
+const ACTIVE = {
+  title: 'Bookings API not responding',
+  affects: 'Bookings API',
+  started: '14:02',
+  stage: 'Identified',
+  updates: (long) => [
+    ['Identified', '14:31', long
+      ? 'Our hosting provider confirmed a failed storage volume in the region that serves the API. They are moving the database to a new volume and expect it to take about 40 minutes. Requests to https://api.thesis-room-booking.example/v1/reservations/availability?room=all&include=equipment&from=2026-11-26 will fail until the move finishes. Pages that do not need the API still load. We will post the next update by 15:30 UTC, or sooner if anything changes.'
+      : 'The hosting provider confirmed a failed storage volume. They are moving the database to a new volume and expect it to take about 40 minutes.'],
+    ['Investigating', '14:09', 'Requests to the Bookings API time out. We are looking into it.'],
+  ],
+};
+
+const MAINT = (long) => ({
+  title: long ? 'Moving the bakery ordering site, the gift card pages and the weekend pre-order form to a new server' : 'Bistro table bookings: moving to a new server',
+  window: long ? 'Today 14:30 UTC – tomorrow 02:00 UTC' : '14:30 – 16:00 UTC',
+  affects: long ? 'Online ordering for the bakery on the corner, including the weekend pre-order form and the gift card balance page' : 'Bistro table bookings',
+  text: 'Bookings may not load during this time. Downtime in a maintenance window does not count against uptime.',
+});
+
+const PAST = [
+  { day: 2, items: [
+    { s: 'degraded', title: 'Campus events app slow to load', affects: 'Campus events app', lasted: '25 min',
+      updates: [['Resolved', '09:37', 'Pages load in under a second again. The cause was a search index rebuild that ran during the day; it now runs at night.'],
+        ['Monitoring', '09:31', 'We paused the search index rebuild. Pages are getting faster.'],
+        ['Identified', '09:20', 'A search index rebuild is using most of the server. We are pausing it.'],
+        ['Investigating', '09:12', 'Pages take up to 8 seconds to load. We are looking into it.']] },
+  ] },
+  { day: 8, items: [
+    { s: 'outage', title: 'Corner bakery website down', affects: 'Corner bakery website', lasted: '38 min',
+      updates: [['Resolved', '11:46', 'The site is back. An image upload had filled the server disk. We removed the files and added a size limit for uploads.'],
+        ['Monitoring', '11:40', 'We freed disk space and restarted the site. We are watching it.'],
+        ['Identified', '11:22', 'The server disk is full.'],
+        ['Investigating', '11:08', 'The website does not load. We are looking into it.']] },
+    { s: 'outage', title: 'Bookings API returned errors', affects: 'Bookings API', lasted: '12 min',
+      updates: [['Resolved', '07:15', 'A faulty release was rolled back. The API answers normally.'],
+        ['Investigating', '07:05', 'The API returns errors for every request. We are looking into it.']] },
+  ] },
+  { day: 33, items: [
+    { s: 'outage', title: 'Thesis room booking down', affects: 'Thesis room booking', lasted: '1 h 12 min',
+      updates: [['Resolved', '10:14', 'The site is back. The TLS certificate had expired; it now renews automatically.'],
+        ['Identified', '09:20', 'The TLS certificate expired, so browsers block the site.'],
+        ['Investigating', '09:02', 'Visitors see a security warning. We are looking into it.']] },
+  ] },
+];
+
+/* ---------- Helpers ---------- */
+const allMonitors = (data) => data.groups.flatMap((g) => g.monitors);
+function worstOf(states) {
+  const real = states.filter((s) => s !== 'nodata');
+  if (!real.length) return 'nodata';
+  return SEVERITY.find((s) => real.includes(s));
+}
+function listNames(names) {
+  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+const badge = (s) => `<span class="badge">${icon(s)}<span>${LABEL[s]}</span></span>`;
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+/* ---------- Header ---------- */
+/* Status scrolls to the top; API goes to the badge and API section in the footer. Dashboard, Docs
+   and Login open placeholders until their screens exist (DS-p26-admin-monitors, Q-016, Q-008).
+   No Subscribe: visitor subscriptions are out of scope (D-009). */
+const SOON = (page) => `coming-soon.html?page=${encodeURIComponent(page)}`;
+const LINKS = [['Status', '#top'], ['Dashboard', SOON('Dashboard')], ['API', '#api-docs'], ['Docs', SOON('Docs')]];
+function header() {
+  return `<header class="site-header">
+    <div class="bar col">
+      <div class="brand-group">
+        <a class="brand" href="#top" title="${PRODUCT}">${UI.logo}<span>${PRODUCT}</span></a>
+        <button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme">${UI.moon}${UI.sun}</button>
+      </div>
+      <nav class="nav" aria-label="Main">
+        ${LINKS.map(([l, h], i) => `<a class="nav-link" href="${h}"${i === 0 ? ' aria-current="page"' : ''}>${l}</a>`).join('')}
+      </nav>
+      <div class="actions">
+        <a class="pill" href="#api-docs">API docs</a>
+        <a class="pill" href="${SOON('Login')}">Login</a>
+        <button class="icon-btn menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="drawer" aria-label="Open menu">${UI.menu}</button>
+      </div>
+    </div>
+    <nav class="drawer" id="drawer" aria-label="Main" hidden>
+      <div class="col">
+        <ul class="drawer-list">${LINKS.map(([l, h], i) => `<li><a class="drawer-link" href="${h}"${i === 0 ? ' aria-current="page"' : ''}>${l}</a></li>`).join('')}</ul>
+        <div class="drawer-actions"><a class="pill" href="#api-docs">API docs</a><a class="pill" href="${SOON('Login')}">Login</a></div>
+      </div>
+    </nav>
+  </header>`;
+}
+
+/* ---------- Sections ---------- */
+function overall(data) {
+  const ms = allMonitors(data);
+  const worst = worstOf(ms.map((m) => m.state));
+  const by = (s) => ms.filter((m) => m.state === s).map((m) => m.name);
+  const down = by('outage'), slow = by('degraded'), maint = by('maint');
+  const head = {
+    outage: down.length === ms.filter((m) => m.state !== 'nodata').length ? 'All components are down' : 'Some components are down',
+    degraded: 'Some components are slow',
+    maint: 'Maintenance in progress',
+    ok: 'All components operational',
+    nodata: 'No components yet',
+  }[worst];
+  /* One secondary line: the worst components by name, the rest as counts */
+  let sum;
+  if (worst === 'nodata') sum = 'Each component appears here after its first check.';
+  else if (worst === 'ok') sum = 'Every component passed its last check.';
+  else {
+    const named = worst === 'outage' ? down : worst === 'degraded' ? slow : maint;
+    const verb = { outage: 'down', degraded: 'slow', maint: 'in maintenance' }[worst];
+    const rest = [];
+    if (worst !== 'degraded' && slow.length) rest.push(`${slow.length} slow`);
+    if (worst !== 'maint' && maint.length) rest.push(`${maint.length} in maintenance`);
+    sum = `${listNames(named)} ${named.length > 1 ? 'are' : 'is'} ${verb}${rest.length ? `; ${rest.join(', ')}` : ''}. Everything else is working.`;
+  }
+  return `<div class="lead"><p class="org">${esc(data.org)}</p>
+  <section class="overall card s-${worst}" aria-labelledby="overall-title">
+    ${icon(worst)}
+    <div class="o-body"><h1 id="overall-title">${head}</h1><p class="o-sum">${esc(sum)}</p>
+      <p class="o-updated">Updated ${utc('14:55')}</p></div>
+  </section></div>`;
+}
+
+function timeline(updates, time = utc) {
+  return `<ol class="timeline">${updates.map(([stage, t, text]) =>
+    `<li><div class="u-head"><span class="stage">${stage}</span>${time(t)}</div><p>${esc(text)}</p></li>`).join('')}</ol>`;
+}
+
+function notices(long) {
+  const m = MAINT(long);
+  return `<div class="notices">
+    <section class="notice card" style="--accent: var(--color-status-outage)" aria-labelledby="active-title">
+      <div class="n-head">${icon('outage')}<div>
+        <p class="eyebrow">Active incident · ${ACTIVE.stage}</p>
+        <h2 id="active-title">${esc(ACTIVE.title)}</h2>
+        <p class="meta">Affects ${esc(ACTIVE.affects)} · Started ${utc(ACTIVE.started)} · Down for <span class="num">53 min</span></p>
+      </div></div>
+      <details class="updates" open><summary>Updates (${ACTIVE.updates(long).length})</summary>${timeline(ACTIVE.updates(long))}</details>
+    </section>
+    <section class="notice card" style="--accent: var(--color-status-maint)" aria-labelledby="maint-title">
+      <div class="n-head">${icon('maint')}<div>
+        <p class="eyebrow">Maintenance in progress</p>
+        <h2 id="maint-title">${esc(m.title)}</h2>
+        <p class="meta"><span class="num">${esc(m.window)}</span> · Affects ${esc(m.affects)}</p>
+      </div></div>
+      <p class="n-body">${esc(m.text)}</p>
+    </section>
+  </div>`;
+}
+
+function bars(m, key) {
+  let out = '';
+  for (let i = 0; i < 90; i++) {
+    const ago = 89 - i;
+    const d = dateOf(ago);
+    let [s, detail, up] = m.days[ago] || ['ok', 'No incidents', '100.00%'];
+    if (m.since !== undefined && ago > m.since) [s, detail, up] = ['nodata', 'No checks this day', null];
+    if (m.state === 'nodata') [s, detail, up] = ['nodata', 'No checks yet', null];
+    const upText = up ? ` · ${up} available` : '';
+    out += `<li class="d-${s}${i < 60 ? ' older' : ''}" tabindex="${ago === 0 ? 0 : -1}" data-date="${longDay(d)}${ago === 0 ? ' (today)' : ''}" data-s="${s}" data-detail="${esc(detail + upText)}">`
+      + `<span class="visually-hidden">${longDay(d)}: ${DAY_LABEL[s]}. ${esc(detail + upText)}</span></li>`;
+  }
+  return `<ol class="bars" aria-label="${esc(m.name)}, daily status, oldest first" data-key="${key}">${out}</ol>`;
+}
+
+function components(data) {
+  const legend = ['ok', 'degraded', 'outage', 'maint', 'nodata']
+    .map((s) => `<li>${icon(s, 'icon-sm')}${DAY_LABEL[s]}</li>`).join('');
+  const groups = data.groups.map((g, gi) => {
+    const rows = g.monitors.map((m, mi) => `
+      <li class="component">
+        <div class="c-top"><p class="c-name">${esc(m.name)}</p>${badge(m.state)}</div>
+        <p class="c-uptime"><span class="num">${m.uptime}</span><span class="label">uptime, 90 days</span></p>
+        ${bars(m, `${gi}-${mi}`)}
+        <div class="c-foot"><span class="d90">90 days ago</span><span class="d30">30 days ago</span><span>Today</span></div>
+      </li>`).join('');
+    return `<section class="card" aria-labelledby="group-${gi}">
+      <div class="group-head"><h3 id="group-${gi}">${esc(g.name)}</h3><span class="meta">${plural(g.monitors.length, 'component', 'components')}</span></div>
+      <ul>${rows}</ul>
+    </section>`;
+  }).join('');
+  return `<section class="section" aria-labelledby="components-title">
+    <div class="section-head"><h2 id="components-title">Components</h2>
+      <span class="meta"><span class="d90">Last 90 days</span><span class="d30">Last 30 days shown · uptime over 90 days</span></span></div>
+    <div class="groups">${groups}</div>
+    <ul class="legend" aria-label="Legend">${legend}</ul>
+    <p class="hint">Point at, tap or move with the arrow keys across the bars to see each day.</p>
+  </section>`;
+}
+
+/* ---------- Response time chart ---------- */
+let chartMonitor = 0, chartRange = '24h';
+function rng(seed) { return () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }; }
+function series(m, idx, range) {
+  const r = rng(idx * 97 + (range === '24h' ? 1 : 2));
+  const n = range === '24h' ? 24 : 30;
+  const base = 120 + idx * 23;
+  return Array.from({ length: n }, (_, i) => {
+    if (m.state === 'outage' && range === '24h' && i === n - 1) return null; /* no answers since 14:02 */
+    let v = base + r() * 40;
+    if (m.state === 'degraded' && range === '24h' && i >= n - 2) v *= 3.2;
+    if (range === '24h' && i === 9) v *= 1.6;
+    if (range === '30d' && (m.days[n - 1 - i] || [])[0] === 'degraded') v *= 2.4;
+    return Math.round(v);
+  });
+}
+function pct(vals, p) { const s = vals.filter((v) => v !== null).sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(p * s.length))]; }
+function xLabel(range, i, n) {
+  if (range === '24h') { const h = (new Date(NOW).getUTCHours() - (n - 1 - i) + 24) % 24; return `${String(h).padStart(2, '0')}:00`; }
+  return shortDay(dateOf(n - 1 - i));
+}
+function chartSvg(vals, range) {
+  const body = document.getElementById('chart-body');
+  const W = Math.max(240, body ? body.clientWidth : 740), small = W < 500, H = small ? 140 : 180, L = 44, B = 24, T = 8;
+  const n = vals.length, max = Math.max(500, Math.ceil(Math.max(...vals.filter((v) => v !== null)) / 250) * 250);
+  const x = (i) => L + (i * (W - L - 8)) / (n - 1);
+  const y = (v) => H - B - (v / max) * (H - B - T);
+  const ticks = [0, max / 2, max];
+  const grid = ticks.map((v) => `<line class="grid" x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('');
+  const idxs = small ? [0, Math.floor((n - 1) / 2), n - 1] : [0, Math.floor((n - 1) / 4), Math.floor((n - 1) / 2), Math.floor((3 * (n - 1)) / 4), n - 1];
+  const xl = idxs.map((i) => `<text class="axis" x="${x(i)}" y="${H - 4}" text-anchor="${i === n - 1 ? 'end' : i === 0 ? 'start' : 'middle'}">${xLabel(range, i, n)}</text>`).join('');
+  let line = '', gaps = '', started = false;
+  vals.forEach((v, i) => {
+    if (v === null) { started = false; gaps += `<rect class="gap" x="${x(Math.max(0, i - 1))}" y="${T}" width="${x(i) - x(Math.max(0, i - 1))}" height="${H - B - T}"/>`; return; }
+    line += `${started ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`; started = true;
+  });
+  const peak = vals.indexOf(Math.max(...vals.filter((v) => v !== null)));
+  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">${grid}${xl}${gaps}<path class="line" d="${line}"/>
+    <circle class="peak" cx="${x(peak)}" cy="${y(vals[peak])}" r="4"/></svg>`;
+}
+function chartBody(data) {
+  const ms = allMonitors(data).filter((m) => m.state !== 'nodata');
+  const m = ms[chartMonitor] || ms[0];
+  const vals = series(m, chartMonitor, chartRange);
+  const real = vals.filter((v) => v !== null);
+  const med = pct(vals, 0.5), p95 = pct(vals, 0.95), slow = Math.max(...real), at = xLabel(chartRange, vals.indexOf(slow), vals.length);
+  const per = chartRange === '24h' ? 'hour' : 'day';
+  const period = chartRange === '24h' ? 'last 24 hours' : 'last 30 days';
+  const gapNote = vals.includes(null) ? ` No responses since ${utc('14:02')}; the shaded part of the chart has no data.` : '';
+  return `<dl class="stats">
+      <div class="stat"><dt>Median</dt><dd class="num">${med} ms</dd></div>
+      <div class="stat"><dt>95th percentile</dt><dd class="num">${p95} ms</dd></div>
+      <div class="stat"><dt>Slowest</dt><dd class="num">${slow} ms</dd></div></dl>
+    <figure class="chart">${chartSvg(vals, chartRange)}
+      <figcaption class="chart-note">${esc(m.name)}, median response time per ${per}, ${period}, in milliseconds. Slowest ${slow} ms at ${at}${chartRange === '24h' ? ' UTC' : ''}.${gapNote}</figcaption></figure>`;
+}
+function chart(data) {
+  const ms = allMonitors(data).filter((m) => m.state !== 'nodata');
+  return `<section class="chart-card card" aria-labelledby="chart-title">
+    <div class="chart-head"><h2 id="chart-title">Response time</h2>
+      <div class="chart-controls">
+        <label class="field">Component <select class="select" id="chart-monitor">${ms.map((m, i) => `<option value="${i}"${i === chartMonitor ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>
+        <fieldset class="seg"><legend class="visually-hidden">Period</legend>
+          <input type="radio" name="period" id="p-24h" value="24h"${chartRange === '24h' ? ' checked' : ''}><label for="p-24h">24h</label>
+          <input type="radio" name="period" id="p-30d" value="30d"${chartRange === '30d' ? ' checked' : ''}><label for="p-30d">30d</label>
+        </fieldset>
+      </div></div>
+    <div id="chart-body" class="section">${chartBody(data)}</div>
+  </section>`;
+}
+
+function pastIncidents(long) {
+  const pastTime = (day) => (t) => `<time datetime="${isoDay(dateOf(day))}T${t}Z">${t} UTC</time>`;
+  const days = PAST.map((g) => `
+    <li class="day"><h3><time datetime="${isoDay(dateOf(g.day))}">${longDay(dateOf(g.day))}</time></h3>
+      <ul class="day-list">${g.items.map((it) => {
+        const last = it.updates[0];
+        const summary = long && g.day === 8 && it.lasted === '38 min'
+          ? last[2] + ' We also moved the images to a separate disk so a full upload folder can no longer stop the shop, the contact form or the weekend pre-order page.'
+          : last[2];
+        return `<li class="past" style="--accent: var(--color-status-${it.s})">
+          <div class="p-head">${icon(it.s)}<h4>${esc(it.title)}</h4>
+            <p class="meta">Resolved · Lasted <span class="num">${it.lasted}</span> · Affects ${esc(it.affects)}</p></div>
+          <p>${esc(summary)}</p>
+          <details><summary>Show all ${it.updates.length} updates</summary>${timeline(it.updates, pastTime(g.day))}</details>
+        </li>`;
+      }).join('')}</ul></li>`).join('');
+  return `<section class="section" aria-labelledby="past-title">
+    <div class="section-head"><h2 id="past-title">Past incidents</h2><span class="meta">Last 90 days, newest first</span></div>
+    <ol class="days">${days}</ol></section>`;
+}
+
+function footer() {
+  return `<footer class="site-footer" id="api-docs" tabindex="-1" aria-label="Status badge and API">
+    <div class="f-notes"><p>All times are in UTC.</p><p>Uptime excludes maintenance windows.</p></div>
+    <a href="${SOON('API docs')}">Status badge and API docs</a></footer>`;
+}
+
+/* ---------- Loading and error: same layout as the page, no data yet ---------- */
+function loading() {
+  const row = `<li class="component" aria-hidden="true"><div class="c-top"><div class="skeleton sk-line sk-name"></div><div class="skeleton sk-status"></div></div>
+    <div class="skeleton sk-line" style="width: 25%"></div><div class="skeleton sk-bars"></div></li>`;
+  return `<div class="lead"><p class="org">${esc(SAMPLE.org)}</p>
+    <section class="overall card s-none" aria-labelledby="overall-title" aria-busy="true">
+      <span class="icon skeleton" aria-hidden="true"></span>
+      <div class="o-body"><h1 id="overall-title" class="visually-hidden">Loading status</h1>
+        <div class="skeleton sk-title" aria-hidden="true"></div><div class="skeleton sk-line" aria-hidden="true"></div></div>
+      <p class="visually-hidden" role="status">Loading the status of every component</p>
+    </section></div>
+    <section class="section" aria-labelledby="components-title" aria-busy="true">
+      <div class="section-head"><h2 id="components-title">Components</h2></div>
+      <div class="card"><div class="group-head"><div class="skeleton sk-line sk-name" aria-hidden="true"></div></div><ul>${row.repeat(3)}</ul></div>
+    </section>
+    <section class="section" aria-labelledby="chart-title" aria-busy="true">
+      <div class="section-head"><h2 id="chart-title">Response time</h2></div>
+      <div class="card skeleton sk-chart" aria-hidden="true"></div>
+    </section>`;
+}
+function error() {
+  return `<div class="lead"><p class="org">${esc(SAMPLE.org)}</p>
+  <section class="overall card s-none" aria-labelledby="overall-title" role="alert">
+    ${icon('nodata')}
+    <div class="o-body"><h1 id="overall-title">Status could not load</h1>
+      <p class="o-sum">This page could not reach the status service, so it cannot show current status, uptime or incidents. Try again in a moment.</p></div>
+    <button class="btn o-action" type="button" data-retry>Try again</button>
+  </section></div>`;
+}
+
+/* ---------- Render ---------- */
+let current = SAMPLE;
+function render(state) {
+  const page = document.getElementById('page');
+  hideTip();
+  if (state === 'loading' || state === 'error') {
+    current = SAMPLE;
+    page.innerHTML = (state === 'loading' ? loading() : error()) + footer();
+    return;
+  }
+  if (state === 'empty') {
+    current = { org: SAMPLE.org, groups: [] };
+    page.innerHTML = overall(current) +
+      `<section class="section" aria-labelledby="components-title"><div class="section-head"><h2 id="components-title">Components</h2></div>
+        <div class="empty card"><p>Components will appear here after their first check, with their status and 90-day uptime.</p>
+        <a href="#admin-monitors">Manage monitors</a></div></section>` +
+      `<section class="section" aria-labelledby="past-title"><div class="section-head"><h2 id="past-title">Past incidents</h2></div>
+        <div class="empty card"><p>No incidents in the last 90 days.</p></div></section>` + footer();
+    return;
+  }
+  current = state === 'long' ? LONG : state === 'operational' ? OPERATIONAL : SAMPLE;
+  const pinned = state === 'operational' ? '' : notices(state === 'long');
+  page.innerHTML = overall(current) + pinned + components(current) + chart(current) + pastIncidents(state === 'long') + footer();
+  setupBars();
+  rerenderChart(); /* the chart measures its width once it is in the page */
+}
+function rerenderChart() {
+  const body = document.getElementById('chart-body');
+  if (body) body.innerHTML = chartBody(current);
+}
+
+/* ---------- Daily bars: one tab stop per row, arrow keys move between days ---------- */
+const tip = document.getElementById('tip');
+function showTip(li) {
+  document.querySelectorAll('.bars li.is-active').forEach((el) => el.classList.remove('is-active'));
+  li.classList.add('is-active');
+  const s = li.dataset.s;
+  tip.innerHTML = `<span class="t-date">${li.dataset.date}</span><span class="t-status">${icon(s)}${DAY_LABEL[s]}</span><span class="t-detail">${li.dataset.detail}</span>`;
+  tip.hidden = false;
+  const r = li.getBoundingClientRect(), t = tip.getBoundingClientRect(), pad = 8;
+  let left = r.left + r.width / 2 - t.width / 2;
+  left = Math.max(pad, Math.min(window.innerWidth - t.width - pad, left));
+  let top = r.top - t.height - pad;
+  if (top < pad) top = r.bottom + pad;
+  tip.style.left = `${left}px`; tip.style.top = `${top}px`;
+}
+function hideTip() {
+  tip.hidden = true;
+  document.querySelectorAll('.bars li.is-active').forEach((el) => el.classList.remove('is-active'));
+}
+const visible = (ol) => [...ol.children].filter((li) => li.offsetParent !== null);
+function nearest(ol, clientX) {
+  let best = null, dist = Infinity;
+  for (const li of visible(ol)) { const r = li.getBoundingClientRect(); const d = Math.abs(r.left + r.width / 2 - clientX); if (d < dist) { dist = d; best = li; } }
+  return best;
+}
+function fixTabStops() {
+  document.querySelectorAll('.bars').forEach((ol) => {
+    const stop = ol.querySelector('li[tabindex="0"]');
+    if (stop && stop.offsetParent === null) { stop.tabIndex = -1; ol.lastElementChild.tabIndex = 0; }
+  });
+}
+function setupBars() {
+  document.querySelectorAll('.bars').forEach((ol) => {
+    ol.addEventListener('pointermove', (e) => { const li = nearest(ol, e.clientX); if (li) showTip(li); });
+    ol.addEventListener('pointerdown', (e) => { const li = nearest(ol, e.clientX); if (li) showTip(li); });
+    ol.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') hideTip(); });
+    ol.addEventListener('focusin', (e) => showTip(e.target));
+    ol.addEventListener('focusout', hideTip);
+    ol.addEventListener('keydown', (e) => {
+      const items = visible(ol), at = items.indexOf(document.activeElement);
+      if (e.key === 'Escape') { hideTip(); return; }
+      const next = { ArrowLeft: at - 1, ArrowRight: at + 1, Home: 0, End: items.length - 1 }[e.key];
+      if (next === undefined || at < 0) return;
+      e.preventDefault();
+      const target = items[Math.max(0, Math.min(items.length - 1, next))];
+      items[at].tabIndex = -1; target.tabIndex = 0; target.focus();
+    });
+  });
+  fixTabStops();
+}
+window.addEventListener('scroll', () => {
+  const f = document.activeElement;
+  if (f && f.closest && f.closest('.bars')) showTip(f); else hideTip();
+}, { passive: true });
+document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.bars')) hideTip(); });
+
+/* ---------- Theme: follows the system until the visitor picks one, then remembers it ---------- */
+const params = new URLSearchParams(location.search);
+const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+let theme = params.get('theme') || localStorage.getItem('theme');
+function applyTheme() {
+  if (theme) document.documentElement.dataset.theme = theme; else delete document.documentElement.dataset.theme;
+  const effective = theme || (darkQuery.matches ? 'dark' : 'light');
+  document.documentElement.dataset.effective = effective;
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.setAttribute('aria-label', effective === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+}
+darkQuery.addEventListener('change', applyTheme);
+
+/* ---------- Menu drawer (tablet and mobile): Esc closes and returns focus ---------- */
+function setupHeader() {
+  const slot = document.getElementById('header-slot');
+  slot.innerHTML = header();
+  const btn = slot.querySelector('#menu-btn'), drawer = slot.querySelector('#drawer');
+  const setOpen = (open) => { btn.setAttribute('aria-expanded', String(open)); drawer.hidden = !open; btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu'); };
+  btn.addEventListener('click', () => setOpen(drawer.hidden));
+  drawer.addEventListener('click', (e) => { if (e.target.closest('a[href^="#"]')) setOpen(false); });
+  slot.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !drawer.hidden) { setOpen(false); btn.focus(); } });
+  document.addEventListener('pointerdown', (e) => { if (!slot.contains(e.target)) setOpen(false); });
+  window.matchMedia('(min-width: 1025px)').addEventListener('change', () => setOpen(false));
+  slot.querySelector('#theme-btn').addEventListener('click', () => {
+    theme = document.documentElement.dataset.effective === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', theme);
+    applyTheme(); syncUrl();
+  });
+}
+
+/* ---------- Review states by URL only (no controls on the page): ?state=success|operational|loading|error|empty|long, ?theme=light|dark ---------- */
+let state = params.get('state') || 'success';
+function syncUrl() {
+  const q = new URLSearchParams({ state }); if (theme) q.set('theme', theme);
+  history.replaceState(null, '', '?' + q);
+}
+function apply() {
+  applyTheme();
+  render(state);
+  syncUrl();
+}
+document.getElementById('page').addEventListener('change', (e) => {
+  if (e.target.id === 'chart-monitor') { chartMonitor = Number(e.target.value); rerenderChart(); }
+  if (e.target.name === 'period') { chartRange = e.target.value; rerenderChart(); }
+});
+document.getElementById('page').addEventListener('click', (e) => {
+  if (e.target.closest('[data-retry]')) { state = 'success'; apply(); }
+});
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { hideTip(); fixTabStops(); if (!['empty', 'loading', 'error'].includes(state)) rerenderChart(); }, 100); });
+setupHeader();
+apply();
+</script>
+</body>
+</html>
