@@ -27,6 +27,7 @@
 - Q-016 · Where do the API and status badge docs live?
 - Q-017 · Does the public status page share DS-p26-header or keep its own header variant?
 - Q-018 · What do the API's requests and responses look like? · _investigating_
+- Q-019 · Where and how does the admin panel show worker_fault episodes?
 
 ---
 
@@ -143,3 +144,8 @@
 - **Blocks:** `GET /api/v1/monitors` and `GET /api/v1/status/:org_slug` (C-001, proposed) and the examples on DS-p26-api-docs.
 - **Who answers:** user
 - **Proposed answer:** Keys travel as `Authorization: Bearer <public_id>.<secret>` (D-025). `GET /api/v1/monitors` returns `{"monitors": [{"id", "name", "url", "interval_minutes", "status"}]}`; `GET /api/v1/status/:org_slug` returns `{"organization", "status", "updated_at", "components": [{"name", "status"}], "active_incidents": []}`; `status` is `operational`, `degraded` or `outage`. A missing or wrong key gets 401, a `read` key that writes gets 403, and request 61 in a minute gets 429 with `Retry-After` and `{"error": "rate_limited", "message"}`. The badge is `GET /badge/:monitor_id.svg` (D-025), as drawn on DS-p26-api-docs.
+
+## Q-019 · Where and how does the admin panel show worker_fault episodes?
+- **Status:** open
+- **Blocks:** Surfacing `worker_faults` (D-015) to operators; there is no admin panel yet.
+- **Who answers:** user

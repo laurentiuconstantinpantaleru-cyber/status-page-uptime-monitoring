@@ -13,6 +13,7 @@
 - PATTERN-005 · Mock screenshots through headless Chrome inside fixed-width iframes · candidate
 - PATTERN-006 · Network calls through an injected client, errors classified by a pure function · candidate
 - PATTERN-007 · A CI job that needs secrets is skipped, not failed, while they are missing · candidate
+- PATTERN-008 · At most one open row per owner through a generated column and a unique key · candidate
 
 ---
 
@@ -75,4 +76,12 @@
 - **How:** Secrets cannot be read in a job's `if`. Add a small job in the same environment that maps each secret to an env var, writes `ready=true|false` to `$GITHUB_OUTPUT` and names the missing ones (never their values) in a `::notice::`. The real job `needs` it and runs only `if: needs.<job>.outputs.ready == 'true'`; a skipped job counts as success.
 - **Example:** .github/workflows/ci.yml (`deploy-config`, `deploy`)
 - **Why:** Pushes stay green before the infrastructure exists, without a failing job that hides real failures.
+- **Source:** session 2026-11-26 · confidence medium
+
+## PATTERN-008 · At most one open row per owner through a generated column and a unique key
+- **Status:** candidate
+- **Use when:** A table holds periods that open and end (an incident per monitor, a worker_fault episode per worker) and at most one may be open per owner, even when two processes write at once.
+- **How:** Add `open_<owner>_id BIGINT UNSIGNED GENERATED ALWAYS AS (IF(<end column> IS NULL, <owner>_id, NULL)) VIRTUAL` with a `UNIQUE KEY`; MySQL allows many NULLs, so ended rows never collide. Use VIRTUAL, not STORED, when the owner column has a cascading foreign key.
+- **Example:** db/migrations/0001_initial_schema.sql (`incidents.open_monitor_id`), db/migrations/0005_worker_faults.sql (`worker_faults.open_worker_id`), test/db/schema.test.ts
+- **Why:** The database itself refuses a second open row (`ER_DUP_ENTRY`), so no application lock or check-then-insert race is needed.
 - **Source:** session 2026-11-26 · confidence medium
