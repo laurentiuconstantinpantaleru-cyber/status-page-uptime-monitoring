@@ -1,5 +1,6 @@
 import { createPool } from '../db/connection.js';
 import { systemClock } from '../shared/clock.js';
+import { faultConfigFromEnv, type FaultConfig } from '../shared/worker-fault.js';
 import { nodeHttpClient } from './http-client.js';
 import { MySqlStore } from './store.js';
 import { CONFIRM_POLL_MS, CheckWorker, HEARTBEAT_MS, REFRESH_MS } from './worker.js';
@@ -14,11 +15,19 @@ if (!databaseUrl || !workerName) {
   process.exit(1);
 }
 
+let fault: FaultConfig;
+try {
+  fault = faultConfigFromEnv(process.env);
+} catch (error) {
+  console.error((error as Error).message);
+  process.exit(1);
+}
+
 const pool = createPool(databaseUrl);
 const store = new MySqlStore(pool);
 const clock = systemClock;
 const workerId = await store.registerWorker(workerName, clock.now());
-const worker = new CheckWorker({ clock, client: nodeHttpClient, store, workerId });
+const worker = new CheckWorker({ clock, client: nodeHttpClient, store, workerId, fault });
 const log = (what: string) => (error: unknown) => console.error(`[${workerName}] ${what} failed:`, error);
 
 await worker.refresh();

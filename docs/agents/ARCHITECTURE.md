@@ -51,6 +51,7 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 | Scheduler | `src/worker/scheduler.ts` | Fixed grid per monitor (interval plus a per-monitor offset), no catch-up, a slot skipped while the previous check runs (D-027) | Check Workers |
 | Check Engine | `src/worker/check.ts`, `src/worker/http-client.ts` | One check through an injected `HttpClient` and `Clock`: status, keyword, latency threshold, TLS days left, failure cause; default timeout 30 s (D-022). `nodeHttpClient` is the real client: GET, up to 5 redirects, whole body, certificate of the last hop (D-026) | External Targets (via the client) |
 | Check Workers | `src/worker/main.ts`, `worker.ts`, `assignment.ts`, `store.ts` | One process per `WORKER_NAME` (`npm run start:worker`): heartbeat 10 s, monitors re-read 60 s, scheduled checks of the monitors it is primary for (`monitor_id % active workers`), confirmations of the other worker's `down` checks polled every 5 s; records each check under the monitor's row lock (D-027) | MySQL, External Targets |
+| Worker Degradation | `src/shared/worker-fault.ts` | Judges a worker over the last 10 min of its scheduled checks: ≥ 3 monitors, ≥ 70 % failed, ≥ 70 % of the confirmed failures confirmed up by the other worker (D-015). `recordCheck` opens no incident while a worker behind the run is degraded; each heartbeat opens or ends the worker's `worker_faults` episode | MySQL |
 | Incident Engine | `src/shared/incidents.ts` (uptime: _planned_) | Opens after 2 confirmed failures outside maintenance, resolves after 2 successes (D-006, D-028); says when the status version must change; run by the workers inside `recordCheck` | MySQL, Alert Dispatcher (_planned_) |
 | Alert Dispatcher | `src/worker/` _planned_ | Sends Telegram and email notifications with escalation | Telegram API, SMTP |
 | Roll-up Job | `src/worker/` _planned_ | Aggregates raw check data older than 7 days | MySQL |
@@ -60,7 +61,7 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 ## Data flow
 1. **Probe Trigger:** Scheduler dispatches scheduled monitor checks to Worker 1 without timing drift.
 2. **Failure Confirmation:** If Worker 1 detects an error, it requests an immediate independent probe from Worker 2.
-3. **Incident Declaration:** If Worker 2 confirms the failure across N consecutive checks, the Incident Engine marks the monitor as DOWN and opens an incident.
+3. **Incident Declaration:** If Worker 2 confirms the failure across N consecutive checks, the Incident Engine marks the monitor as DOWN and opens an incident, unless a worker behind that run is degraded (D-015).
 4. **Cache Invalidation & Alerting:** The worker increments the cache version number; the web process reads it every 30 seconds and invalidates the public status cache (D-020); Alert Dispatcher dispatches email and Telegram notifications.
 5. **Resolution:** When M consecutive successful checks occur, the incident is closed, a resolution alert is sent, and the status page cache is cleared.
 6. **Data Compaction:** Raw checks older than 7 days are aggregated into hourly/daily roll-up metrics by a scheduled background job.
@@ -71,6 +72,7 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 | Orgs, users, roles | MySQL `organizations`, `users` | Web / Admin | One organization per user; `global_admin` has none (D-018) |
 | Monitors | MySQL `monitors` | Web / Admin | Targets, interval 1–60 min (D-016), expected status, timeout, keyword, TLS, latency threshold |
 | Workers | MySQL `workers` | Check Workers | Worker processes and when each was last seen |
+| Worker faults | MySQL `worker_faults` | Check Workers | One row per episode of a degraded worker (D-015), open while `ended_at` is NULL, at most one open per worker; the counts the judgment saw |
 | Raw checks | MySQL `checks` | Check Workers | One row per probe or confirmation; a confirmation points at its check by `confirms_check_id` (unique); kept 7 days then rolled up (D-011) |
 | Incidents & Updates | MySQL `incidents`, `incident_updates` | Incident Engine | Start, end, cause; at most one open incident per monitor; human updates by stage (D-014) |
 | Maintenance Windows | MySQL `maintenance_windows` | Web / Admin | Scheduled and quick windows per monitor (D-012), excluded from uptime |
@@ -92,6 +94,7 @@ erDiagram
     organizations ||--o{ api_keys : issues
     monitors ||--o{ checks : "probed by"
     workers ||--o{ checks : runs
+    workers ||--o{ worker_faults : "degraded in"
     monitors ||--o{ incidents : has
     incidents ||--o{ incident_updates : "timeline of"
     users |o--o{ incident_updates : writes
@@ -150,6 +153,14 @@ erDiagram
         smallint http_status "NULL"
         bigint open_monitor_id UK "generated: one open per monitor"
     }
+    worker_faults {
+        bigint id PK
+        bigint worker_id FK
+        datetime started_at
+        datetime ended_at "NULL while open"
+        int checks_failed "and the other counts"
+        bigint open_worker_id UK "generated: one open per worker"
+    }
     incident_updates {
         bigint id PK
         bigint incident_id FK
@@ -195,6 +206,7 @@ on `organizations`, `monitors`), left out of the diagram.
 | `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_RANDOM_ROOT_PASSWORD` | `.env` | `docker-compose.yml` | Local MySQL container credentials; root password generated at first start |
 | `DATABASE_URL` | Environment | All parts, `npm run db:migrate` | MySQL connection string (`mysql://…`) |
 | `WORKER_NAME` | Environment | Check Workers | Unique name per worker process (`worker-1`, `worker-2`); its `workers` row id goes into `checks.worker_id` |
+| `MIN_WORKER_MONITORS`, `WORKER_FAULT_THRESHOLD`, `WORKER_FAULT_WINDOW_MINUTES` | Environment | Check Workers | Worker degradation (D-015): defaults 3 monitors, 70 %, 10 min; a value that is not a whole number ≥ 1 (threshold ≤ 100) stops the worker at start |
 | `IMAGE`, `DOMAIN` | `~/uptime/.env` on the server, written by the deploy job | `deploy/compose.prod.yml`, `deploy/Caddyfile` | Image tag to run; public host name for the HTTPS certificate |
 | `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS` | GitHub `production` environment secrets | CI `deploy` job | SSH access to the server; `MYSQL_*` and `DOMAIN` are secrets there too |
 | `TEST_DATABASE_URL` | Environment, CI | `test/db/schema.test.ts` | Throwaway MySQL the schema tests wipe (name ends in `_test`); unset skips them |

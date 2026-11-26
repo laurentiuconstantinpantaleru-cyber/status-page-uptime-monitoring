@@ -8,6 +8,7 @@ export const CLOSE_AFTER = 2;
 /** A stored `checks` row as the incident engine reads it. */
 export interface RecordedCheck {
   id: number;
+  workerId: number;
   checkedAt: Date;
   outcome: 'up' | 'down';
   httpStatus: number | null;

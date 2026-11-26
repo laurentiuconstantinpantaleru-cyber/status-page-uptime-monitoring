@@ -1,5 +1,6 @@
 import type { Pool, PoolConnection, RowDataPacket } from 'mysql2/promise';
 import type { RecordedCheck, ScheduledCheck } from '../shared/incidents.js';
+import type { FaultCounts, WindowCheck } from '../shared/worker-fault.js';
 import type { WorkerRow } from './assignment.js';
 import type { CheckConfig, CheckResult, ErrorCause } from './check.js';
 
@@ -27,6 +28,8 @@ export interface PendingConfirmation {
 
 /** Reads and writes for one monitor, inside a transaction that holds the monitor's lock. */
 export interface MonitorTx {
+  /** The worker's scheduled checks since `since`, each with its confirmation's outcome (D-015). */
+  workerWindow(workerId: number, since: Date): Promise<WindowCheck[]>;
   lastCheck(monitorId: number): Promise<RecordedCheck | null>;
   hasConfirmation(checkId: number): Promise<boolean>;
   insertCheck(check: NewCheck): Promise<number>;
@@ -48,13 +51,19 @@ export interface WorkerStore {
   /** Scheduled `down` checks of other workers since `since` that have no confirmation yet. */
   pendingConfirmations(workerId: number, since: Date): Promise<PendingConfirmation[]>;
   inMonitorTransaction<T>(monitorId: number, fn: (tx: MonitorTx) => Promise<T>): Promise<T>;
+  workerWindow(workerId: number, since: Date): Promise<WindowCheck[]>;
+  /** A worker_fault episode is open from `openWorkerFault` until `closeWorkerFault` (D-015). */
+  hasOpenWorkerFault(workerId: number): Promise<boolean>;
+  openWorkerFault(workerId: number, startedAt: Date, counts: FaultCounts): Promise<void>;
+  closeWorkerFault(workerId: number, endedAt: Date): Promise<void>;
 }
 
-const CHECK_COLUMNS = 'id, checked_at, outcome, http_status, latency_ms, error_cause';
+const CHECK_COLUMNS = 'id, worker_id, checked_at, outcome, http_status, latency_ms, error_cause';
 
 function toCheck(row: RowDataPacket, prefix = ''): RecordedCheck {
   return {
     id: Number(row[`${prefix}id`]),
+    workerId: Number(row[`${prefix}worker_id`]),
     checkedAt: row[`${prefix}checked_at`],
     outcome: row[`${prefix}outcome`],
     httpStatus: row[`${prefix}http_status`],
@@ -63,9 +72,22 @@ function toCheck(row: RowDataPacket, prefix = ''): RecordedCheck {
   };
 }
 
+type Queryable = Pick<Pool | PoolConnection, 'query'>;
+
+async function workerWindow(db: Queryable, workerId: number, since: Date): Promise<WindowCheck[]> {
+  const [rows] = await db.query<RowDataPacket[]>(
+    `SELECT s.monitor_id, s.outcome, c.outcome AS c_outcome
+     FROM checks s LEFT JOIN checks c ON c.confirms_check_id = s.id
+     WHERE s.worker_id = ? AND s.kind = 'scheduled' AND s.checked_at >= ?`,
+    [workerId, since],
+  );
+  return rows.map((r) => ({ monitorId: Number(r.monitor_id), outcome: r.outcome, confirmation: r.c_outcome ?? null }));
+}
+
 function monitorTx(conn: PoolConnection): MonitorTx {
   const select = async (sql: string, params: unknown[]) => (await conn.query<RowDataPacket[]>(sql, params))[0];
   return {
+    workerWindow: (workerId, since) => workerWindow(conn, workerId, since),
     async lastCheck(monitorId) {
       const [row] = await select(
         `SELECT ${CHECK_COLUMNS} FROM checks WHERE monitor_id = ? ORDER BY checked_at DESC, id DESC LIMIT 1`,
@@ -90,8 +112,8 @@ function monitorTx(conn: PoolConnection): MonitorTx {
     },
     async recentScheduled(monitorId, limit) {
       const rows = await select(
-        `SELECT s.id, s.checked_at, s.outcome, s.http_status, s.latency_ms, s.error_cause,
-                c.id AS c_id, c.checked_at AS c_checked_at, c.outcome AS c_outcome,
+        `SELECT s.id, s.worker_id, s.checked_at, s.outcome, s.http_status, s.latency_ms, s.error_cause,
+                c.id AS c_id, c.worker_id AS c_worker_id, c.checked_at AS c_checked_at, c.outcome AS c_outcome,
                 c.http_status AS c_http_status, c.latency_ms AS c_latency_ms, c.error_cause AS c_error_cause
          FROM checks s LEFT JOIN checks c ON c.confirms_check_id = s.id
          WHERE s.monitor_id = ? AND s.kind = 'scheduled'
@@ -174,6 +196,33 @@ export class MySqlStore implements WorkerStore {
       [workerId, since],
     );
     return rows.map((r) => ({ checkId: Number(r.id), monitorId: Number(r.monitor_id) }));
+  }
+
+  workerWindow(workerId: number, since: Date): Promise<WindowCheck[]> {
+    return workerWindow(this.pool, workerId, since);
+  }
+
+  async hasOpenWorkerFault(workerId: number): Promise<boolean> {
+    const [rows] = await this.pool.query<RowDataPacket[]>(
+      'SELECT 1 FROM worker_faults WHERE worker_id = ? AND ended_at IS NULL',
+      [workerId],
+    );
+    return rows.length > 0;
+  }
+
+  async openWorkerFault(workerId: number, startedAt: Date, c: FaultCounts): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO worker_faults
+         (worker_id, started_at, monitors_checked, checks_total, checks_failed, confirmations_total, confirmations_up)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [workerId, startedAt, c.monitorsChecked, c.checksTotal, c.checksFailed, c.confirmationsTotal, c.confirmationsUp],
+    );
+  }
+
+  async closeWorkerFault(workerId: number, endedAt: Date): Promise<void> {
+    await this.pool.query('UPDATE worker_faults SET ended_at = ? WHERE worker_id = ? AND ended_at IS NULL', [
+      endedAt, workerId,
+    ]);
   }
 
   /** Locks the monitor row, so two workers recording for the same monitor take turns. */
