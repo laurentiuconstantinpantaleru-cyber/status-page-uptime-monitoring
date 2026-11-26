@@ -1,6 +1,6 @@
 # SUBMISSION — P26 · Status page + uptime monitoring
 
-Stare la commit-ul `36dc73c` (26.11.2026). Toate dovezile de mai jos sunt fișiere, teste,
+Stare la commit-ul `c7a5114` (26.11.2026). Toate dovezile de mai jos sunt fișiere, teste,
 endpoint-uri sau commit-uri din acest repo; unde nu există dovadă, rândul spune asta.
 
 ## Linkuri
@@ -22,7 +22,7 @@ npm run user:create -- --email <email> --name "<nume>" --role org_admin --org <s
 npm run user:create -- --email <email> --name "<nume>" --role global_admin
 ```
 
-Cheile API se creează la fel: `npm run apikey:create -- --org <slug> --name "<nume>" --level read|write` (cheia se afișează o singură dată). Parolele și cheile nu se scriu în repo.
+Cheile API se creează la fel: `npm run apikey:create -- --org <slug> --name "<nume>" --level read|write` (cheia se afișează o singură dată). Contactele de alertă: `npm run contact:add -- --org <slug> --name "<nume>" --channel email|telegram --address <adresă sau chat id> --priority primary|secondary`. Parolele și cheile nu se scriu în repo.
 
 ## Cum rulez local
 
@@ -40,13 +40,14 @@ WORKER_NAME=worker-1 npm run start:worker
 WORKER_NAME=worker-2 npm run start:worker
 ```
 
-Rapoartele lunare se trimit pe email doar cu `SMTP_URL` și `MAIL_FROM` setate (`.env.example`);
-fără ele se salvează și se pot descărca din `/admin/reports`.
+Rapoartele lunare și alertele pe email pleacă doar cu `SMTP_URL` și `MAIL_FROM` setate, alertele pe
+Telegram doar cu `TELEGRAM_BOT_TOKEN`, iar linkurile de confirmare au nevoie de `PUBLIC_URL`
+(`.env.example`). Fără ele, canalul respectiv așteaptă; rapoartele se pot descărca din `/admin/reports`.
 
 ## Comanda de teste
 
 ```bash
-npm test                                   # 516 teste; cele MySQL (50) sunt sărite fără bază
+npm test                                   # 580 de teste; cele MySQL (58) sunt sărite fără bază
 npm run lint                               # tsc --noEmit + ledger-lint.py
 ```
 
@@ -55,7 +56,7 @@ Cu testele MySQL (o bază de aruncat, cu numele terminat în `_test`):
 ```bash
 docker run -d --rm --name uptime-schema-test -e MYSQL_ROOT_PASSWORD=change-me \
   -e MYSQL_DATABASE=uptime_test -p 127.0.0.1:3308:3306 mysql:8.4
-TEST_DATABASE_URL=mysql://root:change-me@localhost:3308/uptime_test npm test   # 566 teste
+TEST_DATABASE_URL=mysql://root:change-me@localhost:3308/uptime_test npm test   # 638 de teste
 ```
 
 ## Clienții reali
@@ -76,17 +77,17 @@ Detaliile sunt în `INTERVIEW.md`, `MONITORS.md` și `docs/survey-results.md`.
 |---|---|---|---|
 | N (eșecuri confirmate până la incident) | 2 | D-006, `docs/agents/decisions/incidents.md:3` | `src/shared/incidents.ts:4` (`OPEN_AFTER = 2`); test `test/shared/incidents.test.ts:39` „uses N = 2 and M = 2” |
 | M (succese până la închidere) | 2 | D-006, `docs/agents/decisions/incidents.md:3` | `src/shared/incidents.ts:6` (`CLOSE_AFTER = 2`); test `test/shared/incidents.test.ts:67` „resolves after 2 consecutive successes” |
-| Avertizare TLS | 30 de zile (și 7) | D-010, `docs/agents/decisions/monitoring.md:13` | **PARTIAL:** zilele rămase se calculează la fiecare check (`src/worker/check.ts:73`, test `test/worker/check.test.ts:85`), dar avertizarea nu se trimite: nu există încă dispecerul de alerte |
+| Avertizare TLS | 30 de zile (și 7) | D-010, `docs/agents/decisions/monitoring.md:13` | **PARTIAL:** zilele rămase se calculează la fiecare check (`src/worker/check.ts:73`, test `test/worker/check.test.ts:85`), dar avertizarea nu se trimite: dispecerul de alerte există (D-044), avertizările TLS au un plan separat, neconstruit |
 | Interval implicit | 5 minute (1–60) | D-016, `docs/agents/decisions/monitoring.md:3` | `db/migrations/0001_initial_schema.sql:35` (`DEFAULT 5`), `:46` (`CHECK 1–60`); API: `src/web/api/monitor-input.ts` (implicit 5) |
 | Date brute | 7 zile, apoi roll-up orar / zilnic | D-011, `docs/agents/decisions/monitoring.md:23` | **PARTIAL:** jobul de retenție și roll-up nu există; azi niciun check nu se șterge. Q-023 (`docs/agents/questions/monitoring.md`) leagă roll-up-ul de raportul lunar |
-| Escaladare | al doilea contact după 15 min fără confirmare | D-007, `docs/agents/decisions/incidents.md:13` | **Neimplementat** (fără dispecer de alerte) |
+| Escaladare | al doilea contact după 15 min fără confirmare (configurabil până la 60, per organizație) | D-007, `docs/agents/decisions/incidents.md:13`; D-044 | `src/shared/alerts.ts:35` (`dueKinds`); test `test/web/alerts.test.ts:147` „escalates to the secondary contacts 15 minutes after the primary alert, once; acknowledged in time, it does not”; confirmarea: `test/web/ack.test.ts:33`; commit-uri `94ff6c9`, `c7a5114` |
 
 ## Self-check — Definition of Done (brief)
 
 | # | Cerință | Stare | Dovadă |
 |---|---|---|---|
 | 1 | Minim 12 monitoare reale rulează pe live de minim 14 zile; status page-ul public e accesibil | **PARTIAL** | Nu există live (vezi „URL live”). `MONITORS.md`: 2 din 12 monitoare au acord. Pagina publică merge local: `GET /status` (`src/web/app.ts`, test `test/web/status-page.test.ts:114` „shows the 90- and 30-day uptime of each component…”), commit `1d7b4ac` |
-| 2 | Un incident real (sau provocat) detectat, alertat pe Telegram și închis automat | **PARTIAL** | Detectarea și închiderea automată sunt făcute și testate: `test/worker/worker.test.ts:102` „opens an incident after 2 confirmed failures and resolves it after 2 successes”, commit `476f3a3`. **Alertarea pe Telegram nu există** și nu există niciun incident real înregistrat pe live |
+| 2 | Un incident real (sau provocat) detectat, alertat pe Telegram și închis automat | **PARTIAL** | Detectarea și închiderea automată: `test/worker/worker.test.ts:102` „opens an incident after 2 confirmed failures and resolves it after 2 successes”, commit `476f3a3`. Alertarea pe email și Telegram, o dată la deschidere și o dată la rezolvare: `test/web/alerts.test.ts:113`, `:131`, `:187`; cererea `sendMessage`: `test/web/telegram.test.ts:19`; commit `94ff6c9`. **Lipsește dovada reală:** nu există live și Telegram nu a fost apelat cu un bot real, deci niciun incident real nu a fost alertat |
 | 3 | Calculul de uptime cu mentenanță și incidente peste granița lunii are minim 5 teste | **OK** | `test/shared/uptime.test.ts`: 12 teste `uptime`, între care `:30` „counts for November only the part of a crossing incident outside maintenance: (719 - 1) / 719”, `:37` (aceeași întâmplare pe octombrie), `:44`, `:55`, `:67` (mentenanță suprapusă), `:81` (fereastră recurentă peste miezul nopții), `:159` (30 de zile peste granița lunii). Cod: `src/shared/uptime.ts`, commit `40da385` |
 | 4 | Scheduler-ul nu driftează și nu suprapune (test cu timp simulat) | **OK** | `test/worker/scheduler.test.ts:41` „runs a 1-minute monitor exactly 60 times in an hour”, `:51` „keeps every start on the grid when checks take 40 seconds”, `:61` „skips a slot while the previous check of the monitor still runs”, `:86` „runs 300 1-minute monitors 60 times each in an hour…”. `FakeClock` în `src/shared/clock.ts` (PATTERN-001), commit `476f3a3` |
 | 5 | Colegii intervievați au cerut ceva ce ai implementat (DECISIONS.md) | **OK, cu o rezervă** | Formularul (4 respondenți, `docs/survey-results.md`), nu 3 interviuri: <br>• închidere după 2–3 succese (3 din 4) și deschidere după 2 eșecuri (2 din 4) → D-006 (`docs/agents/decisions/incidents.md:3`, dovada `docs/survey-results.md:7`, `:12`), test `test/worker/worker.test.ts:102`; <br>• statusuri scrise de om pe etape (3 din 4) → D-014 (`incidents.md:43`, `docs/survey-results.md:14`), `POST /admin/incidents/:id/updates`, test `test/web/admin-incidents.test.ts:98`, commit `d76523a`; <br>• buton rapid 15/30/60 min (2 din 4) → D-012 (`incidents.md:23`, `docs/survey-results.md:16`), `POST /admin/monitors/:id/maintenance`, test `test/web/admin-monitors.test.ts:110` |
@@ -104,9 +105,11 @@ Detaliile sunt în `INTERVIEW.md`, `MONITORS.md` și `docs/survey-results.md`.
   job-ul `deploy` din `.github/workflows/ci.yml`), dar serverul și secretele mediului `production` nu
   sunt configurate, așa că job-ul e sărit. Fără live nu pot exista nici cele 14 zile de monitorizare.
 - **10 proiecte ale colegilor.** Niciun acord confirmat încă (`MONITORS.md`).
-- **Alerte pe email și Telegram, escaladare, avertizare TLS.** Deciziile există (D-007, D-010, D-013),
-  dar dispecerul de alerte nu e construit (ARCHITECTURE.md: „Alert Dispatcher … _planned_”). Prin
-  urmare nu a existat niciun incident alertat pe Telegram.
+- **Alerte reale pe Telegram și email.** Dispecerul, escaladarea și confirmarea sunt construite și
+  testate cu clienți falși (D-044), dar fără live, fără bot Telegram (`TELEGRAM_BOT_TOKEN`) și fără
+  SMTP configurat nu a plecat nicio alertă reală.
+- **Avertizările de expirare TLS (D-010).** Zilele rămase se calculează, dar trimiterea are un plan
+  separat, neconstruit încă.
 - **Retenția de 7 zile și roll-up-ul orar / zilnic.** Jobul nu e construit (D-011). Graficele pe
   90 de zile nu citesc agregate: pagina publică calculează uptime-ul din incidente. Q-023 e deschisă.
 - **Graficul de timp de răspuns pe pagina publică.** Nu e construit: Q-012 (perioada și monitorul
@@ -115,10 +118,8 @@ Detaliile sunt în `INTERVIEW.md`, `MONITORS.md` și `docs/survey-results.md`.
   crearea merge prin API (`POST /api/v1/monitors`, C-004).
 - **Mentenanță programată din interfață.** Regulile recurente și ferestrele unice sunt în store și
   testate (`src/web/maintenance/store.ts`, D-031), dar doar butonul rapid are rută.
-- **Contacte de alertă și chei API din interfață.** Cheile se creează doar din CLI (`npm run apikey:create`);
-  revocarea se face direct în SQL (`api_keys.revoked_at`).
-- **Email-ul rapoartelor în producție.** `SMTP_URL` și `MAIL_FROM` nu sunt transmise procesului web
-  în `deploy/compose.prod.yml`.
+- **Contacte de alertă și chei API din interfață.** Se creează doar din CLI (`npm run contact:add`,
+  `npm run apikey:create`); revocarea unei chei se face direct în SQL (`api_keys.revoked_at`).
 
 ## Cum verifici twist-ul în 2 minute
 

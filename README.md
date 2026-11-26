@@ -2,8 +2,8 @@
 
 Availability and uptime monitoring service for student projects and local businesses:
 HTTP/TLS/keyword/latency checks from two workers, incidents that open and close on their own,
-maintenance windows, a cached public status page, an API with a status badge, and monthly
-uptime reports. Alerts (email, Telegram) are not built yet; see Status.
+maintenance windows, a cached public status page, an API with a status badge, monthly uptime
+reports, and email and Telegram alerts with escalation.
 
 ## Status
 
@@ -23,16 +23,21 @@ Done, with tests:
   badge `/badge/:monitor_id.svg` (D-025, D-039, C-004; `API.md`).
 - Monthly PDF reports per organization, emailed to org admins and downloadable at
   `/admin/reports` (D-019, D-041, D-043).
+- Alerts by email and Telegram: the opened alert to the primary contacts, escalation to the
+  secondary ones after the organization's timeout, one resolved alert; acknowledged from the
+  alert's link or on `/admin/incidents` (D-007, D-044, C-002). Contacts come from
+  `npm run contact:add`.
 
 Not done yet:
 
-- Email and Telegram alerts, escalation and TLS expiry warnings (D-007, D-010, D-013).
+- TLS expiry warnings (D-010): the days left are measured, nothing is sent yet.
 - Raw-check retention (7 days) and the hourly / daily roll-ups (D-011, Q-023).
 - The response time chart on the status page (Q-012).
 - Adding and editing monitors in the dashboard (the API can create them), scheduled maintenance,
-  alert contacts and API keys from the web pages (keys come from `npm run apikey:create`).
-- Production: no server is configured, so the deploy job is skipped; the report email needs
-  `SMTP_URL` and `MAIL_FROM` passed in `deploy/compose.prod.yml`.
+  alert contacts and API keys from the web pages (they come from `npm run contact:add` and
+  `npm run apikey:create`).
+- Production: no server is configured, so the deploy job is skipped. Email and Telegram need the
+  `SMTP_URL`, `MAIL_FROM` and `TELEGRAM_BOT_TOKEN` secrets; without them that channel waits.
 - Monitors: 2 of the 12 targets have consent (`MONITORS.md`).
 
 ## Run locally
@@ -100,6 +105,8 @@ One-time setup:
 | `DOMAIN` | the public host name, e.g. `status.example.ro`, with a DNS `A` record to the server's IP; its registered domain must be your own or on the Public Suffix List (not sslip.io or nip.io: D-029) |
 | `MYSQL_DATABASE`, `MYSQL_USER` | e.g. `uptime` |
 | `MYSQL_PASSWORD` | letters and digits only, e.g. `openssl rand -hex 24` (it goes into a URL) |
+| `SMTP_URL`, `MAIL_FROM` | optional: the mail server for reports and alerts, e.g. `smtps://user:password@smtp.example.com:465` |
+| `TELEGRAM_BOT_TOKEN` | optional: the bot that sends Telegram alerts (from @BotFather) |
 
 The status page is then at `https://<DOMAIN>/status`. The monitors with consent
 (MONITORS.md) come with the migrations, at 5 minutes.
