@@ -43,8 +43,11 @@ export const SMALL_ICONS = iconSet('icon-sm');
 export interface HeaderView {
   /** Where the product name goes: the top of the page, or the status page from elsewhere. */
   brandHref: string;
-  apiDocsHref: string;
+  /** The "API docs" pill; the admin and login pages have none (DS-p26-admin-monitors, DS-p26-login). */
+  apiDocsHref?: string;
   links: { label: string; href: string; current: boolean }[];
+  /** "Login" (on the login page, the current page), or "Log out" once signed in. Default: Login. */
+  account?: 'login' | 'login-current' | 'signed-in';
 }
 
 /** Renders a view from `src/web/views/` with what every page needs. */

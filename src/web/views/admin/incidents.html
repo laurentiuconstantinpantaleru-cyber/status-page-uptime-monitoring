@@ -1,0 +1,77 @@
+<%/* DS-p26-admin-incidents (D-038): open incidents, then those resolved in the last 90 days, each with a form. */%>
+<%~ include('../partials/page-head.html', it) %>
+<%
+function updateForm(i) {
+  var f = i.form;
+%>
+<form class="form" method="post" action="/admin/incidents/<%= i.id %>/updates" novalidate>
+<% if (f.posted) { %>
+  <p class="done" role="status"><%~ it.icons.ok %><span>Update posted. It shows on the status page within 30 seconds.</span></p>
+<% } %>
+<% if (f.failed) { %>
+  <div class="alert" role="alert"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg><p><strong>The update was not saved.</strong>The server did not answer. Your text is still here: try again in a moment.</p></div>
+<% } %>
+  <fieldset class="stages"<% if (f.errors.stage) { %> aria-describedby="stage-error-<%= i.id %>"<% } %>><legend>Stage</legend><% it.stages.forEach(function (s) { %><label class="stage-opt"><input type="radio" name="stage" value="<%= s.value %>"<% if (f.stage === s.value) { %> checked<% } %>><%= s.label %></label><% }) %></fieldset>
+<% if (f.errors.stage) { %>
+  <%~ include('../partials/field-error.html', { id: 'stage-error-' + i.id, text: f.errors.stage }) %>
+<% } %>
+  <div class="field"><label for="body-<%= i.id %>">Update</label>
+    <textarea class="input" id="body-<%= i.id %>" name="body" maxlength="2000" aria-describedby="hint-<%= i.id %><% if (f.errors.body) { %> body-error-<%= i.id %><% } %>"<% if (f.errors.body) { %> aria-invalid="true"<% } %>><%= f.body %></textarea>
+<% if (f.errors.body) { %>
+    <%~ include('../partials/field-error.html', { id: 'body-error-' + i.id, text: f.errors.body }) %>
+<% } %>
+  </div>
+  <div class="f-foot"><p class="hint" id="hint-<%= i.id %>">Up to 2000 characters. Shown on the public status page.</p><button class="submit" type="submit">Post update</button></div>
+</form>
+<% }
+function updates(i) { %>
+<% if (i.updates.length === 0) { %>
+<p class="no-updates">No updates yet. The status page says "No updates yet." until you post one.</p>
+<% } else { %>
+<%~ include('../partials/timeline.html', { updates: i.updates }) %>
+<% } %>
+<% } %>
+<main class="page col" id="main">
+<div class="head">
+  <div><p class="org"><%= it.org %></p><h1>Incidents</h1>
+    <p class="role-note">Members and admins write the updates the status page shows (D-014). Incidents open and resolve on their own (D-006).</p></div>
+</div>
+<% if (it.error) { %>
+<div class="empty card" role="alert"><p>Incidents could not load because the server did not answer. Try again in a moment.</p><a class="btn" href="/admin/incidents">Try again</a></div>
+<% } else { %>
+<section class="section" aria-labelledby="open-title">
+  <div class="section-head"><h2 id="open-title">Open</h2></div>
+  <div class="list">
+<% if (it.open.length === 0) { %>
+    <div class="empty card"><p>No open incidents. When a monitor is confirmed down, its incident appears here so you can tell visitors what is going on.</p><a class="pill" href="/admin/monitors">Go to monitors</a></div>
+<% } %>
+<% it.open.forEach(function (i) { %>
+    <section class="notice card" id="incident-<%= i.id %>" style="--accent: var(--color-status-outage)" aria-labelledby="t-<%= i.id %>">
+      <div class="n-head"><%~ it.icons.outage %><div><p class="eyebrow">Open<% if (i.stage) { %> · <%= i.stage %><% } %></p><h3 id="t-<%= i.id %>"><%= i.title %></h3>
+        <p class="meta">Started <span class="num"><%= i.started %></span> · down for <span class="num"><%= i.downFor %></span></p></div></div>
+      <% updates(i) %>
+      <% updateForm(i) %>
+    </section>
+<% }) %>
+  </div>
+</section>
+<section class="section past" aria-labelledby="past-title">
+  <div class="section-head"><h2 id="past-title">Resolved in the last 90 days</h2></div>
+  <div class="list">
+<% if (it.past.length === 0) { %>
+    <div class="empty card"><p>No incidents resolved in the last 90 days.</p></div>
+<% } %>
+<% it.past.forEach(function (i) { %>
+    <section class="notice card" id="incident-<%= i.id %>" aria-labelledby="t-<%= i.id %>">
+      <div class="n-head"><%~ it.icons.ok %><div><p class="eyebrow">Resolved · <%= i.day %></p><h3 id="t-<%= i.id %>"><%= i.title %></h3>
+        <p class="meta">Lasted <span class="num"><%= i.lasted %></span></p></div></div>
+      <details<% if (i.form.open) { %> open<% } %>><summary>Updates and a new update</summary>
+      <% updates(i) %>
+      <% updateForm(i) %>
+      </details>
+    </section>
+<% }) %>
+  </div>
+</section>
+<% } %>
+<%~ include('../partials/page-foot.html', it) %>

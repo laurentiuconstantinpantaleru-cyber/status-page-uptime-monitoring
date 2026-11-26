@@ -6,11 +6,11 @@ import type { RenderedPage } from './cache.js';
 import { STATUSES, css, render, type HeaderView } from '../page.js';
 
 const CSS = css('status.css');
-const LABEL: Record<Status, string> = { ok: 'Operational', degraded: 'Degraded', outage: 'Down', maint: 'Maintenance', nodata: 'No data yet' };
+export const LABEL: Record<Status, string> = { ok: 'Operational', degraded: 'Degraded', outage: 'Down', maint: 'Maintenance', nodata: 'No data yet' };
 const DAY_LABEL: Record<Status, string> = { ...LABEL, nodata: 'No data' };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const longDay = (d: Date) => `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+export const longDay = (d: Date) => `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 
 /** An incident has no written title, so it is named after its monitor and the cause it opened with. */
 const CAUSE_PHRASE: Record<string, string> = {
@@ -22,21 +22,20 @@ const CAUSE_PHRASE: Record<string, string> = {
   tls: 'has a TLS certificate problem',
   connection: 'could not be reached',
 };
-const incidentTitle = (monitor: string, incident: Period) => `${monitor} ${CAUSE_PHRASE[incident.cause ?? ''] ?? 'is down'}`;
-const stageLabel = (stage: IncidentUpdate['stage']) => stage[0].toUpperCase() + stage.slice(1);
+export const incidentTitle = (monitor: string, incident: Period) => `${monitor} ${CAUSE_PHRASE[incident.cause ?? ''] ?? 'is down'}`;
+export const stageLabel = (stage: IncidentUpdate['stage']) => stage[0].toUpperCase() + stage.slice(1);
 
 /** A time in UTC, with the day when it is not on the day of `today`. */
-function utcTime(at: Date, today: Date): { iso: string; text: string } {
+export function utcTime(at: Date, today: Date): { iso: string; text: string } {
   const sameDay = startOfUtcDay(at).getTime() === startOfUtcDay(today).getTime();
   return { iso: at.toISOString(), text: `${sameDay ? '' : `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} `}${hhmm(at)} UTC` };
 }
 
-function timeline(updates: IncidentUpdate[], today: Date) {
+export function timeline(updates: IncidentUpdate[], today: Date) {
   return updates.map((u) => ({ stage: stageLabel(u.stage), body: u.body, time: utcTime(u.createdAt, today) }));
 }
 
-/** Status goes to the top, API to the badge and API section in the footer. The Dashboard
- *  and Login pages do not exist yet (DS-p26-admin-monitors, Q-008). */
+/** Status goes to the top, API to the badge and API section in the footer. */
 const HEADER: HeaderView = {
   brandHref: '#top',
   apiDocsHref: '#api-docs',

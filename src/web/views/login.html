@@ -1,0 +1,35 @@
+<%/* DS-p26-login. Checked on the server (D-024: no script); one message for wrong credentials (Q-008). */%>
+<%~ include('partials/page-head.html', it) %>
+<main class="page col" id="main">
+<section class="login" aria-labelledby="login-title">
+  <div class="login-head">
+    <h1 id="login-title">Log in</h1>
+    <p>For organization members and admins. Visitors can read the status page without an account.</p>
+  </div>
+
+  <form class="form card" method="post" action="/login" novalidate<% if (it.wrong) { %> aria-describedby="form-error"<% } %>>
+<% if (it.wrong) { %>
+    <div class="alert" id="form-error" role="alert"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <p><strong>Wrong email or password.</strong>Check both and try again.</p>
+    </div>
+<% } %>
+    <div class="field">
+      <label for="email">Email</label>
+      <input class="input" id="email" name="email" type="email" autocomplete="username" inputmode="email" spellcheck="false" maxlength="255"
+        placeholder="name@example.test" value="<%= it.email %>"<% if (it.errors.email) { %> aria-invalid="true" aria-describedby="email-error"<% } %><% if (!it.errors.password && !it.wrong) { %> autofocus<% } %>>
+<% if (it.errors.email) { %>
+      <%~ include('partials/field-error.html', { id: 'email-error', text: it.errors.email }) %>
+<% } %>
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input class="input" id="password" name="password" type="password" autocomplete="current-password"<% if (it.errors.password) { %> aria-invalid="true" aria-describedby="password-error"<% } %><% if (it.errors.password || it.wrong) { %> autofocus<% } %>>
+<% if (it.errors.password) { %>
+      <%~ include('partials/field-error.html', { id: 'password-error', text: it.errors.password }) %>
+<% } %>
+    </div>
+    <button class="submit" type="submit">Log in</button>
+  </form>
+  <a class="back" href="/status">Back to status page</a>
+</section>
+<%~ include('partials/page-foot.html', it) %>

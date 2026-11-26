@@ -15,6 +15,8 @@
 - PATTERN-007 · A CI job that needs secrets is skipped, not failed, while they are missing · candidate
 - PATTERN-008 · At most one open row per owner through a generated column and a unique key · candidate
 - PATTERN-009 · A recurring rule is stored as a rule and expanded into spans when read · candidate
+- PATTERN-010 · An admin route: a guard preHandler for the role, the organization in the SQL, 404 outside it · candidate
+- PATTERN-011 · A form posts, then redirects with 303 to a page that says what happened · candidate
 
 ---
 
@@ -95,4 +97,20 @@
 - **How:** Store the rule's fields (frequency, weekdays, start time, duration, first day, `ended_at`). A pure function takes the rule and [from, to) and returns the ranges that overlap it, starting from the day `duration` before `from` so a range crossing midnight is not lost. Readers merge those ranges with the stored one-off ones and pass them on unchanged.
 - **Example:** src/shared/maintenance.ts (`occurrences`), src/db/maintenance.ts (`loadMaintenance`), test/shared/maintenance.test.ts
 - **Why:** No job has to generate rows ahead of time, an edit or an end leaves no stale rows, and the expansion is tested with plain dates instead of a database (D-004).
+- **Source:** session 2026-11-26 · confidence medium
+
+## PATTERN-010 · An admin route: a guard preHandler for the role, the organization in the SQL, 404 outside it
+- **Status:** candidate
+- **Use when:** Adding a route under `/admin` that reads or changes something of one organization.
+- **How:** Register it with `{ preHandler: guard('<permission>') }` (session → 303 `/login`, role → 403). Parse the `:id` with the digits-only `ID` regex; pass `scopeOf(user)` to a store method whose query adds `AND organization_id = ?` unless the scope is null (global admin), and answer `notFound` when it returns null. Add the route to the table in `test/web/access-matrix.test.ts` with one expectation per role.
+- **Example:** src/web/admin/routes.ts (`guard`, `idOf`, `/admin/monitors/:id/delete`), src/web/admin/store.ts (`orgFilter`), test/web/access-matrix.test.ts
+- **Why:** The role and the organization are checked on the server for every route, another organization's ids do not leak (D-036), and a new route cannot skip the matrix unnoticed.
+- **Source:** session 2026-11-26 · confidence medium
+
+## PATTERN-011 · A form posts, then redirects with 303 to a page that says what happened
+- **Status:** candidate
+- **Use when:** A server-rendered page changes something from a `<form method="post">` (no script, D-024).
+- **How:** Validate the fields in a pure function that returns the value or one message per field. Invalid: render the same page with 400, the typed values and `aria-invalid` plus the message next to each field. Saved: `303` to the page with a short query (`?posted=<id>`, `?started=<id>&minutes=30`) that the GET turns into a `role="status"` line. A failed save renders the page with 503 and keeps the typed text.
+- **Example:** src/web/admin/routes.ts (`/admin/incidents/:id/updates`, `/admin/monitors/:id/maintenance`), src/web/admin/incidents.ts (`parseUpdate`), test/web/admin-incidents.test.ts
+- **Why:** Reloading after a post does not post again, and errors and success read the same with or without script.
 - **Source:** session 2026-11-26 · confidence medium

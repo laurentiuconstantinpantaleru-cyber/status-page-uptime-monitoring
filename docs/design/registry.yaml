@@ -13,13 +13,13 @@ designs:
     source: src/web/views/admin/monitors.html
     screenshots: [screens/DS-p26-admin-monitors.light.png, screens/DS-p26-admin-monitors.dark.png]
     design_ref: mocks/DS-p26-admin-monitors.html
-    status: approved
+    status: implemented
   - id: DS-p26-admin-incidents
     kind: screen
     source: src/web/views/admin/incidents.html
     screenshots: [screens/DS-p26-admin-incidents.light.png, screens/DS-p26-admin-incidents.dark.png]
     design_ref: mocks/DS-p26-admin-incidents.html
-    status: approved
+    status: implemented
   - id: DS-p26-admin-maintenance
     kind: screen
     source: src/web/views/admin/maintenance.html
@@ -49,7 +49,7 @@ designs:
     source: src/web/views/login.html
     screenshots: [screens/DS-p26-login.light.png, screens/DS-p26-login.dark.png]
     design_ref: mocks/DS-p26-login.html
-    status: draft
+    status: implemented
   - id: DS-p26-docs
     kind: screen
     source: src/web/views/docs.html

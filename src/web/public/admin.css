@@ -1,0 +1,120 @@
+/* The admin pages (DS-p26-admin-monitors, DS-p26-admin-incidents), from their mocks. Tokens only. */
+
+/* ---------- Page head, monitors list (DS-p26-admin-monitors) ---------- */
+.head { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: end; justify-content: space-between; }
+.head > div { display: grid; gap: var(--space-1); min-width: 0; }
+.head h1 { font: var(--text-2xl); letter-spacing: -0.02em; }
+.org { font: var(--text-sm-strong); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.pill-primary { background: var(--color-brand); border-color: var(--color-brand); color: var(--color-on-brand); }
+.pill-primary:hover { background: var(--color-brand); box-shadow: 0 0 0 var(--space-1) var(--color-bg-subtle); }
+.mon { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-6); align-items: start;
+  padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); }
+.mon:first-child { border-top: 0; }
+.m-name { display: grid; gap: var(--space-0-5); min-width: 0; }
+.m-name strong { font: var(--text-base); font-weight: 500; overflow-wrap: anywhere; }
+.m-name code { font: var(--text-metric); font-weight: 400; color: var(--color-text-muted); overflow-wrap: anywhere; }
+.m-status { grid-column: 2; grid-row: 1; justify-self: end; }
+.m-cell { grid-column: 1; font: var(--text-sm); color: var(--color-text-secondary); min-width: 0; overflow-wrap: anywhere; }
+.m-cell .num { font: var(--text-metric); }
+.m-actions { grid-column: 2; grid-row: 2 / span 2; display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: end; align-self: end; }
+.m-actions .pill { min-height: var(--space-8); padding: 0 var(--space-3); }
+.maint { position: relative; }
+.maint > summary { list-style: none; }
+.maint > summary::-webkit-details-marker { display: none; }
+.maint-panel { position: absolute; right: 0; top: calc(100% + var(--space-1)); z-index: 10; display: grid; gap: var(--space-1);
+  padding: var(--space-2); min-width: calc(var(--space-16) * 2.5); }
+.maint-panel p { font: var(--text-xs); color: var(--color-text-muted); padding: 0 var(--space-2); }
+.maint-panel button { font: var(--text-sm); text-align: left; min-height: var(--space-8); padding: 0 var(--space-2); cursor: pointer;
+  border: 0; border-radius: var(--radius-md); background: none; color: var(--color-text-primary); }
+.maint-panel button:hover { background: var(--color-bg-subtle); }
+@media (pointer: coarse) { .maint-panel button, .m-actions .pill { min-height: var(--space-12); } }
+.live { font: var(--text-sm); color: var(--color-text-secondary); min-height: var(--space-6); }
+.role-note { font: var(--text-xs); color: var(--color-text-muted); }
+@media (max-width: 640px) {
+  .mon { padding: var(--space-4); gap: var(--space-2) var(--space-4); }
+  .m-actions { grid-column: 1 / -1; grid-row: auto; justify-content: start; }
+  .maint-panel { left: 0; right: auto; }
+}
+.group { display: grid; gap: var(--space-2); }
+.group-name { font: var(--text-sm-strong); font-weight: 600; color: var(--color-text-primary); overflow-wrap: anywhere; }
+.groups { display: grid; gap: var(--space-6); }
+.pill:disabled { cursor: not-allowed; color: var(--color-text-secondary); background: var(--color-bg-subtle); border-color: var(--color-border); }
+.pill-primary:disabled { color: var(--color-text-secondary); }
+.maint-panel form { display: contents; }
+
+/* ---------- Delete confirmation (D-037: a page, not a script dialog) ---------- */
+.confirm { display: grid; gap: var(--space-4); padding: var(--space-6); max-width: calc(var(--space-16) * 9); }
+.confirm h1 { font: var(--text-lg); overflow-wrap: anywhere; }
+.confirm p { color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.confirm .row { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: end; }
+.confirm form { display: contents; }
+
+/* ---------- Incidents and the update form (DS-p26-admin-incidents) ---------- */
+.list { display: grid; gap: var(--space-4); }
+.notice { display: grid; gap: var(--space-6); padding: var(--space-6); }
+@media (max-width: 640px) { .notice { padding: var(--space-4); } }
+.n-head { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: start; }
+.n-head .icon { margin-top: var(--space-1); }
+.n-head > div { display: grid; gap: var(--space-1); min-width: 0; }
+.eyebrow { font: var(--text-sm-strong); color: var(--color-text-secondary); }
+.n-head h2 { font: var(--text-lg); overflow-wrap: anywhere; }
+.n-head .meta, .n-body { overflow-wrap: anywhere; }
+.n-body { font: var(--text-base); color: var(--color-text-secondary); }
+
+/* Timeline: dots on a vertical line; the newest dot carries the incident's status color */
+.timeline { display: grid; gap: var(--space-6); }
+.timeline li { position: relative; padding-left: var(--space-8); display: grid; gap: var(--space-1); min-width: 0; }
+.timeline li::before { content: ""; position: absolute; left: 0; top: var(--space-1); width: var(--space-3); height: var(--space-3);
+  border-radius: var(--radius-pill); background: var(--color-bg-surface); border: 2px solid var(--color-border-strong); }
+.timeline li:first-child::before { background: var(--accent, var(--color-border-strong)); border-color: var(--accent, var(--color-border-strong)); }
+.timeline li::after { content: ""; position: absolute; left: calc(var(--space-3) / 2 - 1px); top: calc(var(--space-4) + var(--space-1));
+  bottom: calc(var(--space-6) * -1 + var(--space-1)); width: 2px; background: var(--color-border); }
+.timeline li:last-child::after { display: none; }
+.u-head { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); align-items: baseline; }
+.stage { font: var(--text-sm-strong); color: var(--color-text-primary); }
+.u-head time { font: var(--text-metric); color: var(--color-text-muted); }
+.timeline p { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+
+.no-updates { font: var(--text-sm); color: var(--color-text-muted); }
+.form { padding: var(--space-6) 0 0; border-top: 1px solid var(--color-border); display: grid; gap: var(--space-6); }
+.field { display: grid; gap: var(--space-2); }
+.field label { font: var(--text-sm-strong); color: var(--color-text-primary); }
+.input-row { display: flex; gap: var(--space-2); align-items: stretch; }
+.input { flex: 1; min-width: 0; min-height: var(--space-12); padding: 0 var(--space-3); font: var(--text-base); color: var(--color-text-primary);
+  background: var(--color-bg-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); }
+.input:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 1px; }
+.input[aria-invalid="true"] { border-color: var(--color-status-outage); border-width: 2px; }
+.input:disabled { background: var(--color-bg-subtle); color: var(--color-text-secondary); cursor: not-allowed; }
+.toggle { min-height: var(--space-12); padding: 0 var(--space-3); flex: none; cursor: pointer; font: var(--text-sm-strong); color: var(--color-text-primary);
+  background: var(--color-bg-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); }
+.toggle:hover { background: var(--color-bg-subtle); }
+.toggle:disabled { cursor: not-allowed; color: var(--color-text-secondary); }
+.error { display: flex; gap: var(--space-1); align-items: start; font: var(--text-sm); color: var(--color-text-primary); }
+.error[hidden] { display: none; }
+.error svg { width: var(--space-4); height: var(--space-4); flex: none; margin-top: var(--space-0-5); color: var(--color-status-outage); }
+.hint { font: var(--text-xs); color: var(--color-text-muted); }
+.alert { display: flex; gap: var(--space-3); align-items: start; padding: var(--space-4); border: 1px solid var(--color-border);
+  border-left: var(--border-accent) solid var(--color-status-outage); border-radius: var(--radius-md); background: var(--color-bg-surface); }
+.alert[hidden] { display: none; }
+.alert svg { width: var(--space-4); height: var(--space-4); flex: none; margin-top: var(--space-1); color: var(--color-status-outage); }
+.alert p { font: var(--text-sm); color: var(--color-text-secondary); }
+.alert strong { display: block; font: var(--text-sm-strong); color: var(--color-text-primary); }
+.stages { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.stages legend { font: var(--text-sm-strong); color: var(--color-text-primary); margin-bottom: var(--space-2); }
+.stage-opt { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--space-8); padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong); border-radius: var(--radius-pill); font: var(--text-sm-strong); cursor: pointer; }
+.stage-opt:has(input:checked) { border-color: var(--color-brand); box-shadow: inset 0 0 0 1px var(--color-brand); }
+.stage-opt input { margin: 0; accent-color: var(--color-brand); }
+@media (pointer: coarse) { .stage-opt { min-height: var(--space-12); } }
+textarea.input { min-height: calc(var(--space-16) * 2); padding: var(--space-3); resize: vertical; }
+.f-foot { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; justify-content: space-between; }
+.submit { min-height: var(--space-8); padding: 0 var(--space-4); cursor: pointer; font: var(--text-sm-strong); border-radius: var(--radius-pill);
+  border: 1px solid var(--color-brand); background: var(--color-brand); color: var(--color-on-brand); }
+.submit:hover { box-shadow: 0 0 0 var(--space-1) var(--color-bg-subtle); }
+@media (pointer: coarse) { .submit { min-height: var(--space-12); } }
+.done { display: flex; gap: var(--space-2); align-items: start; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border);
+  border-left: var(--border-accent) solid var(--color-status-ok); border-radius: var(--radius-md); font: var(--text-sm); }
+.done svg { width: var(--space-4); height: var(--space-4); flex: none; margin-top: var(--space-0-5); color: var(--color-status-ok); }
+.past summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer; min-height: var(--space-8); display: inline-flex; align-items: center; }
+@media (pointer: coarse) { .past summary { min-height: var(--space-12); } }
+.past details > .timeline, .past details > .form { margin-top: var(--space-4); }

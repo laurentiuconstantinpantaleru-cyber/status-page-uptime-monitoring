@@ -43,17 +43,19 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 
 | Part | Path | Responsibility | Talks to |
 |---|---|---|---|
-| Web Server | `src/web/` (`app.ts`, `server.ts`) | Serves Fastify REST API, SSR status pages, admin views; `GET /health`; `GET /status` (DS-p26-public-status) when `DATABASE_URL` is set | MySQL, in-memory cache |
-| Public Status Page | `src/web/status/` (`model.ts`, `data.ts`, `render.ts`), `src/web/views/status.html`, `src/web/public/` | Loads monitors, last checks, incidents with their updates and maintenance windows over the 90 × 24 h before now; derives each monitor's status, 90- and 30-day uptime and 90 daily bars, the active incidents and the past incidents (D-032); renders the Eta template with the tokens inlined. Whatever later writes `incident_updates` must bump `status_version` (D-020) | MySQL, In-Memory Cache |
+| Web Server | `src/web/` (`app.ts`, `server.ts`) | Serves Fastify REST API, SSR status pages, admin views; `GET /health`; `GET /status` (DS-p26-public-status) and the sign-in and admin routes when `DATABASE_URL` is set | MySQL, in-memory cache |
+| Sign-in | `src/web/auth/` (`password.ts`, `session.ts`, `access.ts`, `store.ts`), `src/web/views/login.html`, `src/cli/user-create.ts` | `GET`/`POST /login`, `POST /logout` (DS-p26-login): bcrypt passwords (D-034), sessions in `sessions` keyed by the token's SHA-256, 8 h idle / 7 days at most, `SameSite=Lax` cookie and an `Origin` check on every POST (D-035); the role matrix (D-018); accounts from `npm run user:create` | MySQL |
+| Admin pages | `src/web/admin/` (`routes.ts`, `store.ts`, `render.ts`, `incidents.ts`), `src/web/views/admin/`, `src/web/public/admin.css` | `/admin/monitors` (DS-p26-admin-monitors): list, quick maintenance, delete after a confirmation page (D-037); `/admin/incidents` (DS-p26-admin-incidents): human updates, inserted with a `status_version` bump in one transaction (D-033, D-038). A `guard` preHandler checks the session and the role; the store limits every query to the user's organization; refusals per D-036 | MySQL |
+| Public Status Page | `src/web/status/` (`model.ts`, `data.ts`, `render.ts`), `src/web/views/status.html`, `src/web/public/` | Loads monitors, last checks, incidents with their updates and maintenance windows over the 90 × 24 h before now; derives each monitor's status, 90- and 30-day uptime and 90 daily bars, the active incidents and the past incidents (D-032); renders the Eta template with the tokens inlined. The admin pages write `incident_updates` and bump `status_version` (D-033) | MySQL, In-Memory Cache |
 | Docs Page | `src/web/docs/` (`search.ts`, `render.ts`), `src/web/views/docs.html`, `src/web/views/docs/*.html` | `GET /docs` (DS-p26-docs): how monitoring works, filtered by `?q=` on the server (D-024: no script) | — |
-| Shared page parts | `src/web/page.ts`, `src/web/views/partials/`, `src/web/public/base.css` | Eta, inlined tokens and shared styles, icons, the header and the theme toggle used by `/status` and `/docs` | Web Server |
+| Shared page parts | `src/web/page.ts`, `src/web/views/partials/`, `src/web/public/base.css` | Eta, inlined tokens and shared styles, icons, the header (Login or Log out) and the theme toggle used by `/status`, `/docs`, `/login` and the admin pages | Web Server |
 | In-Memory Cache | `src/web/status/cache.ts` | Keeps the rendered status page; reads `status_version` at most every 30 s on a request, re-renders on a new version, at UTC midnight or a maintenance boundary; serves the last copy if MySQL fails | Web Server |
 | Scheduler | `src/worker/scheduler.ts` | Fixed grid per monitor (interval plus a per-monitor offset), no catch-up, a slot skipped while the previous check runs (D-027) | Check Workers |
 | Check Engine | `src/worker/check.ts`, `src/worker/http-client.ts` | One check through an injected `HttpClient` and `Clock`: status, keyword, latency threshold, TLS days left, failure cause; default timeout 30 s (D-022). `nodeHttpClient` is the real client: GET, up to 5 redirects, whole body, certificate of the last hop (D-026) | External Targets (via the client) |
 | Check Workers | `src/worker/main.ts`, `worker.ts`, `assignment.ts`, `store.ts` | One process per `WORKER_NAME` (`npm run start:worker`): heartbeat 10 s, monitors re-read 60 s, scheduled checks of the monitors it is primary for (`monitor_id % active workers`), confirmations of the other worker's `down` checks polled every 5 s; records each check under the monitor's row lock (D-027) | MySQL, External Targets |
 | Worker Degradation | `src/shared/worker-fault.ts` | Judges a worker over the last 10 min of its scheduled checks: ≥ 3 monitors, ≥ 70 % failed, ≥ 70 % of the confirmed failures confirmed up by the other worker (D-015). `recordCheck` opens no incident while a worker behind the run is degraded; each heartbeat opens or ends the worker's `worker_faults` episode | MySQL |
 | Incident Engine | `src/shared/incidents.ts`, `src/shared/uptime.ts` | Opens after 2 confirmed failures outside maintenance, resolves after 2 successes (D-006, D-028); says when the status version must change; run by the workers inside `recordCheck`. `uptime()` computes a period's uptime from incidents and maintenance windows (not check counts), measured from the monitor's history start to now; `formatUptime` truncates to 2 decimals; the status page uses both | MySQL, Alert Dispatcher (_planned_) |
-| Maintenance | `src/shared/maintenance.ts`, `src/db/maintenance.ts`, `src/web/maintenance/store.ts` | One-off and quick windows in `maintenance_windows`; recurring rules in `maintenance_schedules`, expanded into windows when read (D-031). `loadMaintenance` feeds the worker's `inMaintenance` and the status page; the writes bump the status version. No route calls the writes yet (Q-008) | MySQL |
+| Maintenance | `src/shared/maintenance.ts`, `src/db/maintenance.ts`, `src/web/maintenance/store.ts` | One-off and quick windows in `maintenance_windows`; recurring rules in `maintenance_schedules`, expanded into windows when read (D-031). `loadMaintenance` feeds the worker's `inMaintenance` and the status page; the writes bump the status version. The dashboard calls `startQuickMaintenance` (D-037); the other writes have no route yet | MySQL |
 | Alert Dispatcher | `src/worker/` _planned_ | Sends Telegram and email notifications with escalation | Telegram API, SMTP |
 | Roll-up Job | `src/worker/` _planned_ | Aggregates raw check data older than 7 days | MySQL |
 | Database | `src/db/connection.ts`, `src/db/migrate.ts`, `db/migrations/` | UTC connections (D-020); forward-only SQL migrations recorded in `schema_migrations` (D-021) | MySQL |
@@ -70,7 +72,8 @@ and `src/db/` (database connection and migration runner). SQL migrations live in
 ## State and storage
 | What | Where | Owner | Notes |
 |---|---|---|---|
-| Orgs, users, roles | MySQL `organizations`, `users` | Web / Admin | One organization per user; `global_admin` has none (D-018) |
+| Orgs, users, roles | MySQL `organizations`, `users` | Web / Admin | One organization per user; `global_admin` has none (D-018); `password_hash` is bcrypt (D-034) |
+| Sessions | MySQL `sessions` | Web (sign-in) | SHA-256 of the token, never the token; 8 h idle, 7 days at most (D-035) |
 | Monitors | MySQL `monitors` | Web / Admin | Targets, interval 1–60 min (D-016), expected status, timeout, keyword, TLS, latency threshold |
 | Workers | MySQL `workers` | Check Workers | Worker processes and when each was last seen |
 | Worker faults | MySQL `worker_faults` | Check Workers | One row per episode of a degraded worker (D-015), open while `ended_at` is NULL, at most one open per worker; the counts the judgment saw |
@@ -90,6 +93,7 @@ maintenance windows.
 ```mermaid
 erDiagram
     organizations ||--o{ users : "has (global_admin: none)"
+    users ||--o{ sessions : "signs in"
     organizations ||--o{ monitors : owns
     organizations ||--o{ alert_contacts : alerts
     organizations ||--o{ api_keys : issues
@@ -113,7 +117,14 @@ erDiagram
         bigint organization_id FK "NULL only for global_admin"
         varchar email UK
         varchar display_name
+        char password_hash "bcrypt, NULL: cannot sign in"
         enum role "member, org_admin, global_admin"
+    }
+    sessions {
+        char id PK "SHA-256 of the cookie token"
+        bigint user_id FK
+        datetime created_at
+        datetime last_seen_at
     }
     monitors {
         bigint id PK
@@ -227,6 +238,7 @@ on `organizations`, `monitors`), left out of the diagram.
 - Production: one VPS (D-008) running `deploy/compose.prod.yml`: MySQL 8.4, `migrate` (one-shot, before web and workers), `web`, `worker-1`, `worker-2`, and Caddy for HTTPS on `DOMAIN` (own domain or one on the Public Suffix List, D-029).
 
 ## Boundaries
-- Public Status Page: Publicly readable; cached in-memory with sub-100ms response time; isolated from administrative write routes.
+- Public Status Page: Publicly readable; cached in-memory with sub-100ms response time; isolated from administrative write routes (it never looks up a session).
+- Admin pages: a session and a role checked on the server for every route (D-018, D-036); another organization's monitor or incident is 404; every POST needs a same-site `Origin` (D-035).
 - API Key Auth: Guarded routes for creating and editing monitors (`/api/v1/monitors`).
 - Multi-Worker Confirmation: Protects against false alarms caused by single worker host failure.

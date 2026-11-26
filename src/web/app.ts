@@ -4,6 +4,7 @@ import { StatusCache } from './status/cache.js';
 import type { StatusData } from './status/model.js';
 import { renderErrorPage, renderStatusPage } from './status/render.js';
 import { renderDocsPage } from './docs/render.js';
+import { registerAdminRoutes, type AdminDeps } from './admin/routes.js';
 
 /** Where the public status page reads from: MySQL in production, a fake in tests. */
 export interface StatusSource {
@@ -15,6 +16,8 @@ export interface AppDeps {
   clock?: Clock;
   /** Without one, `GET /status` is not registered. */
   status?: StatusSource;
+  /** Without them, the sign-in and admin routes are not registered. */
+  admin?: AdminDeps;
 }
 
 export function buildApp(options: FastifyServerOptions = {}, deps: AppDeps = {}): FastifyInstance {
@@ -52,6 +55,8 @@ export function buildApp(options: FastifyServerOptions = {}, deps: AppDeps = {})
       }
     });
   }
+
+  if (deps.admin) registerAdminRoutes(app, deps.admin, clock);
 
   return app;
 }

@@ -1,0 +1,1 @@
+<% if (it.header.account === 'signed-in') { %><form method="post" action="/logout"><button class="pill" type="submit">Log out</button></form><% } else { %><a class="pill" href="/login"<% if (it.header.account === 'login-current') { %> aria-current="page"<% } %>>Login</a><% } %>

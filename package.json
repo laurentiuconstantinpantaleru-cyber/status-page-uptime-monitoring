@@ -11,6 +11,7 @@
     "start:web": "node dist/web/server.js",
     "start:worker": "node dist/worker/main.js",
     "db:migrate": "node dist/db/migrate.js",
+    "user:create": "node dist/cli/user-create.js",
     "test": "vitest run",
     "lint": "tsc -p tsconfig.json --noEmit && python3 docs/agents/tools/ledger-lint.py"
   },

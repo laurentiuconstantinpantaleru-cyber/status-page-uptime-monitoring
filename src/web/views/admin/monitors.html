@@ -1,0 +1,55 @@
+<%/* DS-p26-admin-monitors (D-037). Maintenance is a <details> menu of forms; delete goes to a confirmation page. */%>
+<%~ include('../partials/page-head.html', it) %>
+<main class="page col" id="main">
+<div class="head">
+  <div><p class="org"><%= it.org %></p><h1>Monitors</h1>
+    <p class="role-note">Org admins can add, change and delete monitors; members can start maintenance (D-018).</p></div>
+<% if (it.admin) { %>
+  <button class="pill pill-primary" type="button" disabled>Add monitor<span class="visually-hidden"> (coming soon)</span></button>
+<% } %>
+</div>
+<section aria-labelledby="list-title">
+  <h2 id="list-title" class="visually-hidden">All monitors</h2>
+<% if (it.error) { %>
+  <div class="empty card" role="alert"><p>Monitors could not load because the server did not answer. Try again in a moment.</p><a class="btn" href="/admin/monitors">Try again</a></div>
+<% } else if (it.groups.length === 0) { %>
+  <div class="empty card"><p>No monitors yet. Add the first one: it is checked every 5 minutes by default and appears on the status page after its first check.</p></div>
+<% } else { %>
+  <div class="groups">
+<% it.groups.forEach(function (g) { %>
+  <div class="group">
+<% if (it.showGroups) { %>
+    <h2 class="group-name"><%= g.organization %></h2>
+<% } %>
+    <div class="card"><ul>
+<% g.monitors.forEach(function (m) { %>
+      <li class="mon">
+        <div class="m-name"><strong><%= m.name %></strong><code><%= m.url %></code></div>
+        <div class="m-status"><span class="badge"><%~ it.icons[m.status] %><span><%= m.label %></span></span></div>
+        <div class="m-cell">Every <span class="num"><%= m.interval %> min</span> · <% if (m.last) { %>Last check: <span class="num"><%= m.last.time %> UTC</span> · <% if (m.last.latency !== null) { %><span class="num"><%= m.last.latency %> ms</span><% } else { %>no answer<% } %><% } else { %>No checks yet<% } %></div>
+        <div class="m-actions">
+<% if (it.admin) { %>
+          <button class="pill" type="button" disabled>Edit<span class="visually-hidden"> <%= m.name %> (coming soon)</span></button>
+<% } %>
+          <details class="maint"><summary class="pill">Maintenance<span class="visually-hidden"> for <%= m.name %></span></summary>
+            <div class="maint-panel card"><p>Pause alerts for</p>
+<% [15, 30, 60].forEach(function (n) { %>
+              <form method="post" action="/admin/monitors/<%= m.id %>/maintenance"><button type="submit" name="minutes" value="<%= n %>"><%= n %> minutes</button></form>
+<% }) %>
+            </div></details>
+<% if (it.admin) { %>
+          <a class="pill" href="/admin/monitors/<%= m.id %>/delete">Delete<span class="visually-hidden"> <%= m.name %></span></a>
+<% } %>
+        </div>
+      </li>
+<% }) %>
+    </ul></div>
+  </div>
+<% }) %>
+  </div>
+<% } %>
+<% if (it.notice) { %>
+  <p class="live" role="status"><%= it.notice %></p>
+<% } %>
+</section>
+<%~ include('../partials/page-foot.html', it) %>

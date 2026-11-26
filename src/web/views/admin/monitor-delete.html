@@ -1,0 +1,12 @@
+<%/* The delete confirmation (D-037): the mock's dialog as a page, so it needs no script (D-024). */%>
+<%~ include('../partials/page-head.html', it) %>
+<main class="page col" id="main">
+<section class="confirm card">
+  <h1>Delete monitor?</h1>
+  <p>Delete <%= it.monitor.name %>? Its checks, incidents and maintenance windows are deleted too. This cannot be undone.</p>
+  <div class="row">
+    <a class="pill" href="/admin/monitors">Cancel</a>
+    <form method="post" action="/admin/monitors/<%= it.monitor.id %>/delete"><button class="pill" type="submit">Delete monitor</button></form>
+  </div>
+</section>
+<%~ include('../partials/page-foot.html', it) %>

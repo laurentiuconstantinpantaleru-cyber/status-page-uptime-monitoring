@@ -97,6 +97,9 @@ export function fakeAdmin(opts: { groups?: AdminGroup[]; incidents?: (AdminIncid
     deleted: [],
     updates: [],
     fail: {},
+    async organizationName(id) {
+      return groups.find((g) => g.organizationId === id)?.organization ?? null;
+    },
     async monitors(orgId) {
       if (store.fail.monitors) throw new Error('database down');
       return groups.filter((g) => orgId === null || g.organizationId === orgId).map(({ organization, monitors }) => ({ organization, monitors }));

@@ -1,4 +1,4 @@
-<%/* The page header (DS-p26-public-status): product name, theme toggle, links, Login, menu. */%>
+<%/* The page header (DS-p26-public-status, DS-p26-admin-monitors): product name, theme toggle, links, Login or Log out, menu. */%>
 <header class="site-header">
   <div class="bar col">
     <div class="brand-group">
@@ -11,8 +11,10 @@
 <% }) %>
     </nav>
     <div class="actions">
+<% if (it.header.apiDocsHref) { %>
       <a class="pill" href="<%= it.header.apiDocsHref %>">API docs</a>
-      <a class="pill" href="/login">Login</a>
+<% } %>
+      <%~ include('./account.html', it) %>
       <details class="menu">
         <summary aria-label="Menu"><%~ it.icons.menu %></summary>
         <nav class="drawer" aria-label="Main">
@@ -22,7 +24,7 @@
               <li><a class="drawer-link" href="<%= link.href %>"<% if (link.current) { %> aria-current="page"<% } %>><%= link.label %></a></li>
 <% }) %>
             </ul>
-            <div class="drawer-actions"><a class="pill" href="<%= it.header.apiDocsHref %>">API docs</a><a class="pill" href="/login">Login</a></div>
+            <div class="drawer-actions"><% if (it.header.apiDocsHref) { %><a class="pill" href="<%= it.header.apiDocsHref %>">API docs</a><% } %><%~ include('./account.html', it) %></div>
           </div>
         </nav>
       </details>
