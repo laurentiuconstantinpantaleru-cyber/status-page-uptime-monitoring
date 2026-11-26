@@ -20,6 +20,7 @@ import { recordCheck } from '../../src/worker/worker.js';
 import { hashSecret, newApiKey } from '../../src/web/api/keys.js';
 import type { NewMonitor } from '../../src/web/api/monitor-input.js';
 import { createApiKey, mysqlApiStore } from '../../src/web/api/store.js';
+import { mysqlReportStore } from '../../src/web/reports/store.js';
 
 // Integration tests against a real MySQL 8. CI always sets TEST_DATABASE_URL.
 // The database is wiped, so its name must end in `_test`.
@@ -93,6 +94,7 @@ describe.skipIf(!url)('MySQL schema', () => {
       '0005_worker_faults.sql',
       '0006_maintenance_schedules.sql',
       '0007_auth.sql',
+      '0008_monthly_reports.sql',
     ]);
 
     const applied = await rows<{ version: string; applied_at: Date }>(
@@ -833,6 +835,124 @@ describe.skipIf(!url)('MySQL schema', () => {
       expect(await store.monitorStatus(own, NOW)).toBe('nodata');
       expect(await store.monitorStatus(other, NOW)).toBe('outage');
       expect(await store.monitorStatus(99999999, NOW)).toBeNull();
+    });
+  });
+
+  describe('monthly reports (D-019, D-041)', () => {
+    const NOW = new Date('2026-12-01T00:30:00.000Z');
+    const MONTH = '2026-11';
+    let pool: ReturnType<typeof createPool>;
+    let orgId: number;
+    let otherOrg: number;
+    let monitor: number;
+
+    beforeAll(async () => {
+      pool = createPool(url!);
+      orgId = await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', ['rep-a', 'Școala Țară', T0, T0]);
+      otherOrg = await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', ['rep-b', 'Rep B', T0, T0]);
+      const created = new Date('2026-10-01T00:00:00.000Z');
+      monitor = await insertId(
+        conn,
+        `INSERT INTO monitors (organization_id, name, url, timeout_ms, check_tls, created_at, updated_at)
+         VALUES (?, 'Bibliotecă', 'https://biblioteca.example/', 10000, 1, ?, ?)`,
+        [orgId, created, created],
+      );
+      const check = (at: string, kind: string, latency: number | null) =>
+        conn.query(
+          `INSERT INTO checks (monitor_id, worker_id, checked_at, kind, outcome, latency_ms) VALUES (?, ?, ?, ?, 'up', ?)`,
+          [monitor, workerId, new Date(at), kind, latency],
+        );
+      await check('2026-10-20T00:00:00.000Z', 'scheduled', 5000); // October: not in the mean
+      await check('2026-11-05T00:00:00.000Z', 'scheduled', 100);
+      await check('2026-11-06T00:00:00.000Z', 'scheduled', 300);
+      await check('2026-11-07T00:00:00.000Z', 'confirmation', 9999); // a confirmation: not in the mean
+      await check('2026-11-08T00:00:00.000Z', 'scheduled', null); // no response: not in the mean
+      await check('2026-12-01T00:10:00.000Z', 'scheduled', 7000); // December: not in the mean
+      const incident = (start: string, end: string | null) =>
+        conn.query("INSERT INTO incidents (monitor_id, started_at, resolved_at, cause) VALUES (?, ?, ?, 'timeout')",
+          [monitor, new Date(start), end ? new Date(end) : null]);
+      await incident('2026-10-10T00:00:00.000Z', '2026-10-10T01:00:00.000Z'); // October only
+      await incident('2026-10-31T22:00:00.000Z', '2026-11-01T03:00:00.000Z'); // crosses into November
+      await conn.query(
+        "INSERT INTO maintenance_windows (monitor_id, starts_at, ends_at, source, created_at) VALUES (?, ?, ?, 'scheduled', ?)",
+        [monitor, new Date('2026-11-10T00:00:00.000Z'), new Date('2026-11-10T02:00:00.000Z'), T0],
+      );
+      const user = (org: number | null, email: string, role: string) =>
+        conn.query('INSERT INTO users (organization_id, email, display_name, role, created_at) VALUES (?, ?, ?, ?, ?)', [org, email, email, role, T0]);
+      await user(orgId, 'admin@rep-a.test', 'org_admin');
+      await user(orgId, 'member@rep-a.test', 'member');
+      await user(otherOrg, 'admin@rep-b.test', 'org_admin');
+      await user(null, 'global@rep.test', 'global_admin');
+    });
+
+    afterAll(async () => {
+      await pool?.end();
+    });
+
+    it('loads the month of one organization: its monitors, overlapping incidents, maintenance and mean latency of scheduled checks', async () => {
+      const input = await mysqlReportStore(pool).loadMonth(orgId, 2026, 11, NOW);
+
+      expect(input).toEqual({
+        organization: 'Școala Țară',
+        year: 2026,
+        month: 11,
+        monitors: [{
+          name: 'Bibliotecă',
+          url: 'https://biblioteca.example/',
+          historyStart: new Date('2026-10-01T00:00:00.000Z'),
+          incidents: [{ startedAt: new Date('2026-10-31T22:00:00.000Z'), resolvedAt: new Date('2026-11-01T03:00:00.000Z'), cause: 'timeout' }],
+          maintenance: [{ startsAt: new Date('2026-11-10T00:00:00.000Z'), endsAt: new Date('2026-11-10T02:00:00.000Z') }],
+          latency: { meanMs: 200, checks: 2 },
+        }],
+      });
+      expect(await mysqlReportStore(pool).loadMonth(99999999, 2026, 11, NOW)).toBeNull();
+    });
+
+    it('lists only the organization\'s org admins as recipients', async () => {
+      expect(await mysqlReportStore(pool).orgAdminEmails(orgId)).toEqual(['admin@rep-a.test']);
+    });
+
+    it('stores one report per organization and month; a second save is refused', async () => {
+      const store = mysqlReportStore(pool);
+      expect(await store.reportState(orgId, MONTH)).toBeNull();
+
+      expect(await store.saveReport(orgId, MONTH, Buffer.from('%PDF-first'), NOW)).toBe(true);
+      expect(await store.saveReport(orgId, MONTH, Buffer.from('%PDF-second'), NOW)).toBe(false);
+
+      expect((await store.storedReport(orgId, MONTH))?.toString()).toBe('%PDF-first');
+      expect(await store.reportState(orgId, MONTH)).toEqual({ emailed: false });
+      expect(await store.storedReport(otherOrg, MONTH)).toBeNull();
+      await expect(
+        conn.query('INSERT INTO monthly_reports (organization_id, month, pdf, generated_at) VALUES (?, ?, ?, ?)', [orgId, MONTH, Buffer.from('x'), NOW]),
+      ).rejects.toThrow(/Duplicate entry/);
+    });
+
+    it('only one claim to email a report wins; a failed send releases it, a sent one is never claimed again', async () => {
+      const store = mysqlReportStore(pool);
+      await store.saveReport(otherOrg, MONTH, Buffer.from('%PDF-b'), NOW);
+
+      const claims = await Promise.all([store.claimEmail(otherOrg, MONTH, NOW), store.claimEmail(otherOrg, MONTH, NOW)]);
+      expect(claims.filter((c) => c !== null).map((c) => c!.toString())).toEqual(['%PDF-b']);
+
+      await store.releaseEmail(otherOrg, MONTH, 'SMTP 421');
+      const [failed] = await rows<{ last_error: string; sending_at: Date | null }>(
+        conn, 'SELECT last_error, sending_at FROM monthly_reports WHERE organization_id = ? AND month = ?', [otherOrg, MONTH]);
+      expect(failed).toMatchObject({ last_error: 'SMTP 421', sending_at: null });
+
+      expect(await store.claimEmail(otherOrg, MONTH, NOW)).not.toBeNull();
+      await store.markEmailed(otherOrg, MONTH, NOW);
+      expect(await store.reportState(otherOrg, MONTH)).toEqual({ emailed: true });
+      expect(await store.claimEmail(otherOrg, MONTH, new Date(NOW.getTime() + 2 * 60 * 60 * 1000))).toBeNull();
+    });
+
+    it('a claim left by a crashed send is taken again after an hour', async () => {
+      const store = mysqlReportStore(pool);
+      const month = '2026-10';
+      await store.saveReport(orgId, month, Buffer.from('%PDF-oct'), NOW);
+
+      expect(await store.claimEmail(orgId, month, NOW)).not.toBeNull();
+      expect(await store.claimEmail(orgId, month, new Date(NOW.getTime() + 59 * 60 * 1000))).toBeNull();
+      expect(await store.claimEmail(orgId, month, new Date(NOW.getTime() + 60 * 60 * 1000))).not.toBeNull();
     });
   });
 });

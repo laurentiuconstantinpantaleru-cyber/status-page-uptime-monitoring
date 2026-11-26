@@ -39,6 +39,8 @@ const ROUTES: Route[] = [
   { method: 'POST', url: `/admin/incidents/${INCIDENT_A}/updates`, fields: { stage: 'identified', body: 'Disk full; freeing space.' },
     ok: { status: 303, location: `/admin/incidents?posted=${INCIDENT_A}#incident-${INCIDENT_A}` },
     roles: { visitor: 'login', member: 'ok', orgAdmin: 'ok', otherAdmin: 404, global: 'ok' } },
+  { method: 'GET', url: '/admin/reports/1/2026-10.pdf', ok: { status: 200 },
+    roles: { visitor: 'login', member: 403, orgAdmin: 'ok', otherAdmin: 404, global: 'ok' } },
   { method: 'POST', url: '/logout', fields: {}, ok: { status: 303, location: '/login' },
     roles: { visitor: 'login', ...ALL_SIGNED_IN } },
 ];

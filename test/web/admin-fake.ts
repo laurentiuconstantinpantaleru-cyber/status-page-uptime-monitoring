@@ -4,6 +4,7 @@ import { buildApp } from '../../src/web/app.js';
 import type { AdminGroup, AdminIncident, AdminStore, NewIncidentUpdate } from '../../src/web/admin/store.js';
 import { hashPassword } from '../../src/web/auth/password.js';
 import type { AuthStore, SessionRow, UserCredentials } from '../../src/web/auth/store.js';
+import type { ReportDownloads } from '../../src/web/reports/job.js';
 import type { StatusData } from '../../src/web/status/model.js';
 
 // In-memory stores for the admin routes (D-034–D-038): what the routes ask and write, without MySQL.
@@ -133,24 +134,43 @@ export function fakeAdmin(opts: { groups?: AdminGroup[]; incidents?: (AdminIncid
   return store;
 }
 
+/** Monthly report PDFs (D-019): one fake file per organization and month asked for. */
+export interface FakeReports extends ReportDownloads {
+  asked: { orgId: number; year: number; month: number }[];
+}
+
+export function fakeReports(): FakeReports {
+  const reports: FakeReports = {
+    asked: [],
+    async pdf(orgId, year, month) {
+      if (orgId !== ORG_A && orgId !== ORG_B) return null;
+      reports.asked.push({ orgId, year, month });
+      return Buffer.from(`%PDF-fake ${orgId} ${year}-${month}`);
+    },
+  };
+  return reports;
+}
+
 export interface Harness {
   app: FastifyInstance;
   clock: FakeClock;
   auth: FakeAuth;
   admin: FakeAdmin;
+  reports: FakeReports;
 }
 
 export function harness(opts: { admin?: FakeAdmin; secureCookies?: boolean; status?: StatusData } = {}): Harness {
   const clock = new FakeClock(NOW);
   const auth = fakeAuth();
   const admin = opts.admin ?? fakeAdmin();
+  const reports = fakeReports();
   const status = opts.status ?? { groups: [] };
   const app = buildApp({}, {
     clock,
     status: { load: async () => status, readVersion: async () => 1 },
-    admin: { auth, store: admin, secureCookies: opts.secureCookies ?? false },
+    admin: { auth, store: admin, secureCookies: opts.secureCookies ?? false, reports },
   });
-  return { app, clock, auth, admin };
+  return { app, clock, auth, admin, reports };
 }
 
 export const form = (fields: Record<string, string>) => new URLSearchParams(fields).toString();
