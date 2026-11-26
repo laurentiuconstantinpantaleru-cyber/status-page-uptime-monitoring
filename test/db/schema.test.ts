@@ -22,6 +22,7 @@ import type { NewMonitor } from '../../src/web/api/monitor-input.js';
 import { createApiKey, mysqlApiStore } from '../../src/web/api/store.js';
 import { mysqlReportStore } from '../../src/web/reports/store.js';
 import { loadMaintenance } from '../../src/db/maintenance.js';
+import { createContact, mysqlAlertStore } from '../../src/web/alerts/store.js';
 
 // Integration tests against a real MySQL 8. CI always sets TEST_DATABASE_URL.
 // The database is wiped, so its name must end in `_test`.
@@ -97,6 +98,7 @@ describe.skipIf(!url)('MySQL schema', () => {
       '0007_auth.sql',
       '0008_monthly_reports.sql',
       '0009_checks_latency_index.sql',
+      '0010_alerts.sql',
     ]);
 
     const applied = await rows<{ version: string; applied_at: Date }>(
@@ -1000,6 +1002,111 @@ describe.skipIf(!url)('MySQL schema', () => {
       expect(await store.claimEmail(orgId, month, NOW)).not.toBeNull();
       expect(await store.claimEmail(orgId, month, new Date(NOW.getTime() + 59 * 60 * 1000))).toBeNull();
       expect(await store.claimEmail(orgId, month, new Date(NOW.getTime() + 60 * 60 * 1000))).not.toBeNull();
+    });
+  });
+
+  describe('alerts (D-007, D-044)', () => {
+    const NOW = new Date('2026-12-01T10:12:00.000Z');
+    let pool: ReturnType<typeof createPool>;
+    let orgId: number;
+    let monitor: number;
+    let incident: number;
+    let ana: number;
+    let ops: number;
+    let bogdan: number;
+
+    beforeAll(async () => {
+      pool = createPool(url!);
+      orgId = await insertId(conn, 'INSERT INTO organizations (slug, name, escalation_timeout_minutes, created_at, updated_at) VALUES (?, ?, 30, ?, ?)', ['alert-a', 'Alert A', T0, T0]);
+      await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', ['alert-b', 'Alert B', T0, T0]);
+      monitor = await insertId(
+        conn,
+        `INSERT INTO monitors (organization_id, name, url, timeout_ms, check_tls, created_at, updated_at)
+         VALUES (?, 'Alerted API', 'https://alerted.example/', 10000, 1, ?, ?)`,
+        [orgId, T0, T0],
+      );
+      const check = (iso: string, outcome: string) =>
+        conn.query('INSERT INTO checks (monitor_id, worker_id, checked_at, kind, outcome, latency_ms) VALUES (?, ?, ?, \'scheduled\', ?, 100)',
+          [monitor, workerId, new Date(iso), outcome]);
+      await check('2026-12-01T09:52:00.000Z', 'up');
+      await check('2026-12-01T09:57:00.000Z', 'up');
+      await check('2026-12-01T10:02:00.000Z', 'down');
+      incident = await insertId(conn, "INSERT INTO incidents (monitor_id, started_at, cause, http_status) VALUES (?, ?, 'http_5xx', 503)",
+        [monitor, new Date('2026-12-01T10:02:00.000Z')]);
+      const clock = new FakeClock(T0);
+      ana = await createContact(pool, clock, { organizationSlug: 'alert-a', name: 'Ana', channel: 'email', address: 'ana@alert-a.test', priority: 'primary' });
+      ops = await createContact(pool, clock, { organizationSlug: 'alert-a', name: 'Ops', channel: 'telegram', address: '-1001', priority: 'primary' });
+      bogdan = await createContact(pool, clock, { organizationSlug: 'alert-a', name: 'Bogdan', channel: 'email', address: 'bogdan@alert-a.test', priority: 'secondary' });
+      await createContact(pool, clock, { organizationSlug: 'alert-b', name: 'Other', channel: 'email', address: 'x@alert-b.test', priority: 'primary' });
+    });
+
+    afterAll(async () => {
+      await pool?.end();
+    });
+
+    it('creating a contact needs an existing organization', async () => {
+      await expect(createContact(pool, new FakeClock(T0), { organizationSlug: 'no-such-org', name: 'X', channel: 'email', address: 'x@x.test', priority: 'primary' }))
+        .rejects.toThrow(/No organization with the slug "no-such-org"/);
+    });
+
+    it('lists the open incident with what its alert says, and the organization\'s timeout', async () => {
+      const [found] = (await mysqlAlertStore(pool).openIncidents()).filter((i) => i.id === incident);
+
+      expect(found).toEqual({
+        id: incident, organizationId: orgId, organization: 'Alert A', monitor: 'Alerted API', url: 'https://alerted.example/',
+        cause: 'http_5xx', httpStatus: 503, startedAt: new Date('2026-12-01T10:02:00.000Z'), resolvedAt: null, acknowledgedAt: null,
+        lastSuccessAt: new Date('2026-12-01T09:57:00.000Z'), openedSentAt: null, escalationMinutes: 30,
+      });
+    });
+
+    it('lists contacts by organization and priority', async () => {
+      const store = mysqlAlertStore(pool);
+
+      expect((await store.contacts(orgId, 'primary')).map((c) => c.id)).toEqual([ana, ops]);
+      expect(await store.contacts(orgId, 'secondary')).toEqual([{ id: bogdan, name: 'Bogdan', channel: 'email', address: 'bogdan@alert-a.test' }]);
+    });
+
+    it('one claim per alert wins; a release sets the next try; a sent alert is never claimed again; the first sent opened alert dates the escalation', async () => {
+      const store = mysqlAlertStore(pool);
+
+      const claims = await Promise.all([store.claim(incident, 'opened', ana, NOW), store.claim(incident, 'opened', ana, NOW)]);
+      expect(claims.filter(Boolean)).toHaveLength(1);
+
+      const retryAt = new Date(NOW.getTime() + 90_000);
+      await store.release(incident, 'opened', ana, 'EENVELOPE 550 RCPT TO', retryAt);
+      expect(await store.claim(incident, 'opened', ana, new Date(retryAt.getTime() - 1))).toBe(false);
+      expect(await store.claim(incident, 'opened', ana, retryAt)).toBe(true);
+      await store.markSent(incident, 'opened', ana, retryAt);
+      expect(await store.claim(incident, 'opened', ana, new Date(retryAt.getTime() + 60 * 60_000))).toBe(false);
+
+      const [found] = (await store.openIncidents()).filter((i) => i.id === incident);
+      expect(found.openedSentAt).toEqual(retryAt);
+      expect((await store.alertedContacts(incident)).map((c) => c.id)).toEqual([ana]);
+    });
+
+    it('a claim left by a crashed send is taken again after 10 minutes', async () => {
+      const store = mysqlAlertStore(pool);
+
+      expect(await store.claim(incident, 'opened', ops, NOW)).toBe(true);
+      expect(await store.claim(incident, 'opened', ops, new Date(NOW.getTime() + 10 * 60_000 - 1))).toBe(false);
+      expect(await store.claim(incident, 'opened', ops, new Date(NOW.getTime() + 10 * 60_000))).toBe(true);
+    });
+
+    it('stores only the hash of an acknowledge token', async () => {
+      await mysqlAlertStore(pool).saveAckToken(incident, 'b'.repeat(64), NOW);
+      const [row] = await rows<{ incident_id: number }>(conn, 'SELECT incident_id FROM incident_ack_tokens WHERE token_hash = ?', ['b'.repeat(64)]);
+      expect(Number(row.incident_id)).toBe(incident);
+    });
+
+    it('a resolved incident is listed for its resolved alert until everyone alerted has it', async () => {
+      const store = mysqlAlertStore(pool);
+      await conn.query('UPDATE incidents SET resolved_at = ? WHERE id = ?', [new Date('2026-12-01T11:00:00.000Z'), incident]);
+
+      expect((await store.resolvedIncidents()).map((i) => i.id)).toContain(incident);
+      expect(await store.claim(incident, 'resolved', ana, NOW)).toBe(true);
+      await store.markSent(incident, 'resolved', ana, NOW);
+      expect((await store.resolvedIncidents()).map((i) => i.id)).not.toContain(incident);
+      expect((await store.openIncidents()).map((i) => i.id)).not.toContain(incident);
     });
   });
 });
