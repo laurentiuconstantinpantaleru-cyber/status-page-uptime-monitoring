@@ -127,6 +127,32 @@ describe('GET /status', () => {
     expect(response.body).not.toContain('ECONNREFUSED');
   });
 
+  it('has a theme toggle next to the product name that saves the choice (D-024)', async () => {
+    const response = await get({ groups: [] });
+    const body = response.body;
+
+    expect(body).toMatch(/<div class="brand-group">\s*<a class="brand" href="#top"[^>]*>[\s\S]*?<\/a>\s*<button class="icon-btn theme-btn" type="button" id="theme-btn" aria-label="Switch to dark theme">/);
+    expect(body).toContain("localStorage.getItem('theme')");
+    expect(body).toContain("localStorage.setItem('theme'");
+    expect(body).toContain("matchMedia('(prefers-color-scheme: dark)')");
+  });
+
+  it('links Status to the top and API and the API docs pill to the footer section', async () => {
+    const body = (await get({ groups: [] })).body;
+
+    expect(body).toContain('<a class="nav-link" href="#top" aria-current="page">Status</a>');
+    expect(body).toContain('<a class="nav-link" href="#api-docs">API</a>');
+    expect(body).toContain('<a class="pill" href="#api-docs">API docs</a>');
+    expect(body).toMatch(/<footer class="site-footer" id="api-docs"/);
+  });
+
+  it('keeps the header and theme toggle on the error page', async () => {
+    const body = (await get(async () => { throw new Error('down'); })).body;
+
+    expect(body).toContain('id="theme-btn"');
+    expect(body).toContain('<a class="pill" href="#api-docs">API docs</a>');
+  });
+
   it('is not registered without a status source', async () => {
     app = buildApp();
 
