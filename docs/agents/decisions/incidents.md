@@ -59,3 +59,13 @@
 - **Evidence:** src/shared/incidents.ts, test/shared/incidents.test.ts
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26
+
+## D-030 · Uptime ratio from incidents and maintenance
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** Uptime over a period [from, to) is (measured − maintenance − downtime) / (measured − maintenance), where measured runs from the later of `from` and the monitor's history start (D-023) to the earlier of `to` and now. Downtime is the union of incidents (an open one until now) minus the union of maintenance windows; check counts never enter it. Months are UTC calendar months; "30 days" is the 30 × 24 h before now. No measured time left after maintenance, or no history: no value, shown as "—". Shown truncated to 2 decimals (99.996 % → 99.99 %), never rounded up to 100.00 %.
+- **Why:** docs/brief.md:24 asks for uptime from incidents, across month boundaries and with partial maintenance overlap; the history start, the all-maintenance case and the rounding were answered by the user on 2026-11-26.
+- **Rejected:** Counting checks (a 1-minute and a 60-minute monitor would not be comparable); counting the days before a monitor existed as available; 100 % for a period that was all maintenance; rounding to the nearest (99.996 % would show 100.00 % despite downtime).
+- **Evidence:** src/shared/uptime.ts, test/shared/uptime.test.ts, src/web/views/docs/uptime.html
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26
