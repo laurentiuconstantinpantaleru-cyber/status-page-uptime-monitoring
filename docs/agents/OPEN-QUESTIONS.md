@@ -19,6 +19,12 @@
 - Q-008 · How do users sign in to the admin interface?
 - Q-009 · How are recurring maintenance windows expressed?
 - Q-010 · What latency threshold do the seeded business monitors use?
+- Q-011 · Which time zone does the public status page show times in? · _answered_
+- Q-012 · What period and which monitor does the public response time chart show? · _investigating_
+- Q-013 · How far back does the public status page list past incidents?
+- Q-014 · How are monitors grouped on the public status page?
+- Q-015 · Which status wins when several apply, in the overall banner and in a daily bar?
+- Q-016 · Where do the API and status badge docs live?
 
 ---
 
@@ -82,3 +88,45 @@
 - **Status:** open
 - **Blocks:** Latency alerts for `hugthemug.ro` and `cafewien.ro`; their `latency_threshold_ms` is NULL until answered.
 - **Who answers:** user
+
+## Q-011 · Which time zone does the public status page show times in?
+- **Status:** answered 2026-11-26
+- **Blocks:** Time formatting on DS-p26-public-status (incident updates, maintenance banner, "Updated" time, chart axis).
+- **Who answers:** user
+- **Answer:** UTC, labelled "UTC" next to each time, and the footer states that all times are in UTC (user's redesign brief for DS-p26-public-status, 2026-11-26).
+- **Confirmed:** 2026-11-26
+
+## Q-012 · What period and which monitor does the public response time chart show?
+- **Status:** investigating
+- **Blocks:** The response time chart on DS-p26-public-status and the query behind it.
+- **Who answers:** user
+- **Partial answer:** Two periods, the last 24 hours and the last 30 days (user, 2026-11-26).
+- **Proposed answer:** One monitor at a time, picked from a list of monitors that have data. 24 hours: median per hour from raw checks (inside the 7-day raw retention, D-011). 30 days: median per day from the hourly and daily roll-ups. Median, 95th percentile and slowest value shown above the chart, as drawn in the mock.
+- **Confirmed:** 2026-11-26
+
+## Q-013 · How far back does the public status page list past incidents?
+- **Status:** open
+- **Blocks:** The past incidents list on DS-p26-public-status.
+- **Who answers:** user
+- **Proposed answer:** The same 90 days as the uptime bars; the empty state reads "No incidents in the last 90 days."
+- **Confirmed:** 2026-11-26
+
+## Q-014 · How are monitors grouped on the public status page?
+- **Status:** open
+- **Blocks:** The grouped component cards on DS-p26-public-status ("Local businesses", "Student projects"); `monitors` has no group column today (`db/migrations/0001_initial_schema.sql`).
+- **Who answers:** user
+- **Proposed answer:** A nullable group name on each monitor, set by an organization admin; monitors without one go in a card titled "Other". Cards keep the order in which groups were created.
+- **Confirmed:** 2026-11-26
+
+## Q-015 · Which status wins when several apply, in the overall banner and in a daily bar?
+- **Status:** open
+- **Blocks:** The overall status banner and the colour of each daily uptime bar on DS-p26-public-status.
+- **Who answers:** user
+- **Proposed answer:** Down, then Degraded, then Maintenance, then Operational, as drawn in the mock. "No data" counts only when no monitor (or no check that day) has data. A day shows the worst status it had.
+- **Confirmed:** 2026-11-26
+
+## Q-016 · Where do the API and status badge docs live?
+- **Status:** open
+- **Blocks:** The footer link on DS-p26-public-status; the mock links to a placeholder. The API itself is C-001 (proposed).
+- **Who answers:** user
+- **Confirmed:** 2026-11-26
