@@ -89,3 +89,12 @@
 - **Evidence:** src/web/status/model.ts (`monitorUptime`, `pastIncidents`), src/web/status/render.ts, src/web/views/status.html, test/web/status-page.test.ts
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26
+
+## D-033 · Writing an incident update bumps the status version
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** The admin panel (after Q-008) inserts an incident update into `incident_updates` and runs `UPDATE status_version SET version = version + 1 WHERE id = 1` in the same transaction, so the update shows on the public status page within 30 seconds (Q-007). No other code writes `incident_updates`.
+- **Why:** The user answered Q-021 on 2026-11-26. The status page is cached until `status_version` changes (D-020), so an update written without a bump would show only after the next bump or UTC midnight.
+- **Rejected:** Leaving incident updates out of the version bump (the cached page would hide a human update for hours).
+- **Evidence:** src/worker/store.ts (`bumpStatusVersion`), src/web/maintenance/store.ts, src/web/status/cache.ts, test/web/status-page.test.ts
+- **Source:** user · confidence high

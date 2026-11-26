@@ -27,7 +27,7 @@
 - Q-004 · Which email transport/provider will be used for alerts and reports?
 - Q-009 · How are recurring maintenance windows expressed? · _answered_
 - Q-020 · Can quick maintenance be stopped before it expires?
-- Q-021 · Who writes incident updates, and does that code bump `status_version`?
+- Q-021 · Who writes incident updates, and does that code bump `status_version`? · _answered_
 
 ### [Monitoring](questions/monitoring.md)
 - Q-001 · Which 10 student project URLs and 2 local business URLs will be monitored? · _investigating_
