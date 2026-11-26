@@ -78,6 +78,7 @@ describe.skipIf(!url)('MySQL schema', () => {
       '0002_seed_local_businesses.sql',
       '0003_status_version.sql',
       '0004_check_confirmations.sql',
+      '0005_worker_faults.sql',
     ]);
 
     const applied = await rows<{ version: string; applied_at: Date }>(
@@ -401,6 +402,52 @@ describe.skipIf(!url)('MySQL schema', () => {
       expect(open[0].started_at.toISOString()).toBe(at(10).toISOString());
       expect(open[0].cause).toBe('http_5xx');
       expect(await readStatusVersion(conn)).toBe(before + 1);
+    });
+
+    it("reads a worker's scheduled checks in a window with their confirmations (D-015)", async () => {
+      await conn.query('DELETE FROM checks WHERE monitor_id = ?', [monitor]);
+      const at = (minutes: number) => new Date(NOW.getTime() + minutes * 60_000);
+      const old = await insertId(
+        conn,
+        "INSERT INTO checks (monitor_id, worker_id, checked_at, kind, outcome) VALUES (?, ?, ?, 'scheduled', 'down')",
+        [monitor, first, at(20)],
+      );
+      const recent = await insertId(
+        conn,
+        "INSERT INTO checks (monitor_id, worker_id, checked_at, kind, outcome) VALUES (?, ?, ?, 'scheduled', 'down')",
+        [monitor, first, at(31)],
+      );
+      for (const id of [old, recent]) {
+        await conn.query(
+          "INSERT INTO checks (monitor_id, worker_id, checked_at, kind, outcome, confirms_check_id) VALUES (?, ?, ?, 'confirmation', 'up', ?)",
+          [monitor, second, at(31.1), id],
+        );
+      }
+
+      expect(await store().workerWindow(first, at(30))).toEqual([{ monitorId: monitor, outcome: 'down', confirmation: 'up' }]);
+      expect(await store().workerWindow(second, at(30))).toEqual([]);
+    });
+
+    it('keeps one open worker_fault episode per worker and ends it (D-015)', async () => {
+      const counts = { monitorsChecked: 3, checksTotal: 6, checksFailed: 6, confirmationsTotal: 6, confirmationsUp: 6 };
+      const at = (minutes: number) => new Date(NOW.getTime() + minutes * 60_000);
+
+      expect(await store().hasOpenWorkerFault(first)).toBe(false);
+      await store().openWorkerFault(first, at(40), counts);
+      expect(await store().hasOpenWorkerFault(first)).toBe(true);
+      await expect(store().openWorkerFault(first, at(41), counts)).rejects.toMatchObject({ code: 'ER_DUP_ENTRY' });
+
+      await store().closeWorkerFault(first, at(45));
+      expect(await store().hasOpenWorkerFault(first)).toBe(false);
+      const faults = await rows<{ started_at: Date; ended_at: Date; checks_failed: number }>(
+        conn,
+        'SELECT started_at, ended_at, checks_failed FROM worker_faults WHERE worker_id = ?',
+        [first],
+      );
+      expect(faults).toHaveLength(1);
+      expect(faults[0].started_at.toISOString()).toBe(at(40).toISOString());
+      expect(faults[0].ended_at.toISOString()).toBe(at(45).toISOString());
+      expect(faults[0].checks_failed).toBe(6);
     });
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FakeClock } from '../../src/shared/clock.js';
 import type { HttpClient, HttpResponse } from '../../src/worker/check.js';
 import type { MonitorRow } from '../../src/worker/store.js';
-import { CONFIRM_POLL_MS, CONFIRM_WITHIN_MS, CheckWorker } from '../../src/worker/worker.js';
+import { CONFIRM_POLL_MS, CONFIRM_WITHIN_MS, CheckWorker, HEARTBEAT_MS } from '../../src/worker/worker.js';
 import { MemoryStore } from './memory-store.js';
 
 const T0 = new Date('2026-11-26T10:00:00.000Z');
@@ -156,5 +156,107 @@ describe('CheckWorker', () => {
 
     expect(env.store.checks.filter((c) => c.kind === 'scheduled')).toHaveLength(3);
     expect(env.store.incidents).toHaveLength(0);
+  });
+});
+
+describe('worker degradation (D-015)', () => {
+  /** Monitors 2, 4, 6 have worker 1 as primary; monitor 3 has worker 2 (active_workers[id % 2]). */
+  const monitor = (id: number): MonitorRow => ({ ...MONITOR, id, url: `https://site-${id}.test/` });
+
+  /** Answers DOWN for the URLs of the monitors in `down`, UP for the rest. */
+  function siteClient(down: number[]): HttpClient & { down: Set<string> } {
+    return {
+      down: new Set(down.map((id) => monitor(id).url)),
+      async request(req) {
+        return this.down.has(req.url) ? DOWN : UP;
+      },
+    };
+  }
+
+  /**
+   * Two workers that see the sites through their own client. Every simulated second both run what
+   * is due; every 5 s they poll for confirmations and every 10 s they write a heartbeat (D-027).
+   */
+  async function setupPair(ids: number[], firstDown: number[], secondDown: number[]) {
+    const clock = new FakeClock(T0);
+    const store = new MemoryStore();
+    store.monitors = ids.map(monitor);
+    const seenByFirst = siteClient(firstDown);
+    const seenBySecond = siteClient(secondDown);
+    const first = new CheckWorker({ clock, client: seenByFirst, store, workerId: await store.registerWorker('worker-1', T0) });
+    const second = new CheckWorker({ clock, client: seenBySecond, store, workerId: await store.registerWorker('worker-2', T0) });
+    for (const w of [first, second]) await w.refresh();
+    const runFor = async (ms: number) => {
+      for (let elapsed = 0; elapsed < ms; elapsed += 1_000) {
+        clock.advance(1_000);
+        const t = clock.now().getTime() - T0.getTime();
+        await Promise.all([first.runDue(), second.runDue()]);
+        if (t % CONFIRM_POLL_MS === 0) await Promise.all([first.confirmPending(), second.confirmPending()]);
+        if (t % HEARTBEAT_MS === 0) for (const w of [first, second]) await w.heartbeat();
+      }
+    };
+    return { clock, store, seenByFirst, seenBySecond, first, second, runFor };
+  }
+
+  it('opens no incident from the confirmations of a degraded worker', async () => {
+    // Worker 1 cannot reach anything; monitor 3 also fails for worker 2.
+    const env = await setupPair([2, 3, 4, 6], [2, 3, 4, 6], [3]);
+
+    await env.runFor(11 * MIN);
+
+    const onThree = env.store.checks.filter((c) => c.monitorId === 3);
+    expect(onThree.filter((c) => c.kind === 'scheduled' && c.result.outcome === 'down').length).toBeGreaterThanOrEqual(2);
+    expect(onThree.filter((c) => c.kind === 'confirmation' && c.result.outcome === 'down').length).toBeGreaterThanOrEqual(2);
+    expect(env.store.incidents).toHaveLength(0);
+  });
+
+  it('opens the incident when the confirming worker is healthy', async () => {
+    const env = await setupPair([2, 3, 4, 6], [3], [3]);
+
+    await env.runFor(11 * MIN);
+
+    expect(env.store.incidents).toEqual([
+      { monitorId: 3, startedAt: new Date(T0.getTime() + 3_000), resolvedAt: null, cause: 'http_5xx', httpStatus: 503 },
+    ]);
+  });
+
+  it('makes no judgment with fewer than 3 monitors, so D-005 alone decides', async () => {
+    const env = await setupPair([2, 3, 4], [2, 3, 4], [3]);
+
+    await env.runFor(11 * MIN);
+
+    expect(env.store.incidents).toHaveLength(1);
+    expect(env.store.workerFaults).toHaveLength(0);
+  });
+
+  it('records one worker_fault episode while degraded and ends it once the worker recovers', async () => {
+    const env = await setupPair([2, 3, 4, 6], [2, 3, 4, 6], []);
+
+    await env.runFor(6 * MIN);
+    expect(env.store.workerFaults).toHaveLength(1);
+    const [fault] = env.store.workerFaults;
+    expect(fault).toMatchObject({ workerId: 1, endedAt: null });
+    expect(fault.counts).toMatchObject({ monitorsChecked: 3, checksFailed: fault.counts.checksTotal });
+    expect(fault.counts.confirmationsUp).toBe(fault.counts.confirmationsTotal);
+
+    // From 6 min on worker 1 sees the sites up again. At 10:00 the window still holds only failures.
+    env.seenByFirst.down.clear();
+    await env.runFor(4 * MIN);
+    expect(env.store.workerFaults).toEqual([fault]);
+    expect(fault.endedAt).toBeNull();
+
+    // At 10:10 the first failures left the window: 3 down of 6 (50 %), so the episode ends.
+    await env.runFor(1 * MIN);
+    expect(env.store.workerFaults).toHaveLength(1);
+    expect(fault.startedAt).toEqual(new Date(T0.getTime() + HEARTBEAT_MS));
+    expect(fault.endedAt).toEqual(new Date(T0.getTime() + 10 * MIN + HEARTBEAT_MS));
+  });
+
+  it('starts no episode for the worker that sees the sites up', async () => {
+    const env = await setupPair([2, 3, 4, 6], [2, 3, 4, 6], []);
+
+    await env.runFor(11 * MIN);
+
+    expect(env.store.workerFaults.map((f) => f.workerId)).toEqual([1]);
   });
 });

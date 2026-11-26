@@ -1,9 +1,17 @@
 import type { RecordedCheck, ScheduledCheck } from '../../src/shared/incidents.js';
+import type { FaultCounts, WindowCheck } from '../../src/shared/worker-fault.js';
 import type { MonitorRow, MonitorTx, NewCheck, PendingConfirmation, WorkerStore } from '../../src/worker/store.js';
 import type { WorkerRow } from '../../src/worker/assignment.js';
 
 export interface StoredCheck extends NewCheck {
   id: number;
+}
+
+export interface StoredWorkerFault {
+  workerId: number;
+  startedAt: Date;
+  endedAt: Date | null;
+  counts: FaultCounts;
 }
 
 export interface StoredIncident {
@@ -16,6 +24,7 @@ export interface StoredIncident {
 
 const recorded = (c: StoredCheck): RecordedCheck => ({
   id: c.id,
+  workerId: c.workerId,
   checkedAt: c.checkedAt,
   outcome: c.result.outcome,
   httpStatus: c.result.httpStatus,
@@ -32,7 +41,36 @@ export class MemoryStore implements WorkerStore {
   checks: StoredCheck[] = [];
   incidents: StoredIncident[] = [];
   maintenance: { monitorId: number; startsAt: Date; endsAt: Date }[] = [];
+  workerFaults: StoredWorkerFault[] = [];
   statusVersion = 0;
+
+  /** The worker's scheduled checks since `since`, each with its confirmation's outcome. */
+  private windowOf(workerId: number, since: Date): WindowCheck[] {
+    return this.checks
+      .filter((c) => c.workerId === workerId && c.kind === 'scheduled' && c.checkedAt >= since)
+      .map((c) => ({
+        monitorId: c.monitorId,
+        outcome: c.result.outcome,
+        confirmation: this.checks.find((x) => x.confirmsCheckId === c.id)?.result.outcome ?? null,
+      }));
+  }
+
+  async workerWindow(workerId: number, since: Date): Promise<WindowCheck[]> {
+    return this.windowOf(workerId, since);
+  }
+
+  async hasOpenWorkerFault(workerId: number): Promise<boolean> {
+    return this.workerFaults.some((f) => f.workerId === workerId && f.endedAt === null);
+  }
+
+  async openWorkerFault(workerId: number, startedAt: Date, counts: FaultCounts): Promise<void> {
+    this.workerFaults.push({ workerId, startedAt, endedAt: null, counts });
+  }
+
+  async closeWorkerFault(workerId: number, endedAt: Date): Promise<void> {
+    const found = this.workerFaults.find((f) => f.workerId === workerId && f.endedAt === null);
+    if (found) found.endedAt = endedAt;
+  }
 
   async registerWorker(name: string, now: Date): Promise<number> {
     const found = this.workers.find((w) => w.name === name);
@@ -77,6 +115,7 @@ export class MemoryStore implements WorkerStore {
         const last = this.checks.filter((c) => c.monitorId === monitorId).sort(newestFirst)[0];
         return last ? recorded(last) : null;
       },
+      workerWindow: async (workerId, since) => this.windowOf(workerId, since),
       hasConfirmation: async (checkId) => this.checks.some((c) => c.confirmsCheckId === checkId),
       insertCheck: async (check) => {
         const id = this.checks.length + 1;
