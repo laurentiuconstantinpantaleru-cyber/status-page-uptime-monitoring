@@ -19,7 +19,7 @@ designs:
     source: src/web/views/admin/incidents.html
     screenshots: [screens/DS-p26-admin-incidents.light.png, screens/DS-p26-admin-incidents.dark.png]
     design_ref: mocks/DS-p26-admin-incidents.html
-    status: draft
+    status: approved
   - id: DS-p26-admin-maintenance
     kind: screen
     source: src/web/views/admin/maintenance.html

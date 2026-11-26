@@ -13,6 +13,9 @@ import {
 } from '../../src/web/maintenance/store.js';
 import type { CheckResult } from '../../src/worker/check.js';
 import { MySqlStore } from '../../src/worker/store.js';
+import { mysqlAdminStore } from '../../src/web/admin/store.js';
+import { hashPassword } from '../../src/web/auth/password.js';
+import { createUser, mysqlAuthStore } from '../../src/web/auth/store.js';
 import { recordCheck } from '../../src/worker/worker.js';
 
 // Integration tests against a real MySQL 8. CI always sets TEST_DATABASE_URL.
@@ -86,6 +89,7 @@ describe.skipIf(!url)('MySQL schema', () => {
       '0004_check_confirmations.sql',
       '0005_worker_faults.sql',
       '0006_maintenance_schedules.sql',
+      '0007_auth.sql',
     ]);
 
     const applied = await rows<{ version: string; applied_at: Date }>(
@@ -605,6 +609,154 @@ describe.skipIf(!url)('MySQL schema', () => {
       await expect(
         startQuickMaintenance(pool, new FakeClock(at(0)), { monitorId: monitor, minutes: 20, userId: null }),
       ).rejects.toThrow(/15, 30 or 60/);
+    });
+  });
+  describe('sign-in and admin stores (D-034–D-038)', () => {
+    const NOW = new Date('2026-11-26T14:55:00.000Z');
+    const DAY = 24 * 60 * 60 * 1000;
+    let pool: ReturnType<typeof createPool>;
+    let orgA: number;
+    let orgB: number;
+    let hash: string;
+
+    beforeAll(async () => {
+      pool = createPool(url!);
+      hash = await hashPassword('correct-horse-battery');
+      orgA = await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', ['auth-a', 'Auth A', T0, T0]);
+      orgB = await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', ['auth-b', 'Auth B', T0, T0]);
+    });
+
+    afterAll(async () => {
+      await pool?.end();
+    });
+
+    const addMonitor = (org: number, name: string) =>
+      insertId(
+        conn,
+        `INSERT INTO monitors (organization_id, name, url, timeout_ms, check_tls, created_at, updated_at)
+         VALUES (?, ?, 'https://example.test/', 10000, 0, ?, ?)`,
+        [org, name, T0, T0],
+      );
+    const addIncident = (monitor: number, startedAt: Date, resolvedAt: Date | null) =>
+      insertId(conn, "INSERT INTO incidents (monitor_id, started_at, resolved_at, cause) VALUES (?, ?, ?, 'timeout')", [monitor, startedAt, resolvedAt]);
+
+    it('creates a user with a password hash and finds them by email', async () => {
+      const clock = new FakeClock(T0);
+      const id = await createUser(pool, clock, { email: 'mara@auth-a.test', displayName: 'Mara', role: 'member', organizationSlug: 'auth-a', passwordHash: hash });
+
+      const user = await mysqlAuthStore(pool).userByEmail('mara@auth-a.test');
+      expect(user).toEqual({ id, displayName: 'Mara', role: 'member', organizationId: orgA, passwordHash: hash });
+      await expect(
+        createUser(pool, clock, { email: 'mara@auth-a.test', displayName: 'Again', role: 'member', organizationSlug: 'auth-a', passwordHash: hash }),
+      ).rejects.toThrow(/already exists/);
+      await expect(
+        createUser(pool, clock, { email: 'x@auth.test', displayName: 'X', role: 'member', organizationSlug: 'no-such-org', passwordHash: hash }),
+      ).rejects.toThrow(/No organization with the slug "no-such-org"/);
+      await expect(
+        createUser(pool, clock, { email: 'g@auth.test', displayName: 'G', role: 'global_admin', organizationSlug: 'auth-a', passwordHash: hash }),
+      ).rejects.toThrow(/global admin belongs to no organization/);
+    });
+
+    it.each(["' OR '1'='1", "mara@auth-a.test' -- ", '%', 'mara@auth-a.test\\'])(
+      'finds no user for the injected email %j (SQL injection)',
+      async (email) => {
+        expect(await mysqlAuthStore(pool).userByEmail(email)).toBeNull();
+      },
+    );
+
+    it('creates, reads, touches and deletes a session by its token hash', async () => {
+      const auth = mysqlAuthStore(pool);
+      const user = (await auth.userByEmail('mara@auth-a.test'))!;
+      const tokenHash = 'a'.repeat(64);
+
+      await auth.createSession(tokenHash, user.id, NOW);
+      expect(await auth.session(tokenHash)).toEqual({
+        createdAt: NOW, lastSeenAt: NOW, user: { id: user.id, displayName: 'Mara', role: 'member', organizationId: orgA },
+      });
+      await auth.touchSession(tokenHash, new Date(NOW.getTime() + 1000));
+      expect((await auth.session(tokenHash))?.lastSeenAt.toISOString()).toBe(new Date(NOW.getTime() + 1000).toISOString());
+      expect(await auth.session("' OR '1'='1")).toBeNull();
+      await auth.deleteSession(tokenHash);
+      expect(await auth.session(tokenHash)).toBeNull();
+    });
+
+    it('lists only the organization\'s monitors with their status; a global admin gets every organization', async () => {
+      const down = await addMonitor(orgA, 'Admin down');
+      await addMonitor(orgB, 'Admin other org');
+      await addIncident(down, new Date(NOW.getTime() - 60 * 60 * 1000), null);
+      const store = mysqlAdminStore(pool, new FakeClock(NOW));
+
+      const own = await store.monitors(orgA, NOW);
+      expect(own.map((g) => g.organization)).toEqual(['Auth A']);
+      expect(own[0].monitors.find((m) => m.name === 'Admin down')).toMatchObject({ id: down, status: 'outage', intervalMinutes: 5, lastCheck: null });
+      expect(own[0].monitors.some((m) => m.name === 'Admin other org')).toBe(false);
+      const all = await store.monitors(null, NOW);
+      expect(all.map((g) => g.organization)).toEqual(expect.arrayContaining(['Auth A', 'Auth B']));
+      expect(await store.monitor(down, orgB)).toBeNull();
+      expect(await store.monitor(down, orgA)).toEqual({ id: down, name: 'Admin down' });
+      expect(await store.monitor(down, null)).toEqual({ id: down, name: 'Admin down' });
+    });
+
+    it('deletes a monitor with its incidents and bumps the status version', async () => {
+      const monitor = await addMonitor(orgA, 'To delete');
+      await addIncident(monitor, new Date(NOW.getTime() - DAY), null);
+      const before = await readStatusVersion(conn);
+
+      await mysqlAdminStore(pool, new FakeClock(NOW)).deleteMonitor(monitor);
+
+      expect(await rows(conn, 'SELECT id FROM monitors WHERE id = ?', [monitor])).toEqual([]);
+      expect(await rows(conn, 'SELECT id FROM incidents WHERE monitor_id = ?', [monitor])).toEqual([]);
+      expect(await readStatusVersion(conn)).toBe(before + 1);
+    });
+
+    it('lists open incidents and those resolved in the last 90 days, of the organization only', async () => {
+      const monitor = await addMonitor(orgA, 'Incident list');
+      const other = await addMonitor(orgB, 'Incident other');
+      const open = await addIncident(monitor, new Date(NOW.getTime() - 60 * 60 * 1000), null);
+      const recent = await addIncident(monitor, new Date(NOW.getTime() - 10 * DAY), new Date(NOW.getTime() - 10 * DAY + 60_000));
+      const old = await addIncident(monitor, new Date(NOW.getTime() - 91 * DAY), new Date(NOW.getTime() - 91 * DAY + 60_000));
+      const foreign = await addIncident(other, new Date(NOW.getTime() - DAY), null);
+      const store = mysqlAdminStore(pool, new FakeClock(NOW));
+
+      const ids = (await store.incidents(orgA, NOW)).map((i) => i.id);
+      expect(ids).toContain(open);
+      expect(ids).toContain(recent);
+      expect(ids).not.toContain(old);
+      expect(ids).not.toContain(foreign);
+      expect(ids.indexOf(open)).toBeLessThan(ids.indexOf(recent));
+      expect(await store.incident(old, orgA, NOW)).toBeNull();
+      expect(await store.incident(foreign, orgA, NOW)).toBeNull();
+      expect(await store.incident(foreign, null, NOW)).toEqual({ id: foreign });
+    });
+
+    it('writes an update and bumps the status version in one transaction (D-033); it shows on the status page', async () => {
+      const monitor = await addMonitor(orgA, 'Update target');
+      const incident = await addIncident(monitor, new Date(NOW.getTime() - 60 * 60 * 1000), null);
+      const author = (await mysqlAuthStore(pool).userByEmail('mara@auth-a.test'))!.id;
+      const before = await readStatusVersion(conn);
+      const store = mysqlAdminStore(pool, new FakeClock(NOW));
+
+      await store.addIncidentUpdate({ incidentId: incident, userId: author, stage: 'identified', body: "Disk full'); DROP TABLE incidents; --" }, NOW);
+
+      const [row] = await rows<{ stage: string; body: string; author_user_id: number; created_at: Date }>(
+        conn, 'SELECT stage, body, author_user_id, created_at FROM incident_updates WHERE incident_id = ?', [incident],
+      );
+      expect(row).toMatchObject({ stage: 'identified', body: "Disk full'); DROP TABLE incidents; --", author_user_id: author });
+      expect(row.created_at.toISOString()).toBe(NOW.toISOString());
+      expect(await readStatusVersion(conn)).toBe(before + 1);
+      const data = await loadStatusData(conn, NOW);
+      const shown = data.groups.flatMap((g) => g.monitors).find((m) => m.name === 'Update target')!;
+      expect(shown.incidents[0].updates?.[0]).toMatchObject({ stage: 'identified' });
+    });
+
+    it('a failed update leaves no row and no bump', async () => {
+      const before = await readStatusVersion(conn);
+
+      await expect(
+        mysqlAdminStore(pool, new FakeClock(NOW)).addIncidentUpdate({ incidentId: 99999999, userId: null, stage: 'identified', body: 'x' }, NOW),
+      ).rejects.toThrow(/foreign key/i);
+
+      expect(await readStatusVersion(conn)).toBe(before);
     });
   });
 });
