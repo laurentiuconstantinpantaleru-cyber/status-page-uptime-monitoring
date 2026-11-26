@@ -45,23 +45,23 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg-base: #0f172a; --color-bg-surface: #1e293b; --color-bg-subtle: #334155;
-    --color-border: #334155; --color-border-strong: #64748b;
+    --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+    --color-border: #23272f; --color-border-strong: #64748b;
     --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
     --color-brand: #60a5fa; --color-on-brand: #0f172a;
     --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
     --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
-    --shadow-card: 0 0 0 1px #334155;
+    --shadow-card: 0 0 0 1px #23272f;
   }
 }
 :root[data-theme="dark"] {
-  --color-bg-base: #0f172a; --color-bg-surface: #1e293b; --color-bg-subtle: #334155;
-  --color-border: #334155; --color-border-strong: #64748b;
+  --color-bg-base: #0a0b0f; --color-bg-surface: #111318; --color-bg-subtle: #1a1d24;
+  --color-border: #23272f; --color-border-strong: #64748b;
   --color-text-primary: #f8fafc; --color-text-secondary: #cbd5e1; --color-text-muted: #94a3b8;
   --color-brand: #60a5fa; --color-on-brand: #0f172a;
   --color-status-ok: #34d399; --color-status-degraded: #fbbf24; --color-status-outage: #f87171;
   --color-status-maint: #a78bfa; --color-status-nodata: #64748b;
-  --shadow-card: 0 0 0 1px #334155;
+  --shadow-card: 0 0 0 1px #23272f;
 }
 
 /* ---------- Base ---------- */
@@ -266,7 +266,7 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 .sk-bars { height: var(--space-8); }
 .sk-chart { height: calc(var(--space-16) * 3); border-radius: var(--radius-lg); }
 @keyframes pulse { 50% { opacity: 0.5; } }
-.btn { font: var(--text-sm-strong); min-height: var(--space-8); padding: 0 var(--space-4); border-radius: var(--radius-md); cursor: pointer;
+.btn { font: var(--text-sm-strong); min-height: var(--space-8); padding: 0 var(--space-4); border-radius: var(--radius-pill); cursor: pointer;
   background: var(--color-bg-base); color: var(--color-text-primary); border: 1px solid var(--color-border-strong); }
 .btn:hover { background: var(--color-bg-subtle); }
 .btn:active { background: var(--color-border); }
