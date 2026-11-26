@@ -20,3 +20,13 @@
 - **Evidence:** src/shared/report.ts, src/web/reports/job.ts, src/web/reports/store.ts, src/web/reports/pdf.ts, db/migrations/0008_monthly_reports.sql, test/web/report-job.test.ts
 - **Source:** user · confidence high
 - **Confirmed:** 2026-11-26
+
+## D-043 · Report PDFs stay off the status page's path; the latency query reads one index
+- **Status:** approved
+- **Date:** 2026-11-26
+- **Rule:** pdfkit renders synchronously in the web process (30–65 ms measured for 12–300 monitors), which also serves the status page (D-020). A PDF made on demand (D-041) goes through an in-memory cache of at most 50 PDFs, each kept an hour (least recently used out); concurrent requests for the same organization and month share one render; a failed render and "no such organization" are not kept; a stored PDF is served as stored and not cached. The monthly job gives the event loop one turn (`setImmediate`) between organizations. `idx_checks_monitor_checked` covers `(monitor_id, checked_at, kind, latency_ms)` (migration 0009), so the month's mean latency is read from the index alone. Reports read only their organization's maintenance.
+- **Why:** The user approved the plan on 2026-11-26 after the performance review: option B, the smaller change, over a worker thread, whose code would load from `dist/` and make tests depend on a fresh build. The index keeps its name and leading columns, so the queries it served before are unchanged.
+- **Rejected:** Rendering in a `worker_threads` worker (see Why); storing on-demand PDFs in `monthly_reports` (the reports page would show old months as "not emailed yet"); a second index beside the old one (more writes on the busiest table); caching only the font files (0.5 ms of the 30–65 ms).
+- **Evidence:** src/web/reports/cache.ts, src/web/reports/job.ts (`reportPdf`, `runMonthlyReports`), db/migrations/0009_checks_latency_index.sql, test/web/report-cache.test.ts, test/db/schema.test.ts
+- **Source:** user · confidence high
+- **Confirmed:** 2026-11-26

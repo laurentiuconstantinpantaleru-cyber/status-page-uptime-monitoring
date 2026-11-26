@@ -56,6 +56,7 @@
 ### [Reporting](decisions/reporting.md)
 - D-019 · Monthly uptime report: schedule, recipients, format, and idempotency
 - D-041 · How the monthly report is made, counted, sent and downloaded
+- D-043 · Report PDFs stay off the status page's path; the latency query reads one index
 
 ### [Roles](decisions/roles.md)
 - D-042 · Role permission matrix

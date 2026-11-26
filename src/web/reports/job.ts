@@ -1,5 +1,6 @@
 import type { Clock } from '../../shared/clock.js';
 import { buildReport, monthKey, monthTitle, previousMonth, type ReportInput } from '../../shared/report.js';
+import type { PdfCache } from './cache.js';
 import type { ReportOrg } from './months.js';
 import { renderReportPdf } from './pdf.js';
 
@@ -66,25 +67,33 @@ export interface ReportJobDeps {
   /** Null without SMTP settings: reports are stored and sent once a mailer exists. */
   mailer: Mailer | null;
   log: (message: string, error?: unknown) => void;
+  /** The PDF renderer; tests pass a fake to see the job's own scheduling. */
+  render?: (input: ReportInput, now: Date) => Promise<Buffer>;
 }
 
 export const REPORT_JOB_MS = 60 * 60 * 1000;
 
 const render = async (input: ReportInput, now: Date) => renderReportPdf(buildReport(input, now));
 
+/** One turn of the event loop: a render blocks it, so requests waiting meanwhile are served here (D-043). */
+const yieldToEventLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
+
 export async function runMonthlyReports(deps: ReportJobDeps): Promise<void> {
   const { clock, store, mailer, log } = deps;
+  const renderPdf = deps.render ?? render;
   const now = clock.now();
   const { year, month } = previousMonth(now);
   const key = monthKey(year, month);
 
-  for (const org of await store.organizations()) {
+  const orgs = await store.organizations();
+  for (const [i, org] of orgs.entries()) {
+    if (i > 0) await yieldToEventLoop();
     try {
       let state = await store.reportState(org.id, key);
       if (state === null) {
         const input = await store.loadMonth(org.id, year, month, now);
         if (input === null) continue;
-        await store.saveReport(org.id, key, await render(input, now), now);
+        await store.saveReport(org.id, key, await renderPdf(input, now), now);
         state = { emailed: false };
       }
       if (state.emailed || mailer === null) continue;
@@ -141,10 +150,17 @@ export interface ReportDownloads {
   pdf(orgId: number, year: number, month: number, now: Date): Promise<Buffer | null>;
 }
 
-/** The stored report, else one made now and not stored, so the job still emails it on its own. */
-export async function reportPdf(store: ReportStore, orgId: number, year: number, month: number, now: Date): Promise<Buffer | null> {
-  const stored = await store.storedReport(orgId, monthKey(year, month));
+/** The stored report, else one made now and not stored, so the job still emails it on its own.
+ *  With a cache, a made one is rendered at most once per hour and shared by concurrent requests. */
+export async function reportPdf(
+  store: ReportStore, orgId: number, year: number, month: number, now: Date, cache?: PdfCache,
+): Promise<Buffer | null> {
+  const key = monthKey(year, month);
+  const stored = await store.storedReport(orgId, key);
   if (stored) return stored;
-  const input = await store.loadMonth(orgId, year, month, now);
-  return input === null ? null : render(input, now);
+  const make = async () => {
+    const input = await store.loadMonth(orgId, year, month, now);
+    return input === null ? null : render(input, now);
+  };
+  return cache ? cache.get(`${orgId}/${key}`, make) : make();
 }

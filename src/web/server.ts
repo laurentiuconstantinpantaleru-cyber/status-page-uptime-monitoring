@@ -2,6 +2,7 @@ import { createPool } from '../db/connection.js';
 import { systemClock } from '../shared/clock.js';
 import { mysqlAdminStore } from './admin/store.js';
 import { mysqlApiStore } from './api/store.js';
+import { PdfCache } from './reports/cache.js';
 import { reportPdf, startMonthlyReports } from './reports/job.js';
 import { mailerFromEnv } from './reports/mailer.js';
 import { mysqlReportStore } from './reports/store.js';
@@ -13,6 +14,8 @@ const port = Number(process.env.PORT ?? 3000);
 const databaseUrl = process.env.DATABASE_URL;
 const pool = databaseUrl ? createPool(databaseUrl) : undefined;
 const reportStore = pool ? mysqlReportStore(pool) : undefined;
+// On-demand report PDFs: 50 at most, an hour each (D-043).
+const pdfCache = new PdfCache(systemClock, 50, 60 * 60 * 1000);
 const app = buildApp(
   { logger: true },
   pool
@@ -25,7 +28,7 @@ const app = buildApp(
         secureCookies: process.env.NODE_ENV === 'production',
         reports: {
           list: (orgId) => reportStore!.list(orgId),
-          pdf: (orgId, year, month, now) => reportPdf(reportStore!, orgId, year, month, now),
+          pdf: (orgId, year, month, now) => reportPdf(reportStore!, orgId, year, month, now, pdfCache),
         },
       },
       api: { store: mysqlApiStore(pool, systemClock) },
