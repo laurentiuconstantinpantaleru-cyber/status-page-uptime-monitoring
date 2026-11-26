@@ -83,10 +83,42 @@ jobs:
           docker tag app:ci "$image"
           docker push "$image"
 
-  # Only main, only after the tests and the image check pass; one deploy at a time.
-  deploy:
-    needs: [lint-and-test, image]
+  # Secrets cannot appear in a job's `if`, so this job reports whether all of them are set.
+  deploy-config:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Check the deploy secrets
+        id: check
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+        run: |
+          missing=()
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS DOMAIN MYSQL_DATABASE MYSQL_USER MYSQL_PASSWORD; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ ${#missing[@]} -eq 0 ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Deploy skipped: missing secrets in the production environment: ${missing[*]}"
+          fi
+
+  # Only main, only after the tests and the image check pass, only with every secret set
+  # (skipped otherwise, not failed); one deploy at a time.
+  deploy:
+    needs: [lint-and-test, image, deploy-config]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.deploy-config.outputs.ready == 'true'
     runs-on: ubuntu-latest
     environment: production
     concurrency:
