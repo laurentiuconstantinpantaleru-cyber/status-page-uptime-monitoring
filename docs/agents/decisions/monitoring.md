@@ -7,9 +7,8 @@
 - **Rule:** The default check interval for a newly created monitor is 5 minutes. The valid configurable range is 1 to 60 minutes (inclusive), set per monitor. The two confirmed business monitors (`hugthemug.ro` and `cafewien.ro`) run at the 5-minute default.
 - **Why:** Five minutes balances timely outage detection with request load on monitored services; aligns with brief's configurable 1–60 min range requirement.
 - **Rejected:** No default (forces manual entry on every monitor creation); 1-minute global default (excessive load on small monitored services).
-- **Evidence:** docs/brief.md:10, docs/agents/OPEN-QUESTIONS.md Q-001
+- **Evidence:** docs/brief.md:10, docs/agents/questions/monitoring.md Q-001
 - **Source:** user · confidence high
-- **Confirmed:** 2026-11-25
 
 ## D-010 · TLS certificate expiration warnings at 30 days and 7 days reminder
 - **Status:** approved
