@@ -5,6 +5,12 @@ import { MIGRATIONS_DIR, migrate } from '../../src/db/migrate.js';
 import { FakeClock } from '../../src/shared/clock.js';
 import { loadStatusData, readStatusVersion } from '../../src/web/status/data.js';
 import { monitorStatus } from '../../src/web/status/model.js';
+import {
+  addMaintenanceSchedule,
+  endMaintenanceSchedule,
+  scheduleMaintenance,
+  startQuickMaintenance,
+} from '../../src/web/maintenance/store.js';
 import type { CheckResult } from '../../src/worker/check.js';
 import { MySqlStore } from '../../src/worker/store.js';
 import { recordCheck } from '../../src/worker/worker.js';
@@ -79,6 +85,7 @@ describe.skipIf(!url)('MySQL schema', () => {
       '0003_status_version.sql',
       '0004_check_confirmations.sql',
       '0005_worker_faults.sql',
+      '0006_maintenance_schedules.sql',
     ]);
 
     const applied = await rows<{ version: string; applied_at: Date }>(
@@ -448,6 +455,120 @@ describe.skipIf(!url)('MySQL schema', () => {
       expect(faults[0].started_at.toISOString()).toBe(at(40).toISOString());
       expect(faults[0].ended_at.toISOString()).toBe(at(45).toISOString());
       expect(faults[0].checks_failed).toBe(6);
+    });
+  });
+
+  // After 'status page data': these bump the status version.
+  describe('maintenance (D-012, D-031)', () => {
+    const NOW = new Date('2026-11-26T23:50:00.000Z');
+    const at = (minutes: number) => new Date(NOW.getTime() + minutes * 60_000);
+    let pool: ReturnType<typeof createPool>;
+    let org: number;
+    const addMonitor = async (name: string) =>
+      insertId(
+        conn,
+        `INSERT INTO monitors (organization_id, name, url, timeout_ms, check_tls, created_at, updated_at)
+         VALUES (?, ?, 'https://example.test/', 10000, 0, ?, ?)`,
+        [org, name, T0, T0],
+      );
+    const inMaintenance = (monitor: number, t: Date) =>
+      new MySqlStore(pool).inMonitorTransaction(monitor, (tx) => tx.inMaintenance(monitor, t));
+    /** Every day 23:30–00:30 UTC from 2026-11-20. */
+    const nightly = {
+      frequency: 'daily' as const,
+      weekdays: [],
+      startMinute: 23 * 60 + 30,
+      durationMinutes: 60,
+      startsOn: new Date('2026-11-20T00:00:00.000Z'),
+    };
+
+    beforeAll(async () => {
+      pool = createPool(url!);
+      org = await insertId(conn, 'INSERT INTO organizations (slug, name, created_at, updated_at) VALUES (?, ?, ?, ?)', [
+        'maint-org', 'Maintenance Org', T0, T0,
+      ]);
+    });
+
+    afterAll(async () => {
+      await pool?.end();
+    });
+
+    it('accepts a daily rule under 24 h and a weekly rule under 7 days, with weekdays only when weekly', async () => {
+      const monitor = await addMonitor('Rule limits');
+      const add = (frequency: string, weekdays: string, duration: number) =>
+        conn.query(
+          `INSERT INTO maintenance_schedules
+             (monitor_id, frequency, weekdays, start_time, duration_minutes, starts_on, created_at)
+           VALUES (?, ?, ?, '23:30:00', ?, '2026-11-20', ?)`,
+          [monitor, frequency, weekdays, duration, T0],
+        );
+      const rejected = { code: 'ER_CHECK_CONSTRAINT_VIOLATED' };
+
+      await add('daily', '', 1439);
+      await add('weekly', 'sun,thu', 10079);
+      await expect(add('daily', '', 1440)).rejects.toMatchObject(rejected);
+      await expect(add('weekly', 'mon', 10080)).rejects.toMatchObject(rejected);
+      await expect(add('daily', '', 0)).rejects.toMatchObject(rejected);
+      await expect(add('weekly', '', 60)).rejects.toMatchObject(rejected);
+      await expect(add('daily', 'mon', 60)).rejects.toMatchObject(rejected);
+    });
+
+    it('holds maintenance across midnight for a recurring rule, in the worker and on the status page', async () => {
+      const monitor = await addMonitor('Nightly');
+      await addMaintenanceSchedule(pool, new FakeClock(T0), { monitorId: monitor, ...nightly, userId: null });
+
+      expect(await inMaintenance(monitor, at(-21))).toBe(false);
+      expect(await inMaintenance(monitor, at(25))).toBe(true);
+      expect(await inMaintenance(monitor, at(40))).toBe(false);
+      const site = (await loadStatusData(conn, at(25))).groups
+        .find((g) => g.name === 'Maintenance Org')!
+        .monitors.find((m) => m.name === 'Nightly')!;
+      expect(monitorStatus(site, at(25))).toBe('maint');
+      expect(site.maintenance.map((w) => w.startsAt.toISOString())).toContain('2026-11-20T23:30:00.000Z');
+    });
+
+    it('ends a rule without removing its past windows', async () => {
+      const monitor = await addMonitor('Ended rule');
+      const id = await addMaintenanceSchedule(pool, new FakeClock(T0), { monitorId: monitor, ...nightly, userId: null });
+
+      await endMaintenanceSchedule(pool, new FakeClock(at(-15)), id);
+
+      expect(await inMaintenance(monitor, at(-10))).toBe(false);
+      expect(await inMaintenance(monitor, new Date('2026-11-25T23:45:00.000Z'))).toBe(true);
+    });
+
+    it('schedules a one-off window and bumps the status version (D-020)', async () => {
+      const monitor = await addMonitor('One-off');
+      const before = await readStatusVersion(conn);
+
+      await scheduleMaintenance(pool, new FakeClock(T0), { monitorId: monitor, startsAt: at(0), endsAt: at(60), userId: null });
+
+      expect(await inMaintenance(monitor, at(30))).toBe(true);
+      expect(await readStatusVersion(conn)).toBe(before + 1);
+      const [window] = await rows<{ source: string; created_at: Date }>(
+        conn, 'SELECT source, created_at FROM maintenance_windows WHERE monitor_id = ?', [monitor],
+      );
+      expect(window).toMatchObject({ source: 'scheduled' });
+      expect(window.created_at.toISOString()).toBe(T0.toISOString());
+    });
+
+    it('starts quick maintenance that expires, extends it when pressed again, and bumps the status version', async () => {
+      const monitor = await addMonitor('Quick');
+      const before = await readStatusVersion(conn);
+
+      await startQuickMaintenance(pool, new FakeClock(at(0)), { monitorId: monitor, minutes: 15, userId: null });
+      await startQuickMaintenance(pool, new FakeClock(at(10)), { monitorId: monitor, minutes: 30, userId: null });
+
+      expect(await inMaintenance(monitor, at(44))).toBe(true);
+      expect(await inMaintenance(monitor, at(45))).toBe(false);
+      expect(await readStatusVersion(conn)).toBe(before + 2);
+      const windows = await rows<{ source: string }>(
+        conn, 'SELECT source FROM maintenance_windows WHERE monitor_id = ?', [monitor],
+      );
+      expect(windows.map((w) => w.source)).toEqual(['quick', 'quick']);
+      await expect(
+        startQuickMaintenance(pool, new FakeClock(at(0)), { monitorId: monitor, minutes: 20, userId: null }),
+      ).rejects.toThrow(/15, 30 or 60/);
     });
   });
 });

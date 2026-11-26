@@ -1,4 +1,5 @@
 import type { RecordedCheck, ScheduledCheck } from '../../src/shared/incidents.js';
+import { occurrences, type MaintenanceSchedule } from '../../src/shared/maintenance.js';
 import type { FaultCounts, WindowCheck } from '../../src/shared/worker-fault.js';
 import type { MonitorRow, MonitorTx, NewCheck, PendingConfirmation, WorkerStore } from '../../src/worker/store.js';
 import type { WorkerRow } from '../../src/worker/assignment.js';
@@ -41,6 +42,7 @@ export class MemoryStore implements WorkerStore {
   checks: StoredCheck[] = [];
   incidents: StoredIncident[] = [];
   maintenance: { monitorId: number; startsAt: Date; endsAt: Date }[] = [];
+  schedules: { monitorId: number; schedule: MaintenanceSchedule }[] = [];
   workerFaults: StoredWorkerFault[] = [];
   statusVersion = 0;
 
@@ -133,7 +135,10 @@ export class MemoryStore implements WorkerStore {
           }),
       hasOpenIncident: async (monitorId) => this.incidents.some((i) => i.monitorId === monitorId && i.resolvedAt === null),
       inMaintenance: async (monitorId, at) =>
-        this.maintenance.some((w) => w.monitorId === monitorId && w.startsAt <= at && w.endsAt > at),
+        this.maintenance.some((w) => w.monitorId === monitorId && w.startsAt <= at && w.endsAt > at) ||
+        this.schedules.some(
+          (s) => s.monitorId === monitorId && occurrences(s.schedule, at, new Date(at.getTime() + 1)).length > 0,
+        ),
       openIncident: async (monitorId, startedAt, cause, httpStatus) => {
         this.incidents.push({ monitorId, startedAt, resolvedAt: null, cause, httpStatus });
       },

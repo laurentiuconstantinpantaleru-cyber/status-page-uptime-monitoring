@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { quickWindow } from '../../src/shared/maintenance.js';
 import { days, monitorStatus, nextChange, worstOf, type MonitorData } from '../../src/web/status/model.js';
 
 const NOW = new Date('2026-11-26T14:55:00.000Z');
@@ -163,5 +164,17 @@ describe('nextChange', () => {
     const m = monitor({ maintenance: [{ startsAt: new Date('2026-11-26T15:30:00.000Z'), endsAt: new Date('2026-11-26T16:00:00.000Z') }] });
 
     expect(nextChange({ groups: [{ name: 'A', monitors: [m] }] }, NOW).toISOString()).toBe('2026-11-26T15:30:00.000Z');
+  });
+});
+
+describe('quick maintenance (D-012)', () => {
+  it('shows maintenance until the window expires, then operational, and re-renders when it expires', () => {
+    const m = monitor({ maintenance: [quickWindow(NOW, 15, [])] });
+    const expires = new Date(NOW.getTime() + 15 * 60_000);
+
+    expect(monitorStatus(m, NOW)).toBe('maint');
+    expect(monitorStatus(m, new Date(expires.getTime() - 1000))).toBe('maint');
+    expect(monitorStatus(m, expires)).toBe('ok');
+    expect(nextChange({ groups: [{ name: 'A', monitors: [m] }] }, NOW)).toEqual(expires);
   });
 });

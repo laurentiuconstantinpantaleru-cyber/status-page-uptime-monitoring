@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { occurrences } from '../../src/shared/maintenance.js';
 import { formatUptime, lastDays, uptime, utcMonth, type UptimeInput } from '../../src/shared/uptime.js';
 
 const HOUR = 3_600_000;
@@ -75,6 +76,31 @@ describe('uptime', () => {
     );
 
     expect(result).toMatchObject({ maintenanceMs: 3 * HOUR, downMs: 2 * HOUR, ratio: (717 - 2) / 717 });
+  });
+
+  it('counts only the part of an incident outside a recurring window that crosses midnight', () => {
+    const from = at('2026-11-10T00:00:00');
+    const to = at('2026-11-12T00:00:00');
+    const nightly = {
+      frequency: 'daily' as const,
+      weekdays: [],
+      startMinute: 23 * 60 + 30,
+      durationMinutes: 60,
+      startsOn: at('2026-11-01T00:00:00'),
+      endedAt: null,
+    };
+    const result = uptime(
+      input({
+        from,
+        to,
+        maintenance: occurrences(nightly, from, to),
+        incidents: [{ startedAt: at('2026-11-10T22:00:00'), resolvedAt: at('2026-11-11T00:00:00') }],
+      }),
+    );
+
+    // Maintenance in the 48 h: 00:00–00:30 on the 10th, 23:30–00:30, 23:30–00:00 on the 11th = 2 h.
+    // The incident is down 2 h, of which 23:30–00:00 falls in maintenance.
+    expect(result).toEqual({ measuredMs: 48 * HOUR, maintenanceMs: 2 * HOUR, downMs: 1.5 * HOUR, ratio: (46 - 1.5) / 46 });
   });
 
   it('counts an open incident until now and measures a month in progress only until now', () => {

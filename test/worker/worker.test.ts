@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FakeClock } from '../../src/shared/clock.js';
+import { quickWindow } from '../../src/shared/maintenance.js';
 import type { HttpClient, HttpResponse } from '../../src/worker/check.js';
 import type { MonitorRow } from '../../src/worker/store.js';
 import { CONFIRM_POLL_MS, CONFIRM_WITHIN_MS, CheckWorker, HEARTBEAT_MS } from '../../src/worker/worker.js';
@@ -156,6 +157,49 @@ describe('CheckWorker', () => {
 
     expect(env.store.checks.filter((c) => c.kind === 'scheduled')).toHaveLength(3);
     expect(env.store.incidents).toHaveLength(0);
+  });
+
+  it('opens no incident inside a recurring window, and opens one once it is over', async () => {
+    const env = await setup();
+    // Every day 09:30–10:15 UTC; T0 is 10:00.
+    env.store.schedules = [{
+      monitorId: 3,
+      schedule: {
+        frequency: 'daily', weekdays: [], startMinute: 9 * 60 + 30, durationMinutes: 45,
+        startsOn: new Date('2026-11-01T00:00:00.000Z'), endedAt: null,
+      },
+    }];
+    env.client.answer = DOWN;
+
+    for (let i = 0; i < 3; i++) {
+      await nextSlot(env);
+      await confirmationPoll(env);
+    }
+    expect(env.store.incidents).toHaveLength(0);
+
+    for (let i = 0; i < 2; i++) {
+      await nextSlot(env);
+      await confirmationPoll(env);
+    }
+    expect(env.store.incidents).toHaveLength(1);
+  });
+
+  it('opens an incident once a quick maintenance window has expired', async () => {
+    const env = await setup();
+    env.store.maintenance = [{ monitorId: 3, ...quickWindow(T0, 15, []) }];
+    env.client.answer = DOWN;
+
+    for (let i = 0; i < 3; i++) {
+      await nextSlot(env);
+      await confirmationPoll(env);
+    }
+    expect(env.store.incidents).toHaveLength(0);
+
+    for (let i = 0; i < 2; i++) {
+      await nextSlot(env);
+      await confirmationPoll(env);
+    }
+    expect(env.store.incidents).toHaveLength(1);
   });
 });
 
