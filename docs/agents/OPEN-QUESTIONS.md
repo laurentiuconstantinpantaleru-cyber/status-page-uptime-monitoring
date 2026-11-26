@@ -33,6 +33,7 @@
 ### [Monitoring](questions/monitoring.md)
 - Q-001 · Which 10 student project URLs and 2 local business URLs will be monitored? · _investigating_
 - Q-010 · What latency threshold do the seeded business monitors use?
+- Q-023 · What do the D-011 roll-ups keep, so the monthly report's mean latency survives the 7-day retention? · _investigating_
 
 ### [Project](questions/project.md)
 - Q-005 · What are the specific requirements requested in the 3 student interviews? · _answered_
