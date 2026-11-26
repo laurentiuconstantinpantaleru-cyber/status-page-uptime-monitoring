@@ -131,7 +131,8 @@ tight.
 
 | Token | Value | Purpose |
 |---|---|---|
-| `--space-1` | `4px` | Uptime bar gap, icon-to-text in badges |
+| `--space-0-5` | `2px` | Uptime bar gap only |
+| `--space-1` | `4px` | Icon-to-text in badges |
 | `--space-2` | `8px` | Badge padding, inline gaps |
 | `--space-3` | `12px` | Table cell padding, list row gap |
 | `--space-4` | `16px` | Gap between items inside a card |
@@ -152,5 +153,10 @@ tight.
 | Name | Min | Max | Purpose |
 |---|---|---|---|
 | `mobile` | `0px` | `640px` | One column; uptime bars show the last 30 days, no horizontal scroll |
-| `tablet` | `641px` | `1024px` | One column, 90-day bars |
-| `desktop` | `1025px` | — | Centered 960 px container, 90-day bars |
+| `tablet` | `641px` | `1024px` | One column, centered `--container-max` container, 90-day bars |
+| `desktop` | `1025px` | — | Centered `--container-max` container, 90-day bars |
+
+### Layout
+| Token | Value | Purpose |
+|---|---|---|
+| `--container-max` | `800px` | Widest content column on tablet and desktop |
