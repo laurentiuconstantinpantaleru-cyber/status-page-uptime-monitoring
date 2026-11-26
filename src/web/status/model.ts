@@ -1,10 +1,23 @@
+import { formatUptime, lastDays, uptime } from '../../shared/uptime.js';
+
 /** What the public status page shows for a monitor, a day, or the whole page. */
 export type Status = 'ok' | 'degraded' | 'outage' | 'maint' | 'nodata';
+
+/** A human-written incident update (D-014). */
+export interface IncidentUpdate {
+  stage: 'investigating' | 'identified' | 'monitoring' | 'resolved';
+  body: string;
+  createdAt: Date;
+}
 
 export interface Period {
   startedAt: Date;
   /** `null` while the incident is open. */
   resolvedAt: Date | null;
+  /** The failure cause the incident opened with (`ErrorCause`). */
+  cause?: string;
+  /** Newest first; empty until someone writes one. */
+  updates?: IncidentUpdate[];
 }
 
 export interface MaintenanceWindow {
@@ -20,9 +33,9 @@ export interface MonitorData {
   /** Oldest raw check still kept (raw checks live 7 days, D-011); `null` when none. */
   firstCheckAt: Date | null;
   lastCheck: { checkedAt: Date; latencyMs: number | null } | null;
-  /** Incidents overlapping the last 90 days. */
+  /** Incidents overlapping the 90 × 24 h before now (the 90-day uptime, D-030). */
   incidents: Period[];
-  /** Maintenance windows overlapping the last 90 days. */
+  /** Maintenance windows overlapping the 90 × 24 h before now. */
   maintenance: MaintenanceWindow[];
 }
 
@@ -87,8 +100,8 @@ function overlap(start: Date, end: Date, from: Date, to: Date): number {
   return Math.max(0, Math.min(end.getTime(), to.getTime()) - Math.max(start.getTime(), from.getTime()));
 }
 
-/** When the monitor's history starts: its first check, or its creation once older checks are gone. */
-function dataSince(monitor: MonitorData, now: Date): Date | null {
+/** When the monitor's history starts: its first check, or its creation once older checks are gone (D-023). */
+export function dataSince(monitor: MonitorData, now: Date): Date | null {
   const first = monitor.firstCheckAt;
   if (first === null) return null;
   if (now.getTime() - first.getTime() < RAW_HISTORY_MS) return first;
@@ -149,4 +162,38 @@ export function nextChange(data: StatusData, now: Date): Date {
     }
   }
   return new Date(next);
+}
+
+/** Uptime over the `days` × 24 h before now, from incidents and maintenance (D-030); "—" without history. */
+export function monitorUptime(monitor: MonitorData, now: Date, days: number): string {
+  return formatUptime(uptime({
+    incidents: monitor.incidents,
+    maintenance: monitor.maintenance,
+    ...lastDays(now, days),
+    now,
+    historyStart: dataSince(monitor, now),
+  }));
+}
+
+export interface PastDay {
+  /** Start of the UTC day the incidents started on. */
+  date: Date;
+  items: { monitor: string; incident: Period }[];
+}
+
+/** Resolved incidents of the last 90 days, by the UTC day they started, newest first (Q-013). */
+export function pastIncidents(data: StatusData, now: Date): PastDay[] {
+  const since = lastDays(now, DAYS_SHOWN).from;
+  const items = data.groups
+    .flatMap((g) => g.monitors.flatMap((m) => m.incidents.map((incident) => ({ monitor: m.name, incident }))))
+    .filter(({ incident }) => incident.resolvedAt !== null && incident.resolvedAt > since)
+    .sort((a, b) => b.incident.startedAt.getTime() - a.incident.startedAt.getTime());
+  const result: PastDay[] = [];
+  for (const item of items) {
+    const date = startOfUtcDay(item.incident.startedAt);
+    const last = result[result.length - 1];
+    if (last && last.date.getTime() === date.getTime()) last.items.push(item);
+    else result.push({ date, items: [item] });
+  }
+  return result;
 }

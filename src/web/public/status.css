@@ -17,6 +17,32 @@
   .overall > .icon { width: var(--space-8); height: var(--space-8); }
 }
 
+/* ---------- Notices: active incident ---------- */
+.notices { display: grid; gap: var(--space-4); }
+.notice { display: grid; gap: var(--space-6); padding: var(--space-6); }
+@media (max-width: 640px) { .notice { padding: var(--space-4); } }
+.n-head { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: start; }
+.n-head .icon { margin-top: var(--space-1); }
+.n-head > div { display: grid; gap: var(--space-1); min-width: 0; }
+.eyebrow { font: var(--text-sm-strong); color: var(--color-text-secondary); }
+.n-head h2 { font: var(--text-lg); overflow-wrap: anywhere; }
+.n-head .meta, .n-body { overflow-wrap: anywhere; }
+.n-body { font: var(--text-base); color: var(--color-text-secondary); }
+
+/* Timeline: dots on a vertical line; the newest dot carries the incident's status color */
+.timeline { display: grid; gap: var(--space-6); }
+.timeline li { position: relative; padding-left: var(--space-8); display: grid; gap: var(--space-1); min-width: 0; }
+.timeline li::before { content: ""; position: absolute; left: 0; top: var(--space-1); width: var(--space-3); height: var(--space-3);
+  border-radius: var(--radius-pill); background: var(--color-bg-surface); border: 2px solid var(--color-border-strong); }
+.timeline li:first-child::before { background: var(--accent, var(--color-border-strong)); border-color: var(--accent, var(--color-border-strong)); }
+.timeline li::after { content: ""; position: absolute; left: calc(var(--space-3) / 2 - 1px); top: calc(var(--space-4) + var(--space-1));
+  bottom: calc(var(--space-6) * -1 + var(--space-1)); width: 2px; background: var(--color-border); }
+.timeline li:last-child::after { display: none; }
+.u-head { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); align-items: baseline; }
+.stage { font: var(--text-sm-strong); color: var(--color-text-primary); }
+.u-head time { font: var(--text-metric); color: var(--color-text-muted); }
+.timeline p { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+
 /* ---------- Components: one card per group ---------- */
 .groups { display: grid; gap: var(--space-4); }
 .group-head { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); justify-content: space-between; align-items: baseline;
@@ -27,9 +53,10 @@
 @media (max-width: 640px) { .group-head, .component { padding-left: var(--space-4); padding-right: var(--space-4); } }
 .c-top { display: flex; gap: var(--space-2) var(--space-4); align-items: start; justify-content: space-between; }
 .c-name { font: var(--text-base); font-weight: 500; overflow-wrap: anywhere; min-width: 0; padding-top: var(--space-0-5); }
-.c-uptime { display: flex; gap: var(--space-2); align-items: baseline; }
+.c-uptime { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); align-items: baseline; }
+.c-uptime .u { display: inline-flex; gap: var(--space-2); align-items: baseline; }
 .c-uptime .num { font: var(--text-metric-lg); }
-.c-uptime .label { font: var(--text-xs); color: var(--color-text-muted); }
+.c-uptime .label { font: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; }
 .c-foot { display: flex; gap: var(--space-2); justify-content: space-between; font: var(--text-xs); color: var(--color-text-muted); }
 
 .bars { display: flex; gap: var(--space-0-5); height: var(--space-8); touch-action: pan-y; }
@@ -60,3 +87,22 @@
 .tip .t-date { font: var(--text-metric); color: var(--color-text-muted); }
 .tip .t-status { display: flex; gap: var(--space-2); align-items: center; font: var(--text-sm-strong); }
 .tip .t-detail { color: var(--color-text-secondary); }
+
+/* ---------- Past incidents, grouped by day (quiet: no cards) ---------- */
+.days { display: grid; gap: var(--space-8); }
+.day { display: grid; gap: var(--space-4); }
+.day h3 { font: var(--text-sm-strong); color: var(--color-text-secondary); padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); }
+.day h3 time { font: var(--text-metric); }
+.day-list { display: grid; gap: var(--space-6); }
+.past { display: grid; gap: var(--space-2); min-width: 0; }
+.p-head { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-2); align-items: start; }
+.p-head > .icon { margin-top: calc(var(--space-1) + 1px); }
+.p-head h4 { font: var(--text-lg); overflow-wrap: anywhere; }
+.p-head .meta { grid-column: 2; overflow-wrap: anywhere; color: var(--color-text-secondary); }
+.past > p, .past details { margin-left: var(--space-6); }
+.past > p { font: var(--text-base); color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.past summary, .notice summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer;
+  min-height: var(--space-6); display: inline-flex; align-items: center; border-radius: var(--radius-sm); }
+@media (pointer: coarse) { .past summary, .notice summary { min-height: var(--space-12); } }
+.past details .timeline, .notice details .timeline { margin-top: var(--space-4); }
+.past details .timeline p { font: var(--text-sm); }

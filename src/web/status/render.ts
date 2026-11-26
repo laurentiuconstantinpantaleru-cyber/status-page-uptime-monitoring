@@ -1,4 +1,7 @@
-import { days, hhmm, monitorStatus, nextChange, worstOf, type Status, type StatusData } from './model.js';
+import {
+  days, duration, hhmm, monitorStatus, monitorUptime, nextChange, pastIncidents, startOfUtcDay, worstOf,
+  type IncidentUpdate, type Period, type Status, type StatusData,
+} from './model.js';
 import type { RenderedPage } from './cache.js';
 import { STATUSES, css, render, type HeaderView } from '../page.js';
 
@@ -8,6 +11,29 @@ const DAY_LABEL: Record<Status, string> = { ...LABEL, nodata: 'No data' };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const longDay = (d: Date) => `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+
+/** An incident has no written title, so it is named after its monitor and the cause it opened with. */
+const CAUSE_PHRASE: Record<string, string> = {
+  timeout: 'timed out',
+  http_5xx: 'returned server errors',
+  unexpected_status: 'returned an unexpected status',
+  keyword_missing: 'is missing its expected text',
+  dns: 'could not be found in DNS',
+  tls: 'has a TLS certificate problem',
+  connection: 'could not be reached',
+};
+const incidentTitle = (monitor: string, incident: Period) => `${monitor} ${CAUSE_PHRASE[incident.cause ?? ''] ?? 'is down'}`;
+const stageLabel = (stage: IncidentUpdate['stage']) => stage[0].toUpperCase() + stage.slice(1);
+
+/** A time in UTC, with the day when it is not on the day of `today`. */
+function utcTime(at: Date, today: Date): { iso: string; text: string } {
+  const sameDay = startOfUtcDay(at).getTime() === startOfUtcDay(today).getTime();
+  return { iso: at.toISOString(), text: `${sameDay ? '' : `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} `}${hhmm(at)} UTC` };
+}
+
+function timeline(updates: IncidentUpdate[], today: Date) {
+  return updates.map((u) => ({ stage: stageLabel(u.stage), body: u.body, time: utcTime(u.createdAt, today) }));
+}
 
 /** Status goes to the top, API to the badge and API section in the footer. The Dashboard
  *  and Login pages do not exist yet (DS-p26-admin-monitors, Q-008). */
@@ -68,6 +94,8 @@ export function renderStatusPage(data: StatusData, now: Date): RenderedPage {
         name: monitor.name,
         status,
         label: LABEL[status],
+        uptime90: monitorUptime(monitor, now, 90),
+        uptime30: monitorUptime(monitor, now, 30),
         days: days(monitor, now).map((day, i, all) => ({
           status: day.status,
           label: DAY_LABEL[day.status],
@@ -80,9 +108,37 @@ export function renderStatusPage(data: StatusData, now: Date): RenderedPage {
       };
     }),
   }));
+  const active = data.groups.flatMap((g) => g.monitors.flatMap((m) =>
+    m.incidents.filter((i) => i.resolvedAt === null).map((i) => {
+      const updates = i.updates ?? [];
+      return {
+        title: incidentTitle(m.name, i),
+        affects: m.name,
+        stage: updates.length ? stageLabel(updates[0].stage) : null,
+        started: utcTime(i.startedAt, now),
+        downFor: duration(now.getTime() - i.startedAt.getTime()),
+        updates: timeline(updates, now),
+      };
+    })));
+  const past = pastIncidents(data, now).map((day) => ({
+    iso: day.date.toISOString().slice(0, 10),
+    label: longDay(day.date),
+    items: day.items.map(({ monitor, incident }) => {
+      const updates = incident.updates ?? [];
+      return {
+        title: incidentTitle(monitor, incident),
+        affects: monitor,
+        lasted: duration(incident.resolvedAt!.getTime() - incident.startedAt.getTime()),
+        summary: updates[0]?.body ?? null,
+        updates: timeline(updates, day.date),
+      };
+    }),
+  }));
   const html = page({
     error: false,
     groups,
+    active,
+    past,
     legend: STATUSES.map((s) => ({ status: s, label: DAY_LABEL[s] })),
     updatedIso: now.toISOString(),
     updatedHhmm: hhmm(now),
@@ -95,6 +151,8 @@ export function renderErrorPage(): string {
   return page({
     error: true,
     groups: [],
+    active: [],
+    past: [],
     legend: [],
     worst: 'nodata',
     headline: 'Status could not load',

@@ -1,0 +1,5 @@
+<ol class="timeline">
+<% it.updates.forEach(function (u) { %>
+  <li><div class="u-head"><span class="stage"><%= u.stage %></span><time datetime="<%= u.time.iso %>"><%= u.time.text %></time></div><p><%= u.body %></p></li>
+<% }) %>
+</ol>

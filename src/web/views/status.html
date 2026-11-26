@@ -31,11 +31,30 @@
     </section>
   </div>
 
+<% if (it.active.length > 0) { %>
+  <div class="notices">
+<% it.active.forEach(function (a, ai) { %>
+    <section class="notice card" style="--accent: var(--color-status-outage)" aria-labelledby="active-title-<%= ai %>">
+      <div class="n-head"><%~ it.icons.outage %><div>
+        <p class="eyebrow">Active incident<% if (a.stage) { %> · <%= a.stage %><% } %></p>
+        <h2 id="active-title-<%= ai %>"><%= a.title %></h2>
+        <p class="meta">Affects <%= a.affects %> · Started <time datetime="<%= a.started.iso %>"><%= a.started.text %></time> · Down for <span class="num"><%= a.downFor %></span></p>
+      </div></div>
+<% if (a.updates.length > 0) { %>
+      <details class="updates" open><summary>Updates (<%= a.updates.length %>)</summary><%~ include('partials/timeline.html', { updates: a.updates }) %></details>
+<% } else { %>
+      <p class="n-body">No updates yet.</p>
+<% } %>
+    </section>
+<% }) %>
+  </div>
+<% } %>
+
 <% if (!it.error) { %>
   <section class="section" aria-labelledby="components-title">
     <div class="section-head"><h2 id="components-title">Components</h2>
 <% if (it.groups.length > 0) { %>
-      <span class="meta"><span class="d90">Last 90 days</span><span class="d30">Last 30 days shown · uptime over 90 days</span></span>
+      <span class="meta"><span class="d90">Last 90 days</span><span class="d30">Last 30 days shown</span></span>
 <% } %>
     </div>
 <% if (it.groups.length === 0) { %>
@@ -50,7 +69,7 @@
 <% group.monitors.forEach(function (m) { %>
           <li class="component">
             <div class="c-top"><p class="c-name"><%= m.name %></p><span class="badge"><%~ it.icons[m.status] %><span><%= m.label %></span></span></div>
-            <p class="c-uptime"><span class="num">—</span><span class="label">uptime, 90 days</span></p>
+            <p class="c-uptime"><span class="u"><span class="num"><%= m.uptime90 %></span><span class="label">uptime, 90 days</span></span><span class="u"><span class="num"><%= m.uptime30 %></span><span class="label">uptime, 30 days</span></span></p>
             <ol class="bars" aria-label="<%= m.name %>, daily status, oldest first">
 <% m.days.forEach(function (d) { %>
               <li class="d-<%= d.status %><% if (d.older) { %> older<% } %>" tabindex="<%= d.tabindex %>" data-date="<%= d.date %>" data-s="<%= d.status %>" data-label="<%= d.label %>" data-detail="<%= d.detail %>"><span class="visually-hidden"><%= d.date %>: <%= d.label %>. <%= d.detail %></span></li>
@@ -69,6 +88,34 @@
 <% }) %>
     </ul>
     <p class="hint">Point at, tap or move with the arrow keys across the bars to see each day.</p>
+<% } %>
+  </section>
+
+  <section class="section" aria-labelledby="past-title">
+    <div class="section-head"><h2 id="past-title">Past incidents</h2><% if (it.past.length > 0) { %><span class="meta">Last 90 days, newest first</span><% } %></div>
+<% if (it.past.length === 0) { %>
+    <div class="empty card"><p>No incidents in the last 90 days.</p></div>
+<% } else { %>
+    <ol class="days">
+<% it.past.forEach(function (day) { %>
+      <li class="day"><h3><time datetime="<%= day.iso %>"><%= day.label %></time></h3>
+        <ul class="day-list">
+<% day.items.forEach(function (p) { %>
+          <li class="past" style="--accent: var(--color-status-outage)">
+            <div class="p-head"><%~ it.icons.outage %><h4><%= p.title %></h4>
+              <p class="meta">Resolved · Lasted <span class="num"><%= p.lasted %></span> · Affects <%= p.affects %></p></div>
+<% if (p.summary !== null) { %>
+            <p><%= p.summary %></p>
+<% } %>
+<% if (p.updates.length > 1) { %>
+            <details><summary>Show all <%= p.updates.length %> updates</summary><%~ include('partials/timeline.html', { updates: p.updates }) %></details>
+<% } %>
+          </li>
+<% }) %>
+        </ul>
+      </li>
+<% }) %>
+    </ol>
 <% } %>
   </section>
 <% } %>

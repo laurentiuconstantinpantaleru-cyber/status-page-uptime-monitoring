@@ -220,9 +220,10 @@ fieldset { border: 0; padding: 0; min-width: 0; }
 @media (max-width: 640px) { .group-head, .component { padding-left: var(--space-4); padding-right: var(--space-4); } }
 .c-top { display: flex; gap: var(--space-2) var(--space-4); align-items: start; justify-content: space-between; }
 .c-name { font: var(--text-base); font-weight: 500; overflow-wrap: anywhere; min-width: 0; padding-top: var(--space-0-5); }
-.c-uptime { display: flex; gap: var(--space-2); align-items: baseline; }
+.c-uptime { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); align-items: baseline; }
+.c-uptime .u { display: inline-flex; gap: var(--space-2); align-items: baseline; }
 .c-uptime .num { font: var(--text-metric-lg); }
-.c-uptime .label { font: var(--text-xs); color: var(--color-text-muted); }
+.c-uptime .label { font: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; }
 .c-foot { display: flex; gap: var(--space-2); justify-content: space-between; font: var(--text-xs); color: var(--color-text-muted); }
 
 .bars { display: flex; gap: var(--space-0-5); height: var(--space-8); touch-action: pan-y; }
@@ -592,7 +593,7 @@ function components(data) {
     const rows = g.monitors.map((m, mi) => `
       <li class="component">
         <div class="c-top"><p class="c-name">${esc(m.name)}</p>${badge(m.state)}</div>
-        <p class="c-uptime"><span class="num">${m.uptime}</span><span class="label">uptime, 90 days</span></p>
+        <p class="c-uptime"><span class="u"><span class="num">${m.uptime}</span><span class="label">uptime, 90 days</span></span><span class="u"><span class="num">${m.uptime30 ?? m.uptime}</span><span class="label">uptime, 30 days</span></span></p>
         ${bars(m, `${gi}-${mi}`)}
         <div class="c-foot"><span class="d90">90 days ago</span><span class="d30">30 days ago</span><span>Today</span></div>
       </li>`).join('');
@@ -603,7 +604,7 @@ function components(data) {
   }).join('');
   return `<section class="section" aria-labelledby="components-title">
     <div class="section-head"><h2 id="components-title">Components</h2>
-      <span class="meta"><span class="d90">Last 90 days</span><span class="d30">Last 30 days shown · uptime over 90 days</span></span></div>
+      <span class="meta"><span class="d90">Last 90 days</span><span class="d30">Last 30 days shown</span></span></div>
     <div class="groups">${groups}</div>
     <ul class="legend" aria-label="Legend">${legend}</ul>
     <p class="hint">Point at, tap or move with the arrow keys across the bars to see each day.</p>

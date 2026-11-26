@@ -1,6 +1,7 @@
 import type { RowDataPacket } from 'mysql2/promise';
 import { loadMaintenance, type Queryable } from '../../db/maintenance.js';
-import { DAYS_SHOWN, startOfUtcDay, type MonitorData, type StatusData } from './model.js';
+import { lastDays } from '../../shared/uptime.js';
+import { DAYS_SHOWN, startOfUtcDay, type IncidentUpdate, type MonitorData, type StatusData } from './model.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -10,9 +11,10 @@ export async function readStatusVersion(db: Queryable): Promise<number> {
   return Number(rows[0]?.version ?? 0);
 }
 
-/** Every monitor, grouped by organization, with what its status and 90 daily bars need. */
+/** Every monitor, grouped by organization, with what its status, uptime and 90 daily bars need. */
 export async function loadStatusData(db: Queryable, now: Date): Promise<StatusData> {
-  const from = new Date(startOfUtcDay(now).getTime() - (DAYS_SHOWN - 1) * DAY_MS);
+  // The 90-day uptime reaches 90 × 24 h back, a little before the first daily bar.
+  const { from } = lastDays(now, DAYS_SHOWN);
 
   const [monitors] = await db.query<RowDataPacket[]>(
     `SELECT m.id, m.name, m.created_at, m.latency_threshold_ms, o.id AS org_id, o.name AS org_name
@@ -28,8 +30,16 @@ export async function loadStatusData(db: Queryable, now: Date): Promise<StatusDa
      ) latest WHERE n = 1`,
   );
   const [incidents] = await db.query<RowDataPacket[]>(
-    `SELECT monitor_id, started_at, resolved_at FROM incidents
-     WHERE started_at < ? AND (resolved_at IS NULL OR resolved_at > ?)`,
+    `SELECT id, monitor_id, started_at, resolved_at, cause FROM incidents
+     WHERE started_at < ? AND (resolved_at IS NULL OR resolved_at > ?)
+     ORDER BY started_at`,
+    [now, from],
+  );
+  const [updates] = await db.query<RowDataPacket[]>(
+    `SELECT u.incident_id, u.stage, u.body, u.created_at FROM incident_updates u
+     JOIN incidents i ON i.id = u.incident_id
+     WHERE i.started_at < ? AND (i.resolved_at IS NULL OR i.resolved_at > ?)
+     ORDER BY u.created_at DESC, u.id DESC`,
     [now, from],
   );
   const windowsOf = await loadMaintenance(db, from, new Date(startOfUtcDay(now).getTime() + DAY_MS));
@@ -43,7 +53,17 @@ export async function loadStatusData(db: Queryable, now: Date): Promise<StatusDa
     }
     return result;
   };
-  const incidentsOf = byMonitor(incidents, (r) => ({ startedAt: r.started_at as Date, resolvedAt: r.resolved_at as Date | null }));
+  const updatesOf = new Map<number, IncidentUpdate[]>();
+  for (const u of updates) {
+    const id = Number(u.incident_id);
+    updatesOf.set(id, [...(updatesOf.get(id) ?? []), { stage: u.stage, body: u.body as string, createdAt: u.created_at as Date }]);
+  }
+  const incidentsOf = byMonitor(incidents, (r) => ({
+    startedAt: r.started_at as Date,
+    resolvedAt: r.resolved_at as Date | null,
+    cause: r.cause as string,
+    updates: updatesOf.get(Number(r.id)) ?? [],
+  }));
 
   const groups: StatusData['groups'] = [];
   let currentOrg: number | null = null;

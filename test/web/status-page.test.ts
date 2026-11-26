@@ -167,7 +167,8 @@ describe('GET /status', () => {
 
       expect(body).toContain('<h2 id="past-title">Past incidents</h2>');
       expect(body).toContain('Last 90 days, newest first');
-      expect(body.indexOf('Tue 24 Nov 2026')).toBeLessThan(body.indexOf('Wed 18 Nov 2026'));
+      const past = body.slice(body.indexOf('id="past-title"'));
+      expect(past.indexOf('Tue 24 Nov 2026')).toBeLessThan(past.indexOf('Wed 18 Nov 2026'));
       expect(body).toContain('Resolved · Lasted <span class="num">38 min</span> · Affects Corner bakery website');
       expect(body).toContain('<p>The site is back.</p>');
       expect(body).toContain('Show all 2 updates');
