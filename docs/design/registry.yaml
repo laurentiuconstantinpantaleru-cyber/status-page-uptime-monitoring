@@ -31,7 +31,7 @@ designs:
     source: src/web/views/admin/reports.html
     screenshots: [screens/DS-p26-admin-reports.light.png, screens/DS-p26-admin-reports.dark.png]
     design_ref: mocks/DS-p26-admin-reports.html
-    status: draft
+    status: implemented
   - id: DS-p26-header
     kind: component
     source: src/web/views/partials/header.html

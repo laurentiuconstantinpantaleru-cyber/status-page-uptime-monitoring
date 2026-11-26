@@ -118,3 +118,21 @@ textarea.input { min-height: calc(var(--space-16) * 2); padding: var(--space-3);
 .past summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer; min-height: var(--space-8); display: inline-flex; align-items: center; }
 @media (pointer: coarse) { .past summary { min-height: var(--space-12); } }
 .past details > .timeline, .past details > .form { margin-top: var(--space-4); }
+
+/* ---------- Monthly reports (DS-p26-admin-reports) ---------- */
+.intro { font: var(--text-sm); color: var(--color-text-secondary); max-width: 60ch; }
+.report-groups { display: grid; gap: var(--space-12); }
+@media (max-width: 640px) { .report-groups { gap: var(--space-8); } }
+.section-head h2 { overflow-wrap: anywhere; }
+.month { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-4); align-items: center;
+  padding: var(--space-4) var(--space-6); border-top: 1px solid var(--color-border); }
+.month:first-child { border-top: 0; }
+@media (max-width: 640px) { .month { grid-template-columns: 1fr; padding: var(--space-4); } }
+.month h3 { font: var(--text-lg); }
+.sent { display: flex; gap: var(--space-2); align-items: start; font: var(--text-sm); color: var(--color-text-secondary); }
+.sent .icon { margin-top: var(--space-0-5); }
+.download { justify-self: start; }
+@media (pointer: coarse) { .download { min-height: var(--space-12); } }
+.older summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer; min-height: var(--space-8); display: inline-flex; align-items: center; }
+@media (pointer: coarse) { .older summary { min-height: var(--space-12); } }
+.older[open] summary { margin-bottom: var(--space-4); }

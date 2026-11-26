@@ -23,7 +23,10 @@ const app = buildApp(
         store: mysqlAdminStore(pool, systemClock),
         // Behind Caddy's HTTPS in production (D-029); plain HTTP on a laptop.
         secureCookies: process.env.NODE_ENV === 'production',
-        reports: { pdf: (orgId, year, month, now) => reportPdf(reportStore!, orgId, year, month, now) },
+        reports: {
+          list: (orgId) => reportStore!.list(orgId),
+          pdf: (orgId, year, month, now) => reportPdf(reportStore!, orgId, year, month, now),
+        },
       },
       api: { store: mysqlApiStore(pool, systemClock) },
     }

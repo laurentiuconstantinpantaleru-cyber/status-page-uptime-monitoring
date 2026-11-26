@@ -107,10 +107,10 @@ export function mysqlReportStore(pool: Pool): ReportStore {
       return rows[0].pdf as Buffer;
     },
 
-    async markEmailed(orgId, month, now) {
+    async markEmailed(orgId, month, now, emailedTo) {
       await pool.query(
-        'UPDATE monthly_reports SET emailed_at = ?, sending_at = NULL, last_error = NULL WHERE organization_id = ? AND month = ?',
-        [now, orgId, month],
+        'UPDATE monthly_reports SET emailed_at = ?, emailed_to = ?, sending_at = NULL, last_error = NULL WHERE organization_id = ? AND month = ?',
+        [now, emailedTo, orgId, month],
       );
     },
 
@@ -119,6 +119,29 @@ export function mysqlReportStore(pool: Pool): ReportStore {
         'UPDATE monthly_reports SET sending_at = NULL, last_error = ? WHERE organization_id = ? AND month = ?',
         [error, orgId, month],
       );
+    },
+
+    async list(orgId) {
+      const only = orgId === null ? '' : ' WHERE id = ?';
+      const [orgs] = await pool.query<RowDataPacket[]>(`SELECT id, name, created_at FROM organizations${only} ORDER BY id`, orgId === null ? [] : [orgId]);
+      const ids = orgs.map((o) => Number(o.id));
+      const [reports] = ids.length
+        ? await pool.query<RowDataPacket[]>(
+          'SELECT organization_id, month, emailed_at, emailed_to, last_error FROM monthly_reports WHERE organization_id IN (?) ORDER BY month DESC',
+          [ids],
+        )
+        : [[] as RowDataPacket[]];
+      return orgs.map((o) => ({
+        id: Number(o.id),
+        name: o.name as string,
+        createdAt: o.created_at as Date,
+        reports: reports.filter((r) => Number(r.organization_id) === Number(o.id)).map((r) => ({
+          month: r.month as string,
+          emailedAt: r.emailed_at as Date | null,
+          emailedTo: r.emailed_to === null ? null : Number(r.emailed_to),
+          lastError: r.last_error as string | null,
+        })),
+      }));
     },
 
     async orgAdminEmails(orgId) {

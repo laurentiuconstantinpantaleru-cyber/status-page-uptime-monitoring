@@ -1,0 +1,44 @@
+<%/* DS-p26-admin-reports (D-041): every closed UTC month since the organization was added, how its report was sent, and a download. */%>
+<%~ include('../partials/page-head.html', it) %>
+<%
+function months(list, org) { %>
+<ul class="months card">
+<% list.forEach(function (m) { %>
+  <li class="month"><div><h3><%= m.title %></h3><p class="sent"><%~ it.icons[m.icon] %><span><%= m.text %></span></p></div>
+    <a class="pill download" href="<%= m.href %>" download>Download PDF<span class="visually-hidden"> for <%= org %>, <%= m.title %></span></a></li>
+<% }) %>
+</ul>
+<% }
+function orgReports(o) { %>
+<% if (o.recent.length === 0) { %>
+<div class="empty card"><p>No month has ended since this organization was added. The first report comes by email on <%= it.firstReport %>.</p></div>
+<% } else { %>
+<% months(o.recent, o.name) %>
+<% if (o.older.length) { %>
+<details class="older"><summary>Older months (<%= o.older.length %>)</summary><% months(o.older, o.name) %></details>
+<% } %>
+<% } %>
+<% } %>
+<main class="page col" id="main">
+<div class="head">
+  <div><p class="org"><%= it.org %></p><h1>Monthly reports</h1>
+    <p class="intro">On the 1st of each month, every org admin gets last month's uptime report as a PDF by email. Download any month that has ended here. Months are UTC.</p></div>
+</div>
+<% if (it.error) { %>
+<div class="alert" role="alert"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="var(--color-bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg><p><strong>The reports could not load.</strong>The server could not reach its database. Reload the page in a moment.</p></div>
+<% } else if (it.showOrgs) { %>
+<div class="report-groups">
+<% it.orgs.forEach(function (o) { %>
+<section class="section"><div class="section-head"><h2><%= o.name %></h2></div>
+<% orgReports(o) %>
+</section>
+<% }) %>
+</div>
+<% } else { %>
+<% it.orgs.forEach(function (o) { %>
+<section class="section" aria-label="Months">
+<% orgReports(o) %>
+</section>
+<% }) %>
+<% } %>
+<%~ include('../partials/page-foot.html', it) %>

@@ -7,11 +7,11 @@ import {
 } from '../auth/session.js';
 import type { AuthStore } from '../auth/store.js';
 import { parseUpdate } from './incidents.js';
-import { renderDeleteConfirm, renderIncidents, renderLogin, renderMonitors, type FormState } from './render.js';
+import { renderDeleteConfirm, renderIncidents, renderLogin, renderMonitors, renderReports, type FormState } from './render.js';
 import type { ReportDownloads } from '../reports/job.js';
 import type { AdminStore } from './store.js';
 
-// Sign-in and the admin pages (D-034, D-036–D-038, D-040). Every check runs on the server: the role (D-018)
+// Sign-in and the admin pages (D-034, D-036–D-038, D-040). Every check runs on the server: the role (D-042)
 // in `guard`, the organization in the store's queries, the form fields here.
 
 export interface AdminDeps {
@@ -189,6 +189,18 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps, clock
   /* ---------- Monthly reports (D-019, D-041) ---------- */
 
   if (reports) {
+    app.get('/admin/reports', { preHandler: guard('manage_monitors') }, async (request, reply) => {
+      const u = user(request);
+      const scope = scopeOf(u);
+      const view = { org: await orgLine(u), everyOrg: scope === null, now: clock.now() };
+      try {
+        return html(reply, 200, renderReports({ ...view, orgs: await reports.list(scope) }));
+      } catch (error) {
+        request.log.error(error, 'reports could not load');
+        return html(reply, 503, renderReports({ ...view, orgs: null }));
+      }
+    });
+
     app.get<{ Params: { orgId: string; file: string } }>(
       '/admin/reports/:orgId/:file',
       { preHandler: guard('manage_monitors') },
@@ -221,10 +233,10 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps, clock
     const org = await orgLine(u);
     try {
       const incidents = await store.incidents(scopeOf(u), now);
-      return html(reply, code, renderIncidents({ incidents, org, now, forms }));
+      return html(reply, code, renderIncidents({ incidents, org, now, forms, admin: can(u, 'manage_monitors') }));
     } catch (error) {
       request.log.error(error, 'incidents could not load');
-      return html(reply, 503, renderIncidents({ incidents: null, org, now, forms }));
+      return html(reply, 503, renderIncidents({ incidents: null, org, now, forms, admin: can(u, 'manage_monitors') }));
     }
   };
 

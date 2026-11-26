@@ -1,6 +1,7 @@
 -- Monthly uptime reports (D-019, D-041): one row per organization and UTC month, so a re-run of
 -- the job stores nothing twice. Times come from the Clock (PATTERN-004).
--- sending_at marks a claim to email the report; emailed_at is set once the mail server took it.
+-- sending_at marks a claim to email the report; emailed_at is set once the mail server took it,
+-- with emailed_to, the number of org admins it went to (shown on DS-p26-admin-reports).
 
 CREATE TABLE monthly_reports (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -11,6 +12,7 @@ CREATE TABLE monthly_reports (
   generated_at DATETIME(3) NOT NULL,
   sending_at DATETIME(3) NULL,
   emailed_at DATETIME(3) NULL,
+  emailed_to SMALLINT UNSIGNED NULL,
   last_error VARCHAR(1024) NULL,
   UNIQUE KEY uq_monthly_reports_org_month (organization_id, month),
   CONSTRAINT fk_monthly_reports_organization FOREIGN KEY (organization_id) REFERENCES organizations (id),

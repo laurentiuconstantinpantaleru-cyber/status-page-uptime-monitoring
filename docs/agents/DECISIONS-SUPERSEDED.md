@@ -18,4 +18,7 @@
 ### [Auth](decisions/auth.md)
 - D-035 · Server-side sessions in MySQL; SameSite=Lax cookie and an Origin check on POST · _superseded-by D-040_
 
+### [Roles](decisions/roles.md)
+- D-018 · Role permission matrix · _superseded-by D-042_
+
 ---

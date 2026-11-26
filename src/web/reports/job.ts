@@ -1,5 +1,6 @@
 import type { Clock } from '../../shared/clock.js';
 import { buildReport, monthKey, monthTitle, previousMonth, type ReportInput } from '../../shared/report.js';
+import type { ReportOrg } from './months.js';
 import { renderReportPdf } from './pdf.js';
 
 // The monthly report job (D-019, D-041). It runs every hour in the web process and works on the
@@ -31,11 +32,14 @@ export interface ReportStore {
   /** The stored PDF when this caller may email it now; null when it was emailed or another
    *  caller claimed it less than an hour ago. */
   claimEmail(orgId: number, month: string, now: Date): Promise<Buffer | null>;
-  markEmailed(orgId: number, month: string, now: Date): Promise<void>;
+  /** `emailedTo`: how many org admins the email went to. */
+  markEmailed(orgId: number, month: string, now: Date, emailedTo: number): Promise<void>;
   /** Gives a claim back after a failed send, with the error. */
   releaseEmail(orgId: number, month: string, error: string): Promise<void>;
   /** Org admins only: not members, not global admins (D-019). */
   orgAdminEmails(orgId: number): Promise<string[]>;
+  /** Organizations with their stored reports, oldest organization first; null is every organization. */
+  list(orgId: number | null): Promise<ReportOrg[]>;
 }
 
 export interface ReportJobDeps {
@@ -84,7 +88,7 @@ export async function runMonthlyReports(deps: ReportJobDeps): Promise<void> {
         log(`monthly report ${key} of ${org.name} could not be emailed; it is tried again in an hour`, error);
         continue;
       }
-      await store.markEmailed(org.id, key, now);
+      await store.markEmailed(org.id, key, now, to.length);
     } catch (error) {
       log(`monthly report ${key} of ${org.name} failed`, error);
     }
@@ -108,8 +112,11 @@ export function startMonthlyReports(deps: ReportJobDeps): () => void {
   return () => clearInterval(timer);
 }
 
-/** What the download route needs (D-019): the PDF of a closed month, or null for no such organization. */
+/** What the reports page and its downloads need (D-019, D-041). */
 export interface ReportDownloads {
+  /** The organizations a page shows, with their stored reports; null is every organization. */
+  list(orgId: number | null): Promise<ReportOrg[]>;
+  /** The PDF of a closed month, or null for no such organization. */
   pdf(orgId: number, year: number, month: number, now: Date): Promise<Buffer | null>;
 }
 

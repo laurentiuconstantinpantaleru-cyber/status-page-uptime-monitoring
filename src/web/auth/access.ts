@@ -1,4 +1,4 @@
-// Who may do what (D-018) and the cross-site check on every POST outside /api/ (D-040).
+// Who may do what (D-042) and the cross-site check on every POST outside /api/ (D-040).
 
 export type Role = 'member' | 'org_admin' | 'global_admin';
 
