@@ -166,6 +166,23 @@ describe('runMonthlyReports (D-019, D-041)', () => {
     expect(marked).toEqual([1, 1]);
   });
 
+  it('gives the event loop a turn between organizations, so the status page is served between renders (D-043)', async () => {
+    const clock = new FakeClock(new Date('2026-12-01T00:00:00.000Z'));
+    const store = fakeStore();
+    const events: string[] = [];
+    const load = store.loadMonth.bind(store);
+    store.loadMonth = async (orgId, year, month, now) => {
+      events.push(`load ${orgId}`);
+      if (orgId === 1) setImmediate(() => events.push('other request'));
+      return load(orgId, year, month, now);
+    };
+    // Rendering is replaced by a promise that never leaves the microtask queue, so only an
+    // explicit yield lets the immediate run before organization 2.
+    await runMonthlyReports({ clock, store, mailer: fakeMailer(), log: quiet, render: async () => Buffer.from('%PDF-x') });
+
+    expect(events).toEqual(['load 1', 'other request', 'load 2']);
+  });
+
   it('one millisecond before the 1st, November is not reported yet', async () => {
     const clock = new FakeClock(new Date('2026-11-30T23:59:59.999Z'));
     const store = fakeStore();

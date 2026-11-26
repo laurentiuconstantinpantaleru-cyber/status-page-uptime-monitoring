@@ -96,6 +96,7 @@ describe.skipIf(!url)('MySQL schema', () => {
       '0006_maintenance_schedules.sql',
       '0007_auth.sql',
       '0008_monthly_reports.sql',
+      '0009_checks_latency_index.sql',
     ]);
 
     const applied = await rows<{ version: string; applied_at: Date }>(
@@ -926,6 +927,22 @@ describe.skipIf(!url)('MySQL schema', () => {
       expect([...(await loadMaintenance(pool, from, to, [monitor, other])).keys()].sort()).toEqual([monitor, other].sort());
       expect((await loadMaintenance(pool, from, to, [])).size).toBe(0);
       expect((await mysqlReportStore(pool).loadMonth(orgId, 2026, 11, NOW))!.monitors.map((m) => m.maintenance.length)).toEqual([1]);
+    });
+
+    it('the month\'s mean latency is read from the index alone (D-043)', async () => {
+      await conn.query('ANALYZE TABLE checks');
+      const [[plan]] = await conn.query<RowDataPacket[]>(
+        `EXPLAIN SELECT monitor_id, AVG(latency_ms) AS mean_ms, COUNT(*) AS n FROM checks
+         WHERE monitor_id IN (?) AND kind = 'scheduled' AND latency_ms IS NOT NULL AND checked_at >= ? AND checked_at < ?
+         GROUP BY monitor_id`,
+        [[monitor], new Date('2026-11-01T00:00:00.000Z'), new Date('2026-12-01T00:00:00.000Z')],
+      );
+      expect(plan.key).toBe('idx_checks_monitor_checked');
+      expect(String(plan.Extra)).toContain('Using index');
+      const [columns] = await conn.query<RowDataPacket[]>(
+        "SELECT column_name AS c FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'checks' AND index_name = 'idx_checks_monitor_checked' ORDER BY seq_in_index",
+      );
+      expect(columns.map((r) => r.c)).toEqual(['monitor_id', 'checked_at', 'kind', 'latency_ms']);
     });
 
     it('lists only the organization\'s org admins as recipients', async () => {
