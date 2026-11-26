@@ -79,7 +79,7 @@ pulled back.
 <!-- graffino-agentic:end -->
 
 ## Source
-- Design board: none yet
+- Design board: https://claude.ai/artifact/GAv7eyj8yaxXyZ4VWYkXPJ (DS-p26-public-status, screenshots of the mock)
 - Figma: none
 
 - Token source in code: src/web/public/tokens.css
