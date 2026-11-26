@@ -49,6 +49,12 @@ function updates(i) { %>
     <section class="notice card" id="incident-<%= i.id %>" style="--accent: var(--color-status-outage)" aria-labelledby="t-<%= i.id %>">
       <div class="n-head"><%~ it.icons.outage %><div><p class="eyebrow">Open<% if (i.stage) { %> · <%= i.stage %><% } %></p><h3 id="t-<%= i.id %>"><%= i.title %></h3>
         <p class="meta">Started <span class="num"><%= i.started %></span> · down for <span class="num"><%= i.downFor %></span></p></div></div>
+<% if (i.ack) { %>
+      <p class="acked" role="<%= i.ack.status ? 'status' : 'note' %>"><%~ it.icons.ok %><span><%= i.ack.text %></span></p>
+<% } else { %>
+      <div class="ack-row"><form method="post" action="/admin/incidents/<%= i.id %>/ack"><button class="pill" type="submit">Acknowledge<span class="visually-hidden"> <%= i.title %></span></button></form>
+        <p class="hint">Tells the others you are on it and stops the escalation to the secondary contacts.</p></div>
+<% } %>
       <% updates(i) %>
       <% updateForm(i) %>
     </section>

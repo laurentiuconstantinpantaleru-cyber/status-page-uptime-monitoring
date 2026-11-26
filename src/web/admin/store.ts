@@ -33,6 +33,8 @@ export interface AdminIncident {
   resolvedAt: Date | null;
   /** Newest first. */
   updates: IncidentUpdate[];
+  /** Who acknowledged it and when (D-044); `byUserId` null: through an alert's link. */
+  acknowledged?: { at: Date; byUserId: number | null; by: string | null } | null;
 }
 
 export interface NewIncidentUpdate {
@@ -54,6 +56,8 @@ export interface AdminStore {
   incidents(orgId: number | null, now: Date): Promise<AdminIncident[]>;
   /** One incident of `incidents()`, or null. */
   incident(id: number, orgId: number | null, now: Date): Promise<{ id: number } | null>;
+  /** Marks an open, unacknowledged incident acknowledged by the user; false when it was not (D-044). */
+  acknowledgeIncident(id: number, userId: number, now: Date): Promise<boolean>;
   /** Inserts the update and bumps the status version in one transaction (D-033). */
   addIncidentUpdate(update: NewIncidentUpdate, now: Date): Promise<void>;
 }
@@ -156,8 +160,10 @@ export function mysqlAdminStore(pool: Pool, clock: Clock): AdminStore {
       const org = orgFilter(orgId, 'm.organization_id');
       const since = new Date(now.getTime() - RESOLVED_SHOWN_MS);
       const [incidents] = await pool.query<RowDataPacket[]>(
-        `SELECT i.id, i.started_at, i.resolved_at, i.cause, m.name AS monitor
+        `SELECT i.id, i.started_at, i.resolved_at, i.cause, m.name AS monitor,
+                i.acknowledged_at, i.acknowledged_by_user_id, u.display_name AS acknowledged_by
          FROM incidents i JOIN monitors m ON m.id = i.monitor_id
+         LEFT JOIN users u ON u.id = i.acknowledged_by_user_id
          WHERE (i.resolved_at IS NULL OR i.resolved_at > ?)${org.sql}
          ORDER BY i.resolved_at IS NULL DESC, i.started_at DESC, i.id DESC`,
         [since, ...org.values],
@@ -182,6 +188,13 @@ export function mysqlAdminStore(pool: Pool, clock: Clock): AdminStore {
         startedAt: i.started_at as Date,
         resolvedAt: i.resolved_at as Date | null,
         updates: updatesOf.get(Number(i.id)) ?? [],
+        acknowledged: i.acknowledged_at
+          ? {
+            at: i.acknowledged_at as Date,
+            byUserId: i.acknowledged_by_user_id === null ? null : Number(i.acknowledged_by_user_id),
+            by: (i.acknowledged_by as string | null) ?? null,
+          }
+          : null,
       }));
     },
 
@@ -193,6 +206,14 @@ export function mysqlAdminStore(pool: Pool, clock: Clock): AdminStore {
         [id, new Date(now.getTime() - RESOLVED_SHOWN_MS), ...org.values],
       );
       return rows[0] ? { id: Number(rows[0].id) } : null;
+    },
+
+    async acknowledgeIncident(id, userId, now) {
+      const [result] = await pool.query(
+        'UPDATE incidents SET acknowledged_at = ?, acknowledged_by_user_id = ? WHERE id = ? AND resolved_at IS NULL AND acknowledged_at IS NULL',
+        [now, userId, id],
+      );
+      return (result as { affectedRows: number }).affectedRows === 1;
     },
 
     async addIncidentUpdate(u, now) {

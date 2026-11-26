@@ -5,6 +5,7 @@ import type { UpdateErrors } from './incidents.js';
 import { STAGES } from './incidents.js';
 import { monthTitle } from '../../shared/report.js';
 import { nextFirst, reportMonths, type ReportOrg } from '../reports/months.js';
+import type { AckIncident } from '../alerts/ack.js';
 import type { AdminGroup, AdminIncident } from './store.js';
 
 // The sign-in and admin pages (DS-p26-login, DS-p26-admin-monitors, DS-p26-admin-incidents, DS-p26-admin-reports).
@@ -12,6 +13,7 @@ import type { AdminGroup, AdminIncident } from './store.js';
 
 const ADMIN_CSS = css('admin.css');
 const LOGIN_CSS = css('login.css');
+const ACK_CSS = css('ack.css');
 
 /** `admin`: the user may download reports (D-042), so Reports is linked; members never see it. */
 function adminHeader(current: 'monitors' | 'incidents' | 'reports', admin: boolean): HeaderView {
@@ -105,6 +107,10 @@ export interface IncidentsView {
   now: Date;
   forms: Map<number, FormState>;
   admin: boolean;
+  /** The signed-in user, so their own acknowledgment reads "by you". */
+  userId: number;
+  /** The incident just acknowledged on this page, announced as a status. */
+  ackedId: number | null;
 }
 
 export function renderIncidents(view: IncidentsView): string {
@@ -121,8 +127,15 @@ export function renderIncidents(view: IncidentsView): string {
     };
   };
   const all = view.incidents ?? [];
+  const ackLine = (i: AdminIncident) => {
+    const a = i.acknowledged;
+    if (!a) return null;
+    const who = a.byUserId === null ? 'through an alert link' : a.byUserId === view.userId ? 'by you' : `by ${a.by ?? 'a deleted user'}`;
+    return { text: `Acknowledged ${who} at ${utcTime(a.at, now).text}.`, status: view.ackedId === i.id };
+  };
   const open = all.filter((i) => i.resolvedAt === null).map((i) => ({
     id: i.id,
+    ack: ackLine(i),
     title: incidentTitle(i.monitor, i),
     stage: i.updates.length ? stageLabel(i.updates[0].stage) : null,
     started: utcTime(i.startedAt, now).text,
@@ -195,3 +208,39 @@ export function renderReports(view: ReportsView): string {
     firstReport: `1 ${monthTitle(first.getUTCFullYear(), first.getUTCMonth() + 1)}`,
   });
 }
+
+const ACK_HEADER: HeaderView = { ...LOGIN_HEADER, account: 'login' };
+
+export interface AckView {
+  /** Null: the link does not work (unknown or malformed token). */
+  incident: AckIncident | null;
+  token: string;
+  /** Just acknowledged through this page's form. */
+  done: boolean;
+  now: Date;
+}
+
+/* DS-p26-ack (D-044): an alert's acknowledge link. GET shows; only the form's POST acknowledges. */
+export function renderAck(view: AckView): string {
+  const { incident: i, now } = view;
+  const base = { css: ACK_CSS, header: ACK_HEADER, title: 'Acknowledge incident' };
+  if (!i) return render('ack.html', { ...base, invalid: true });
+  const at = (d: Date) => utcTime(d, now).text;
+  const state = i.resolvedAt !== null ? 'resolved' : i.acknowledgedAt === null ? 'open' : view.done ? 'done' : 'already';
+  const by = i.acknowledgedBy ? `by ${i.acknowledgedBy}` : 'through an alert link';
+  return render('ack.html', {
+    ...base,
+    invalid: false,
+    state,
+    token: view.token,
+    title: incidentTitle(i.monitor, i),
+    organization: i.organization,
+    since: at(i.startedAt),
+    downFor: duration(now.getTime() - i.startedAt.getTime()),
+    resolvedFrom: at(i.startedAt),
+    resolvedTo: i.resolvedAt ? at(i.resolvedAt) : '',
+    ackedAt: i.acknowledgedAt ? at(i.acknowledgedAt) : '',
+    by,
+  });
+}
+

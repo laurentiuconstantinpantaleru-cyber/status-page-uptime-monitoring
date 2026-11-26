@@ -7,7 +7,8 @@ import {
 } from '../auth/session.js';
 import type { AuthStore } from '../auth/store.js';
 import { parseUpdate } from './incidents.js';
-import { renderDeleteConfirm, renderIncidents, renderLogin, renderMonitors, renderReports, type FormState } from './render.js';
+import { renderAck, renderDeleteConfirm, renderIncidents, renderLogin, renderMonitors, renderReports, type FormState } from './render.js';
+import type { AckStore } from '../alerts/ack.js';
 import type { ReportDownloads } from '../reports/job.js';
 import type { AdminStore } from './store.js';
 
@@ -21,12 +22,16 @@ export interface AdminDeps {
   secureCookies: boolean;
   /** Without it, the monthly report download is not registered. */
   reports?: ReportDownloads;
+  /** Without it, the acknowledge links of the alerts (/ack/:token) are not registered. */
+  ack?: AckStore;
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const QUICK_MINUTES = ['15', '30', '60'];
 /** Only digits: anything else in an id is a page that does not exist. */
 const ID = /^[1-9][0-9]{0,15}$/;
+/** An acknowledge link's token: 32 random bytes, base64url (D-044). */
+const ACK_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 /** A monthly report file: `YYYY-MM.pdf`. */
 const REPORT_FILE = /^([0-9]{4})-(0[1-9]|1[0-2])\.pdf$/;
 
@@ -51,7 +56,7 @@ const notFound = (reply: FastifyReply) => plain(reply, 404, 'This page does not 
 const html = (reply: FastifyReply, code: number, body: string) => reply.code(code).type('text/html; charset=utf-8').send(body);
 
 export function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps, clock: Clock): void {
-  const { auth, store, secureCookies, reports } = deps;
+  const { auth, store, secureCookies, reports, ack } = deps;
 
   // Forms arrive URL-encoded; repeated names keep the last value.
   app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string', bodyLimit: 64 * 1024 }, (_req, body, done) => {
@@ -227,25 +232,65 @@ export function registerAdminRoutes(app: FastifyInstance, deps: AdminDeps, clock
 
   /* ---------- Incidents (DS-p26-admin-incidents, D-038) ---------- */
 
-  const incidentsPage = async (request: FastifyRequest, reply: FastifyReply, code: number, forms: Map<number, FormState>) => {
+  const incidentsPage = async (
+    request: FastifyRequest, reply: FastifyReply, code: number, forms: Map<number, FormState>, ackedId: number | null = null,
+  ) => {
     const u = user(request);
     const now = clock.now();
     const org = await orgLine(u);
+    const view = { org, now, forms, admin: can(u, 'manage_monitors'), userId: u.id, ackedId };
     try {
       const incidents = await store.incidents(scopeOf(u), now);
-      return html(reply, code, renderIncidents({ incidents, org, now, forms, admin: can(u, 'manage_monitors') }));
+      return html(reply, code, renderIncidents({ ...view, incidents }));
     } catch (error) {
       request.log.error(error, 'incidents could not load');
-      return html(reply, 503, renderIncidents({ incidents: null, org, now, forms, admin: can(u, 'manage_monitors') }));
+      return html(reply, 503, renderIncidents({ ...view, incidents: null }));
     }
   };
 
-  app.get<{ Querystring: { posted?: string } }>('/admin/incidents', { preHandler: guard('view') }, async (request, reply) => {
-    const posted = request.query.posted;
+  app.get<{ Querystring: { posted?: string; acked?: string } }>('/admin/incidents', { preHandler: guard('view') }, async (request, reply) => {
+    const { posted, acked } = request.query;
     const forms = new Map<number, FormState>();
     if (typeof posted === 'string' && ID.test(posted)) forms.set(Number(posted), { posted: true });
-    return incidentsPage(request, reply, 200, forms);
+    const ackedId = typeof acked === 'string' && ID.test(acked) ? Number(acked) : null;
+    return incidentsPage(request, reply, 200, forms, ackedId);
   });
+
+  // D-007, D-044: any signed-in user of the organization; an incident already acknowledged or
+  // resolved is left as it is, and the page says so.
+  app.post('/admin/incidents/:id/ack', { preHandler: guard('view') }, async (request, reply) => {
+    const id = idOf(request);
+    const now = clock.now();
+    const incident = id === null ? null : await store.incident(id, scopeOf(user(request)), now);
+    if (!incident) return notFound(reply);
+    await store.acknowledgeIncident(incident.id, user(request).id, now);
+    return reply.redirect(`/admin/incidents?acked=${incident.id}#incident-${incident.id}`, 303);
+  });
+
+  /* ---------- Acknowledge links (DS-p26-ack, D-044): no session; the token is the key ---------- */
+
+  if (ack) {
+    const ackPage = (reply: FastifyReply, code: number, body: string) =>
+      reply.code(code).header('cache-control', 'no-store').header('x-robots-tag', 'noindex').type('text/html; charset=utf-8').send(body);
+    const byToken = async (token: string) => (ACK_TOKEN.test(token) ? ack.incidentByToken(hashToken(token)) : null);
+
+    app.get<{ Params: { token: string }; Querystring: { done?: string } }>('/ack/:token', async (request, reply) => {
+      const { token } = request.params;
+      const incident = await byToken(token);
+      const now = clock.now();
+      if (!incident) return ackPage(reply, 404, renderAck({ incident: null, token: '', done: false, now }));
+      return ackPage(reply, 200, renderAck({ incident, token, done: request.query.done === '1', now }));
+    });
+
+    app.post<{ Params: { token: string } }>('/ack/:token', async (request, reply) => {
+      const { token } = request.params;
+      const incident = await byToken(token);
+      const now = clock.now();
+      if (!incident) return ackPage(reply, 404, renderAck({ incident: null, token: '', done: false, now }));
+      const acknowledged = await ack.acknowledge(incident.id, now);
+      return reply.redirect(`/ack/${token}${acknowledged ? '?done=1' : ''}`, 303);
+    });
+  }
 
   app.post('/admin/incidents/:id/updates', { preHandler: guard('write_update') }, async (request, reply) => {
     const id = idOf(request);

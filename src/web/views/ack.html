@@ -1,0 +1,35 @@
+<%/* DS-p26-ack (D-044): from an alert's link. GET never acknowledges (mail scanners open links); the button posts. */%>
+<%~ include('partials/page-head.html', it) %>
+<main class="page col" id="main">
+<section class="ack" aria-labelledby="ack-title">
+<% if (it.invalid) { %>
+  <div class="ack-head">
+    <h1 id="ack-title">This link does not work</h1>
+    <p>It may be cut short by your mail app, or the incident it was for was deleted. Signed-in members can acknowledge incidents in the admin panel.</p>
+  </div>
+  <div class="box card"><p class="explain">Copy the whole link from the alert, or open <a href="/admin/incidents">Incidents</a> after you log in.</p></div>
+<% } else { %>
+  <div class="ack-head">
+    <h1 id="ack-title">Acknowledge incident</h1>
+    <p>You got this link in an alert. Acknowledging tells the others that someone is on it.</p>
+  </div>
+  <div class="box card">
+<% if (it.state === 'resolved') { %>
+    <div class="inc"><%~ it.icons.ok %><div><h2><%= it.title %></h2><p class="meta"><%= it.organization %> · down from <span class="num"><%= it.resolvedFrom %></span> to <span class="num"><%= it.resolvedTo %></span></p></div></div>
+    <p class="explain">This incident is resolved: the monitor is up again. There is nothing to acknowledge.</p>
+<% } else { %>
+    <div class="inc"><%~ it.icons.outage %><div><h2><%= it.title %></h2><p class="meta"><%= it.organization %> · down since <span class="num"><%= it.since %></span> · <span class="num"><%= it.downFor %></span></p></div></div>
+<% if (it.state === 'open') { %>
+    <p class="explain">Acknowledging stops the escalation to the secondary contacts. The incident stays open until the monitor is up again.</p>
+    <form method="post" action="/ack/<%= it.token %>"><button class="submit" type="submit">Acknowledge</button></form>
+<% } else if (it.state === 'done') { %>
+    <p class="done" role="status"><%~ it.icons.ok %><span><strong>Acknowledged at <%= it.ackedAt %>.</strong>The secondary contacts will not be alerted. Everyone alerted gets a message when it is resolved.</span></p>
+<% } else { %>
+    <p class="done" role="status"><%~ it.icons.ok %><span><strong>Already acknowledged at <%= it.ackedAt %> <%= it.by %>.</strong>Nothing more to do here. Everyone alerted gets a message when it is resolved.</span></p>
+<% } %>
+<% } %>
+  </div>
+<% } %>
+  <a class="back" href="/status">Back to the status page</a>
+</section>
+<%~ include('partials/page-foot.html', it) %>

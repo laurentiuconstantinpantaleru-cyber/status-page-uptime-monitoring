@@ -1,6 +1,7 @@
 import { createPool } from '../db/connection.js';
 import { systemClock } from '../shared/clock.js';
 import { mysqlAdminStore } from './admin/store.js';
+import { mysqlAckStore } from './alerts/ack.js';
 import { startAlerts } from './alerts/dispatcher.js';
 import { mysqlAlertStore } from './alerts/store.js';
 import { telegramClient } from './alerts/telegram.js';
@@ -29,6 +30,7 @@ const app = buildApp(
         store: mysqlAdminStore(pool, systemClock),
         // Behind Caddy's HTTPS in production (D-029); plain HTTP on a laptop.
         secureCookies: process.env.NODE_ENV === 'production',
+        ack: mysqlAckStore(pool),
         reports: {
           list: (orgId) => reportStore!.list(orgId),
           pdf: (orgId, year, month, now) => reportPdf(reportStore!, orgId, year, month, now, pdfCache),

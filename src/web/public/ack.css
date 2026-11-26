@@ -1,0 +1,24 @@
+/* The acknowledge page (DS-p26-ack), from its mock. Tokens only. No script (D-024). */
+.ack { width: 100%; max-width: calc(var(--space-16) * 7); margin: 0 auto; display: grid; gap: var(--space-6); }
+.ack-head { display: grid; gap: var(--space-2); }
+.ack-head h1 { font: var(--text-2xl); letter-spacing: -0.02em; }
+.ack-head p { color: var(--color-text-secondary); }
+.box { padding: var(--space-8); display: grid; gap: var(--space-6); }
+@media (max-width: 640px) { .box { padding: var(--space-6) var(--space-4); } }
+.inc { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: start; }
+.inc .icon { margin-top: var(--space-1); }
+.inc > div { display: grid; gap: var(--space-1); min-width: 0; }
+.inc h2 { font: var(--text-lg); overflow-wrap: anywhere; }
+.inc .meta { overflow-wrap: anywhere; }
+.explain { font: var(--text-base); color: var(--color-text-secondary); }
+.box form { display: grid; }
+.submit { min-height: var(--space-12); display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+  font: var(--text-base); font-weight: 600; border-radius: var(--radius-pill); border: 1px solid var(--color-brand);
+  background: var(--color-brand); color: var(--color-on-brand); }
+.submit:hover { box-shadow: 0 0 0 var(--space-1) var(--color-bg-subtle); }
+.done { display: flex; gap: var(--space-2); align-items: start; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border);
+  border-left: var(--border-accent) solid var(--color-status-ok); border-radius: var(--radius-md); font: var(--text-sm); }
+.done .icon { margin-top: var(--space-0-5); }
+.done strong { display: block; font: var(--text-sm-strong); color: var(--color-text-primary); }
+.done span { color: var(--color-text-secondary); }
+.back { justify-self: start; }

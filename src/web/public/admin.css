@@ -136,3 +136,10 @@ textarea.input { min-height: calc(var(--space-16) * 2); padding: var(--space-3);
 .older summary { font: var(--text-sm-strong); color: var(--color-brand); cursor: pointer; min-height: var(--space-8); display: inline-flex; align-items: center; }
 @media (pointer: coarse) { .older summary { min-height: var(--space-12); } }
 .older[open] summary { margin-bottom: var(--space-4); }
+
+/* ---------- Acknowledge (DS-p26-admin-incidents, D-044) ---------- */
+.ack-row { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; }
+.ack-row form { display: contents; }
+.ack-row .hint { flex: 1 1 200px; }
+.acked { display: flex; gap: var(--space-2); align-items: start; font: var(--text-sm); color: var(--color-text-secondary); }
+.acked .icon { margin-top: var(--space-0-5); }
