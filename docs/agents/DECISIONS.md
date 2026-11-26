@@ -21,6 +21,7 @@
 - D-015 · Worker degradation detection and fault suppression
 - D-009 · Explicit out-of-scope architectural and functional boundaries
 - D-027 · Scheduling and work split of check workers
+- D-029 · Production on one VPS, deployed from CI after the tests
 
 ### [Incidents](decisions/incidents.md)
 - D-006 · Incident lifecycle thresholds: N=2 confirmed failures to open, M=2 successes to close
