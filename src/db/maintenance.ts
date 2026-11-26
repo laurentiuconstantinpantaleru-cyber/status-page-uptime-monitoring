@@ -27,15 +27,16 @@ export function weekdayNames(weekdays: number[]): string {
 
 /**
  * Maintenance overlapping [from, to) per monitor: one-off and quick windows, and the windows of
- * recurring rules. All monitors, or only `monitorId`.
+ * recurring rules. All monitors, only `monitorId`, or only the monitors in a list (none: nothing).
  */
 export async function loadMaintenance(
   db: Queryable,
   from: Date,
   to: Date,
-  monitorId: number | null = null,
+  monitorId: number | readonly number[] | null = null,
 ): Promise<Map<number, MaintenanceSpan[]>> {
-  const only = monitorId === null ? '' : ' AND monitor_id = ?';
+  if (Array.isArray(monitorId) && monitorId.length === 0) return new Map();
+  const only = monitorId === null ? '' : Array.isArray(monitorId) ? ' AND monitor_id IN (?)' : ' AND monitor_id = ?';
   const ids = monitorId === null ? [] : [monitorId];
   const [windows] = await db.query<RowDataPacket[]>(
     `SELECT monitor_id, starts_at, ends_at FROM maintenance_windows WHERE starts_at < ? AND ends_at > ?${only}`,

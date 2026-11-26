@@ -8,7 +8,9 @@ export function smtpMailer(url: string, from: string): Mailer {
   const transport = nodemailer.createTransport(url);
   return {
     async send(mail) {
-      await transport.sendMail({ from, to: mail.to, subject: mail.subject, text: mail.text, attachments: mail.attachments });
+      const info = await transport.sendMail({ from, to: mail.to, subject: mail.subject, text: mail.text, attachments: mail.attachments });
+      // A send resolves once one recipient is accepted; the refused ones are in info.rejected.
+      return { accepted: Array.isArray(info.accepted) ? info.accepted.length : mail.to.length };
     },
   };
 }

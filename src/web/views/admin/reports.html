@@ -36,7 +36,7 @@ function orgReports(o) { %>
 </div>
 <% } else { %>
 <% it.orgs.forEach(function (o) { %>
-<section class="section" aria-label="Months">
+<section class="section" aria-labelledby="months-title"><h2 id="months-title" class="visually-hidden">Months</h2>
 <% orgReports(o) %>
 </section>
 <% }) %>

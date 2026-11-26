@@ -322,8 +322,8 @@ fieldset { border: 0; padding: 0; min-width: 0; }
   }
   function card(org, list, showOrg) {
     var recent = list.slice(0, 12), older = list.slice(12);
-    var head = showOrg ? '<div class="section-head"><h2>' + esc(org) + '</h2></div>' : '';
-    var html = '<section class="section"' + (showOrg ? '' : ' aria-label="Months"') + '>' + head +
+    var head = showOrg ? '<div class="section-head"><h2>' + esc(org) + '</h2></div>' : '<h2 id="months-title" class="visually-hidden">Months</h2>';
+    var html = '<section class="section"' + (showOrg ? '' : ' aria-labelledby="months-title"') + '>' + head +
       '<ul class="months card">' + recent.map(function (r) { return row(org, r[0], r[1], r[2]); }).join('') + '</ul>';
     if (older.length) {
       html += '<details class="older"><summary>Older months (' + older.length + ')</summary><ul class="months card">' +

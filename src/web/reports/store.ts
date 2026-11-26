@@ -48,7 +48,7 @@ export function mysqlReportStore(pool: Pool): ReportStore {
           [ids, to, from],
         )
         : none;
-      const windows = await loadMaintenance(pool, from, to);
+      const windows = await loadMaintenance(pool, from, to, ids);
 
       const firstOf = new Map(firsts.map((r) => [Number(r.monitor_id), r.first_at as Date]));
       const latencyOf = new Map(latency.map((r) => [Number(r.monitor_id), { meanMs: Number(r.mean_ms), checks: Number(r.n) }]));

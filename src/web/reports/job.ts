@@ -17,8 +17,26 @@ export interface Mail {
 
 /** Injected so tests never send mail (PATTERN-006); `smtpMailer` is the real one. */
 export interface Mailer {
-  send(mail: Mail): Promise<void>;
+  /** Resolves with how many recipients the mail server accepted; throws when it took none. */
+  send(mail: Mail): Promise<{ accepted: number }>;
 }
+
+/** What of a failed send may be stored and logged. An SMTP error's message, `response`,
+ *  `rejected` and `rejectedErrors` quote the recipients' addresses (personal data, AGENTS.md). */
+export function mailErrorFields(error: unknown): { code?: string; responseCode?: number; command?: string; name: string } {
+  const e = (error ?? {}) as { code?: unknown; responseCode?: unknown; command?: unknown; name?: unknown };
+  return {
+    name: typeof e.name === 'string' ? e.name : 'Error',
+    ...(typeof e.code === 'string' ? { code: e.code } : {}),
+    ...(typeof e.responseCode === 'number' ? { responseCode: e.responseCode } : {}),
+    ...(typeof e.command === 'string' ? { command: e.command } : {}),
+  };
+}
+
+const mailErrorText = (f: ReturnType<typeof mailErrorFields>) =>
+  f.code === undefined && f.responseCode === undefined && f.command === undefined
+    ? f.name
+    : [f.code, f.responseCode, f.command].filter((x) => x !== undefined).join(' ');
 
 export interface ReportStore {
   organizations(): Promise<{ id: number; name: string }[]>;
@@ -75,20 +93,23 @@ export async function runMonthlyReports(deps: ReportJobDeps): Promise<void> {
       if (to.length === 0) continue;
       const pdf = await store.claimEmail(org.id, key, now);
       if (pdf === null) continue;
+      let accepted: number;
       try {
-        await mailer.send({
+        ({ accepted } = await mailer.send({
           to,
           subject: `Uptime report for ${org.name}, ${monthTitle(year, month)}`,
           text: `The uptime report of ${org.name} for ${monthTitle(year, month)} (UTC) is attached.\n\n`
             + 'You get it because you are an organization admin. Org admins can also download it from the dashboard.\n',
           attachments: [{ filename: `uptime-report-${key}.pdf`, content: pdf }],
-        });
+        }));
       } catch (error) {
-        await store.releaseEmail(org.id, key, (error as Error).message.slice(0, 1000));
-        log(`monthly report ${key} of ${org.name} could not be emailed; it is tried again in an hour`, error);
+        const fields = mailErrorFields(error);
+        await store.releaseEmail(org.id, key, mailErrorText(fields));
+        const { name: _, ...smtp } = fields;
+        log(`monthly report ${key} of ${org.name} could not be emailed; it is tried again in an hour`, Object.keys(smtp).length ? smtp : fields);
         continue;
       }
-      await store.markEmailed(org.id, key, now, to.length);
+      await store.markEmailed(org.id, key, now, accepted);
     } catch (error) {
       log(`monthly report ${key} of ${org.name} failed`, error);
     }
